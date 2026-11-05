@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* VS Code Dark Modern Exact Tokens */
+  --vsc-canvas: #1E1E1E;
+  --vsc-sidebar: #252526;
+  --vsc-activity-bar: #333333;
+  --vsc-panel-bg: #181818;
+  --vsc-dropdown-bg: #2D2D2D;
+  --vsc-card-bg: #252526;
+  
+  --vsc-border: #2B2B2B;
+  --vsc-border-focus: #007ACC;
+  --vsc-border-subtle: #333333;
+
+  --vsc-text-primary: #CCCCCC;
+  --vsc-text-secondary: #858585;
+  --vsc-text-bright: #FFFFFF;
+  
+  --vsc-accent-blue: #007ACC;
+  --vsc-accent-hover: #0062A3;
+  --vsc-selection: #04395E;
+
+  --vsc-severity-critical: #F14C4C;
+  --vsc-severity-warning: #CCA700;
+  --vsc-severity-info: #3794FF;
+  --vsc-severity-success: #89D185;
+
+  --vsc-syntax-keyword: #569CD6;
+  --vsc-syntax-string: #CE9178;
+  --vsc-syntax-number: #B5CEA8;
+}
+
+body {
+  background-color: var(--vsc-canvas);
+  color: var(--vsc-text-primary);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Custom VS Code Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

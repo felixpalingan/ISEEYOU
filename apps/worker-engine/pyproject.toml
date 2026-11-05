@@ -1,0 +1,30 @@
+[project]
+name = "iseeyou-worker-engine"
+version = "0.1.0"
+description = "Asynchronous OSINT and Attack Surface Intelligence Worker Mesh"
+authors = [{ name = "Felix Palingan" }]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "httpx>=0.28.0",
+    "aiohttp>=3.11.0",
+    "dnspython>=2.7.0",
+    "redis>=5.2.0",
+    "sse-starlette>=2.1.0",
+    "python-dotenv>=1.0.0"
+]
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

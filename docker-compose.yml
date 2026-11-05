@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    container_name: iseeyou-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - worker-engine
+    networks:
+      - iseeyou-network
+
+  worker-engine:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    container_name: iseeyou-worker
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - REDIS_URL=redis://redis:6379/0
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      - redis
+    networks:
+      - iseeyou-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: iseeyou-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - iseeyou-network
+
+volumes:
+  redis_data:
+
+networks:
+  iseeyou-network:
+    driver: bridge
