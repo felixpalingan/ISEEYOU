@@ -308,3 +308,4 @@ class SubdomainDNSResolver(BaseOSINTProvider):
 
 # Register singleton instance in central provider registry
 provider_registry.register(SubdomainDNSResolver())
+
