@@ -8,6 +8,8 @@ from datetime import datetime
 
 from engine.models.entities import ScanRequest, ScanStatusResponse, EntityType
 from engine.core.event_bus import event_bus
+from engine.core.base_provider import provider_registry
+import engine.providers  # Ensures all provider modules self-register
 
 router = APIRouter()
 
@@ -32,37 +34,82 @@ def classify_input(seed: str) -> EntityType:
 
 async def run_scan_worker(session_id: str, seed: str, entity_type: EntityType):
     """
-    Simulated scan pipeline for Phase 0 verification (Phase 1 will wire real providers)
+    Asynchronous pipeline orchestrator:
+    - Emits seed identification telemetry
+    - Queries provider registry for modules supporting the entity type
+    - Sequentially executes providers and streams real-time SSE events
+    - Tracks aggregate metrics (nodes, edges, risk score)
+    - Signals scan completion
     """
-    await event_bus.publish(session_id, "log", {
-        "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
-        "module": "orchestrator",
-        "level": "info",
-        "message": f"Identified seed input as [{entity_type.upper()}]: {seed}"
-    })
-    await asyncio.sleep(0.5)
+    await event_bus.publish(
+        session_id,
+        "log",
+        {
+            "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
+            "module": "orchestrator",
+            "level": "info",
+            "message": f"Identified seed input as [{entity_type.value.upper()}]: {seed}",
+        },
+    )
 
-    root_node = {
-        "id": f"root-{session_id}",
-        "type": entity_type.value,
-        "value": seed,
-        "label": seed,
-        "severity": "info",
-        "metadata": {"source": "user_input"},
-        "discovered_at": datetime.utcnow().isoformat()
-    }
-    await event_bus.publish(session_id, "node", root_node)
-    
-    await event_bus.publish(session_id, "log", {
-        "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
-        "module": "pipeline",
-        "level": "success",
-        "message": f"Initial target node spawned on canvas. Ready for modules."
-    })
-    
-    _sessions[session_id]["status"] = "completed"
-    _sessions[session_id]["completed_at"] = datetime.utcnow().isoformat()
-    await event_bus.publish(session_id, "scan_completed", _sessions[session_id])
+    providers = provider_registry.get_providers_for_type(entity_type)
+    if not providers:
+        await event_bus.publish(
+            session_id,
+            "log",
+            {
+                "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
+                "module": "orchestrator",
+                "level": "warn",
+                "message": f"No active OSINT providers registered for entity type '{entity_type.value}'.",
+            },
+        )
+    else:
+        for provider in providers:
+            try:
+                async for event in provider.execute(seed, entity_type, session_id):
+                    event_type = event.get("type", "log")
+                    data = event.get("data", {})
+
+                    if session_id in _sessions:
+                        if event_type == "node":
+                            _sessions[session_id]["nodes_count"] += 1
+                        elif event_type == "edge":
+                            _sessions[session_id]["edges_count"] += 1
+                        elif event_type == "summary":
+                            impact = data.get("risk_score_impact", 0)
+                            _sessions[session_id]["risk_score"] = min(
+                                100, _sessions[session_id]["risk_score"] + impact
+                            )
+
+                    await event_bus.publish(session_id, event_type, data)
+            except Exception as e:
+                await event_bus.publish(
+                    session_id,
+                    "log",
+                    {
+                        "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
+                        "module": provider.name,
+                        "level": "error",
+                        "message": f"Module error: {str(e)}",
+                    },
+                )
+
+    if session_id in _sessions:
+        _sessions[session_id]["status"] = "completed"
+        _sessions[session_id]["completed_at"] = datetime.utcnow().isoformat()
+        await event_bus.publish(session_id, "scan_completed", _sessions[session_id])
+
+    await event_bus.publish(
+        session_id,
+        "log",
+        {
+            "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
+            "module": "orchestrator",
+            "level": "success",
+            "message": f"Scan completed. Total nodes: {_sessions.get(session_id, {}).get('nodes_count', 0)}, Risk Score: {_sessions.get(session_id, {}).get('risk_score', 0)}/100",
+        },
+    )
 
 
 @router.post("/scan", response_model=ScanStatusResponse)
