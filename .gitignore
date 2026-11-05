@@ -3,7 +3,9 @@ ide.md
 ROADMAP.md
 ARCHITECTURE_AND_DESIGN.md
 diagrams.html
+logo_showcase.html
 *.svg
+!logo.svg
 scratch/
 .agent/
 .gemini/

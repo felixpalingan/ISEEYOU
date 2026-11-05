@@ -1,9 +1,17 @@
-# ISEEYOU
+<p align="center">
+  <img src="logo.svg" alt="ISEEYOU Logo" width="120" />
+</p>
 
-> Next-Gen Automated OSINT & Attack Surface Intelligence Platform.
+<h1 align="center">ISEEYOU</h1>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Status: In Development](https://img.shields.io/badge/Status-In%20Development-orange.svg)](#)
+<p align="center">
+  <strong>Next-Gen Automated OSINT &amp; Attack Surface Intelligence Platform.</strong>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/Status-In%20Development-orange.svg" alt="Status: In Development" /></a>
+</p>
 
 ---
 
@@ -29,3 +37,4 @@
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
