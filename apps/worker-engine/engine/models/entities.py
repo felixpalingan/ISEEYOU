@@ -55,6 +55,58 @@ class VulnerabilityFinding(BaseModel):
     discovered_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
 
 
+# Deterministic risk weight matrix matching packages/shared-types/src/risk.ts
+RISK_WEIGHTS: Dict[SeverityLevel, int] = {
+    SeverityLevel.CRITICAL: 35,
+    SeverityLevel.HIGH: 20,
+    SeverityLevel.MEDIUM: 10,
+    SeverityLevel.LOW: 5,
+    SeverityLevel.INFO: 0,
+}
+
+
+def calculate_normalized_risk_score(
+    findings: List[VulnerabilityFinding] | List[SeverityLevel],
+) -> int:
+    """
+    Calculates deterministic risk score normalized between 0 and 100
+    """
+    if not findings:
+        return 0
+    total = 0
+    for item in findings:
+        severity = item.severity if isinstance(item, VulnerabilityFinding) else item
+        total += RISK_WEIGHTS.get(severity, 0)
+    return min(100, total)
+
+
+class TelemetryLevel(str, Enum):
+    INFO = "info"
+    SUCCESS = "success"
+    WARN = "warn"
+    ERROR = "error"
+
+
+class TelemetryLog(BaseModel):
+    timestamp: str = Field(
+        default_factory=lambda: datetime.utcnow().strftime("%H:%M:%S")
+    )
+    module: str
+    level: TelemetryLevel = TelemetryLevel.INFO
+    message: str
+
+
+class ProviderResultSummary(BaseModel):
+    provider_name: str
+    target: str
+    nodes_discovered: int = 0
+    edges_discovered: int = 0
+    vulnerabilities_found: int = 0
+    risk_score_impact: int = 0
+    duration_ms: float = 0.0
+    status: str = "success"
+
+
 class ScanRequest(BaseModel):
     seed_input: str
     force_refresh: bool = False

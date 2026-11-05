@@ -48,3 +48,8 @@ jobs:
         run: |
           cd apps/worker-engine
           python -c "from engine.main import app; print('FastAPI loaded successfully')"
+
+      - name: Run Python Unit Tests
+        run: |
+          cd apps/worker-engine
+          python -m unittest discover tests -v
