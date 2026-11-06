@@ -377,3 +377,4 @@ class SocialPresenceScanner(BaseOSINTProvider):
 
 # Register singleton instance in central provider registry
 provider_registry.register(SocialPresenceScanner())
+
