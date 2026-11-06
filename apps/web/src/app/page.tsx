@@ -24,6 +24,7 @@ import { OmniSearchBar } from '@/components/OmniSearchBar';
 import { TelemetryTerminal } from '@/components/TelemetryTerminal';
 import { StructuredDataView } from '@/components/StructuredDataView';
 import { GraphCanvas } from '@/components/GraphCanvas';
+import { RiskGauge } from '@/components/RiskGauge';
 import { Badge, Button, Card, StatusIndicator } from '@/components/ui';
 import { useScanStream } from '@/hooks/useScanStream';
 import { VulnerabilityFinding } from '@iseeyou/shared-types';
@@ -60,15 +61,6 @@ export default function WorkspacePage() {
 
   const riskLevel =
     riskScore >= 70 ? 'CRITICAL' : riskScore >= 40 ? 'HIGH' : riskScore >= 15 ? 'MEDIUM' : 'LOW';
-
-  const riskBadgeClass =
-    riskScore >= 70
-      ? 'bg-red-950/70 border-vsc-critical text-vsc-critical'
-      : riskScore >= 40
-      ? 'bg-orange-950/70 border-orange-500 text-orange-400'
-      : riskScore >= 15
-      ? 'bg-yellow-950/70 border-vsc-warning text-vsc-warning'
-      : 'bg-emerald-950/60 border-vsc-success text-vsc-success';
 
   // Dynamic remediation playbook generator based on selected finding
   const getRemediationCommand = (finding: VulnerabilityFinding | null) => {
@@ -116,18 +108,18 @@ export default function WorkspacePage() {
           initialValue={target}
         />
 
-        {/* Right Status Badge */}
+        {/* Right Status: Dynamic Interactive Risk Score Speedometer Gauge */}
         <div className="flex items-center gap-2">
-          <span
-            className={`flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded border ${riskBadgeClass}`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                riskScore >= 40 ? 'bg-vsc-critical animate-pulse' : 'bg-vsc-success'
-              }`}
-            />
-            RISK: {riskScore}/100 ({riskLevel})
-          </span>
+          <RiskGauge
+            score={riskScore}
+            level={riskLevel}
+            findings={findings}
+            isScanning={isScanning}
+            onInspectFindings={() => {
+              setActiveTab('table');
+              setBottomTab('problems');
+            }}
+          />
         </div>
       </header>
 
