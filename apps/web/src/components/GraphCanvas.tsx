@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -38,10 +38,15 @@ import {
   Radio,
   Maximize2,
   RefreshCw,
-  Zap,
+  FolderTree,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Check,
   ExternalLink,
   Lock,
   Unlock,
+  Sliders,
 } from 'lucide-react';
 
 interface GraphCanvasProps {
@@ -92,12 +97,16 @@ function RootSeedNode({ data }: NodeProps) {
 
 /**
  * Entity Node: Subdomains, IPs, Ports, Profiles, etc.
+ * Features: Threat indicator pip, metadata preview, hover copy & pivot actions.
  */
 function CustomEntityNode({ data }: NodeProps) {
   const node = data.node as SharedEntityNode | undefined;
   const value = String(data.value || data.label || '');
   const type = (data.type as EntityType) || 'domain';
   const severity = (data.severity as SeverityLevel) || 'info';
+  const onPivot = data.onPivot as ((target: string, type: EntityType) => void) | undefined;
+
+  const [copied, setCopied] = useState(false);
 
   const getTypeIcon = () => {
     switch (type) {
@@ -120,21 +129,36 @@ function CustomEntityNode({ data }: NodeProps) {
   };
 
   const getBorderColor = () => {
-    if (severity === 'critical') return 'border-vsc-critical bg-red-950/20 shadow-red-950/20';
-    if (severity === 'high') return 'border-orange-500 bg-orange-950/20 shadow-orange-950/20';
+    if (severity === 'critical') return 'border-vsc-critical bg-red-950/30 ring-1 ring-vsc-critical/40';
+    if (severity === 'high') return 'border-orange-500 bg-orange-950/30 ring-1 ring-orange-500/30';
     if (severity === 'medium') return 'border-yellow-500/80 bg-yellow-950/20';
     if (type === 'ip') return 'border-emerald-500/70 hover:border-emerald-400';
     if (type === 'subdomain') return 'border-sky-500/70 hover:border-sky-400';
     return 'border-vsc-borderSubtle hover:border-vsc-accent-blue';
   };
 
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handlePivot = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onPivot) {
+      onPivot(value, type);
+    }
+  };
+
   return (
     <div
-      className={`bg-vsc-card border rounded p-2.5 min-w-[180px] max-w-[240px] shadow-md transition-all select-none hover:shadow-lg ${getBorderColor()}`}
+      className={`bg-vsc-card border rounded p-2.5 min-w-[190px] max-w-[250px] shadow-md transition-all select-none hover:shadow-xl group relative ${getBorderColor()}`}
     >
       <Handle type="target" position={Position.Top} className="!bg-vsc-borderSubtle" />
       <Handle type="target" position={Position.Left} className="!bg-vsc-borderSubtle" />
 
+      {/* Header: Icon, Type & Threat Pip */}
       <div className="flex items-center justify-between gap-1.5 mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           {getTypeIcon()}
@@ -142,15 +166,35 @@ function CustomEntityNode({ data }: NodeProps) {
             {type}
           </span>
         </div>
-        <Badge variant={severity as any} size="xs" className="uppercase font-mono font-bold">
-          {severity}
-        </Badge>
+
+        <div className="flex items-center gap-1.5">
+          {/* Risk Indicator Pip */}
+          <span
+            className={`w-2 h-2 rounded-full ${
+              severity === 'critical'
+                ? 'bg-vsc-critical animate-ping'
+                : severity === 'high'
+                ? 'bg-orange-500'
+                : severity === 'medium'
+                ? 'bg-yellow-500'
+                : severity === 'low'
+                ? 'bg-blue-400'
+                : 'bg-emerald-400'
+            }`}
+            title={`Risk Level: ${severity.toUpperCase()}`}
+          />
+          <Badge variant={severity as any} size="xs" className="uppercase font-mono font-bold">
+            {severity}
+          </Badge>
+        </div>
       </div>
 
+      {/* Node Value */}
       <div className="font-mono text-xs font-semibold text-vsc-bright truncate" title={value}>
         {value}
       </div>
 
+      {/* Metadata Detail */}
       {node?.metadata && (
         <div className="text-[10px] font-mono text-vsc-muted mt-1 truncate">
           {type === 'ip' && String(node.metadata.city || node.metadata.isp || 'Resolved')}
@@ -160,6 +204,118 @@ function CustomEntityNode({ data }: NodeProps) {
           {type === 'breach' && String(node.metadata.maskedPassword || 'Pwned')}
         </div>
       )}
+
+      {/* Quick Action Bar (Visible on Hover) */}
+      <div className="mt-2 pt-1.5 border-t border-vsc-border/60 flex items-center justify-between opacity-75 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={handleCopy}
+          className="text-[10px] font-mono text-vsc-muted hover:text-vsc-bright flex items-center gap-1 hover:bg-vsc-panel px-1.5 py-0.5 rounded transition-colors"
+          title="Copy node value"
+        >
+          {copied ? <Check className="w-3 h-3 text-vsc-success" /> : <Copy className="w-3 h-3" />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+
+        {onPivot && (
+          <button
+            onClick={handlePivot}
+            className="text-[10px] font-mono text-vsc-accent-blue hover:text-sky-300 flex items-center gap-1 hover:bg-vsc-panel px-1.5 py-0.5 rounded transition-colors"
+            title={`Pivot reconnaissance on ${value}`}
+          >
+            <span>Pivot</span>
+            <ExternalLink className="w-2.5 h-2.5" />
+          </button>
+        )}
+      </div>
+
+      <Handle type="source" position={Position.Bottom} className="!bg-vsc-accent-blue" />
+      <Handle type="source" position={Position.Right} className="!bg-vsc-accent-blue" />
+    </div>
+  );
+}
+
+/**
+ * Cluster Node (Folded / Collapsible):
+ * Solves the "hairball problem" by grouping dense sets of subdomains/ports/profiles into an expandable container.
+ */
+function ClusterNode({ data }: NodeProps) {
+  const clusterId = String(data.clusterId || '');
+  const clusterType = String(data.clusterType || 'items');
+  const count = Number(data.count || 0);
+  const isExpanded = Boolean(data.isExpanded);
+  const hasCritical = Boolean(data.hasCritical);
+  const onToggle = data.onToggle as ((id: string) => void) | undefined;
+
+  const getClusterIcon = () => {
+    switch (clusterType) {
+      case 'subdomain':
+        return <Globe className="w-4 h-4 text-sky-400" />;
+      case 'ip':
+        return <Server className="w-4 h-4 text-emerald-400" />;
+      case 'port':
+        return <Layers className="w-4 h-4 text-cyan-300" />;
+      case 'breach':
+        return <Key className="w-4 h-4 text-amber-400" />;
+      case 'username':
+      case 'email':
+        return <User className="w-4 h-4 text-purple-400" />;
+      default:
+        return <FolderTree className="w-4 h-4 text-vsc-keyword" />;
+    }
+  };
+
+  return (
+    <div
+      data-testid="cluster-node"
+      onClick={() => onToggle?.(clusterId)}
+      className={`bg-vsc-card border-2 rounded p-3 min-w-[200px] max-w-[260px] shadow-xl transition-all cursor-pointer select-none group relative ${
+        hasCritical
+          ? 'border-vsc-critical bg-red-950/30 ring-2 ring-vsc-critical/40 shadow-red-950/40'
+          : isExpanded
+          ? 'border-vsc-accent-blue bg-vsc-panel ring-1 ring-vsc-accent-blue shadow-blue-950/30'
+          : 'border-vsc-borderSubtle hover:border-vsc-accent-blue hover:bg-vsc-panel/70'
+      }`}
+    >
+      <Handle type="target" position={Position.Top} className="!bg-vsc-accent-blue" />
+      <Handle type="target" position={Position.Left} className="!bg-vsc-accent-blue" />
+
+      {/* Header: Icon, Cluster Name & Count */}
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {getClusterIcon()}
+          <span className="text-xs font-mono font-bold text-vsc-bright uppercase truncate">
+            {clusterType}s
+          </span>
+        </div>
+
+        <Badge
+          variant={hasCritical ? 'critical' : 'info'}
+          size="xs"
+          className="font-mono font-bold"
+        >
+          {count} items
+        </Badge>
+      </div>
+
+      {/* Cluster Description */}
+      <div className="text-[11px] font-mono text-vsc-muted flex items-center justify-between">
+        <span>{isExpanded ? 'Sub-cluster expanded' : 'Folded cluster'}</span>
+        {hasCritical && (
+          <span className="text-vsc-critical font-bold text-[10px] animate-pulse">
+            ⚠️ Alert
+          </span>
+        )}
+      </div>
+
+      {/* Toggle button */}
+      <div className="mt-2.5 pt-2 border-t border-vsc-border/60 flex items-center justify-between text-[11px] font-mono text-vsc-accent-blue group-hover:text-sky-300 font-semibold">
+        <span>{isExpanded ? 'Collapse Cluster' : `Expand (+${count})`}</span>
+        {isExpanded ? (
+          <ChevronUp className="w-3.5 h-3.5 transition-transform" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5 transition-transform" />
+        )}
+      </div>
 
       <Handle type="source" position={Position.Bottom} className="!bg-vsc-accent-blue" />
       <Handle type="source" position={Position.Right} className="!bg-vsc-accent-blue" />
@@ -213,12 +369,15 @@ function FindingNode({ data }: NodeProps) {
 const nodeTypes = {
   rootSeed: RootSeedNode,
   customEntity: CustomEntityNode,
+  clusterNode: ClusterNode,
   findingNode: FindingNode,
 };
 
 // -------------------------------------------------------------
-// 2. RADIAL / HIERARCHICAL LAYOUT COMPUTATION
+// 2. LAYOUT ENGINE WITH CLUSTER VIRTUALIZATION & FOLDING
 // -------------------------------------------------------------
+
+const CLUSTER_THRESHOLD = 3; // Groups into a ClusterNode if items >= 3
 
 function layoutGraphElements(
   nodes: SharedEntityNode[],
@@ -226,15 +385,18 @@ function layoutGraphElements(
   findings: VulnerabilityFinding[] = [],
   target: string,
   targetType: EntityType,
-  isScanning: boolean
+  isScanning: boolean,
+  expandedClusters: Set<string>,
+  toggleCluster: (clusterId: string) => void,
+  onPivot?: (target: string, type: EntityType) => void
 ): { flowNodes: Node[]; flowEdges: Edge[] } {
   const flowNodes: Node[] = [];
   const flowEdges: Edge[] = [];
 
-  const centerX = 450;
-  const centerY = 350;
+  const centerX = 500;
+  const centerY = 400;
 
-  // 1. Create Root Node
+  // 1. Create Root Seed Node
   const rootId = `root-${target}`;
   flowNodes.push({
     id: rootId,
@@ -249,97 +411,157 @@ function layoutGraphElements(
     },
   });
 
-  // 2. Separate nodes by classification
-  const subdomains = nodes.filter((n) => n.type === 'subdomain');
-  const ips = nodes.filter((n) => n.type === 'ip');
-  const ports = nodes.filter((n) => n.type === 'port');
-  const breaches = nodes.filter((n) => n.type === 'breach' || n.type === 'secret');
-  const profiles = nodes.filter((n) => n.type === 'username' || n.type === 'email');
-  const others = nodes.filter(
-    (n) => !['subdomain', 'ip', 'port', 'breach', 'secret', 'username', 'email'].includes(n.type)
-  );
+  // 2. Classify items
+  const groups: Record<string, SharedEntityNode[]> = {
+    subdomain: nodes.filter((n) => n.type === 'subdomain'),
+    ip: nodes.filter((n) => n.type === 'ip'),
+    port: nodes.filter((n) => n.type === 'port'),
+    breach: nodes.filter((n) => n.type === 'breach' || n.type === 'secret'),
+    username: nodes.filter((n) => n.type === 'username' || n.type === 'email'),
+  };
 
-  // Helper to place items along an angular arc
-  const placeArc = (
-    items: SharedEntityNode[],
-    startAngleDeg: number,
-    endAngleDeg: number,
-    radius: number
-  ) => {
-    const count = items.length;
-    if (count === 0) return;
+  // Angular sectors for each group
+  const sectorAngles: Record<string, { start: number; end: number; radius: number }> = {
+    subdomain: { start: -150, end: -30, radius: 290 },
+    ip: { start: -15, end: 45, radius: 330 },
+    port: { start: 50, end: 100, radius: 480 },
+    breach: { start: 110, end: 175, radius: 310 },
+    username: { start: 185, end: 245, radius: 320 },
+  };
 
-    const angleStep =
-      count === 1
-        ? 0
-        : (endAngleDeg - startAngleDeg) / (count - 1);
+  // Process each group (Folded or Expanded)
+  Object.entries(groups).forEach(([groupType, groupItems]) => {
+    if (groupItems.length === 0) return;
 
-    items.forEach((item, index) => {
-      const angleDeg = count === 1 ? (startAngleDeg + endAngleDeg) / 2 : startAngleDeg + index * angleStep;
-      const angleRad = (angleDeg * Math.PI) / 180;
-      const x = centerX + radius * Math.cos(angleRad) - 100;
-      const y = centerY + radius * Math.sin(angleRad) - 30;
+    const clusterId = `cluster-${groupType}`;
+    const shouldCluster = groupItems.length >= CLUSTER_THRESHOLD;
+    const isExpanded = expandedClusters.has(clusterId);
+    const sector = sectorAngles[groupType] || { start: -60, end: 60, radius: 300 };
+
+    if (shouldCluster && !isExpanded) {
+      // -------------------------------------------------------------
+      // FOLDED: Render a single ClusterNode representing the group
+      // -------------------------------------------------------------
+      const midAngleDeg = (sector.start + sector.end) / 2;
+      const midAngleRad = (midAngleDeg * Math.PI) / 180;
+      const x = centerX + sector.radius * Math.cos(midAngleRad) - 100;
+      const y = centerY + sector.radius * Math.sin(midAngleRad) - 40;
+
+      const hasCritical = groupItems.some(
+        (item) => item.severity === 'critical' || item.severity === 'high'
+      );
 
       flowNodes.push({
-        id: item.id,
-        type: 'customEntity',
+        id: clusterId,
+        type: 'clusterNode',
         position: { x, y },
         data: {
-          node: item,
-          value: item.value,
-          label: item.label,
-          type: item.type,
-          severity: item.severity,
-          color:
-            item.type === 'ip'
-              ? '#10B981'
-              : item.type === 'subdomain'
-              ? '#38BDF8'
-              : item.type === 'port'
-              ? '#22D3EE'
-              : '#A855F7',
+          clusterId,
+          clusterType: groupType,
+          count: groupItems.length,
+          isExpanded: false,
+          hasCritical,
+          onToggle: toggleCluster,
+          color: hasCritical ? '#F14C4C' : '#007ACC',
         },
       });
 
-      // Default root edge if no explicit parent edge
-      const hasParentEdge = edges.some((e) => e.target === item.id || e.source === item.id);
-      if (!hasParentEdge) {
+      flowEdges.push({
+        id: `edge-${rootId}-${clusterId}`,
+        source: rootId,
+        target: clusterId,
+        animated: isScanning,
+        style: { stroke: hasCritical ? '#F14C4C' : '#007ACC', strokeWidth: 1.8 },
+      });
+    } else {
+      // -------------------------------------------------------------
+      // EXPANDED or UNDER THRESHOLD: Render individual EntityNodes
+      // -------------------------------------------------------------
+      // If was clustered and is now expanded, also place the cluster parent node as anchor
+      let anchorNodeId = rootId;
+
+      if (shouldCluster && isExpanded) {
+        const midAngleDeg = (sector.start + sector.end) / 2;
+        const midAngleRad = (midAngleDeg * Math.PI) / 180;
+        const cx = centerX + (sector.radius - 80) * Math.cos(midAngleRad) - 100;
+        const cy = centerY + (sector.radius - 80) * Math.sin(midAngleRad) - 40;
+
+        flowNodes.push({
+          id: clusterId,
+          type: 'clusterNode',
+          position: { x: cx, y: cy },
+          data: {
+            clusterId,
+            clusterType: groupType,
+            count: groupItems.length,
+            isExpanded: true,
+            hasCritical: groupItems.some((i) => i.severity === 'critical'),
+            onToggle: toggleCluster,
+            color: '#3B82F6',
+          },
+        });
+
         flowEdges.push({
-          id: `edge-root-${item.id}`,
+          id: `edge-${rootId}-${clusterId}`,
           source: rootId,
+          target: clusterId,
+          style: { stroke: '#007ACC', strokeWidth: 1.5, strokeDasharray: '2 2' },
+        });
+
+        anchorNodeId = clusterId;
+      }
+
+      // Fan out individual child nodes in arc
+      const count = groupItems.length;
+      const angleStep = count === 1 ? 0 : (sector.end - sector.start) / (count - 1);
+
+      groupItems.forEach((item, index) => {
+        const angleDeg = count === 1 ? (sector.start + sector.end) / 2 : sector.start + index * angleStep;
+        const angleRad = (angleDeg * Math.PI) / 180;
+        const x = centerX + sector.radius * Math.cos(angleRad) - 100;
+        const y = centerY + sector.radius * Math.sin(angleRad) - 30;
+
+        flowNodes.push({
+          id: item.id,
+          type: 'customEntity',
+          position: { x, y },
+          data: {
+            node: item,
+            value: item.value,
+            label: item.label,
+            type: item.type,
+            severity: item.severity,
+            onPivot,
+            color:
+              item.type === 'ip'
+                ? '#10B981'
+                : item.type === 'subdomain'
+                ? '#38BDF8'
+                : item.type === 'port'
+                ? '#22D3EE'
+                : '#A855F7',
+          },
+        });
+
+        // Edge connecting from anchor (Cluster node if clustered, or Root node)
+        flowEdges.push({
+          id: `edge-${anchorNodeId}-${item.id}`,
+          source: anchorNodeId,
           target: item.id,
           animated: isScanning,
-          style: { stroke: '#007ACC', strokeWidth: 1.5 },
+          style: { stroke: '#007ACC', strokeWidth: 1.4 },
         });
-      }
-    });
-  };
+      });
+    }
+  });
 
-  // Subdomains: Upper Arc (-140° to -40°, radius 280)
-  placeArc(subdomains, -140, -40, 280);
-
-  // IPs: Right Arc (-20° to 45°, radius 320)
-  placeArc(ips, -20, 45, 320);
-
-  // Ports: Further Right Outer Arc (50° to 90°, radius 480)
-  placeArc(ports, 50, 95, 480);
-
-  // Breaches / Secrets: Bottom Arc (105° to 170°, radius 300)
-  placeArc(breaches, 105, 170, 300);
-
-  // Profiles: Left Arc (185° to 240°, radius 310)
-  placeArc(profiles, 185, 240, 310);
-
-  // Others: Left Outer Arc (245° to 280°, radius 340)
-  placeArc(others, 245, 280, 340);
-
-  // 3. Vulnerability findings nodes (Placed prominently near related IP/subdomain or bottom)
+  // 3. Vulnerability findings nodes
   findings.forEach((finding, idx) => {
     const findingNodeId = `finding-${finding.id}`;
-    const angleDeg = 70 + idx * 25;
+    const angleDeg = 65 + idx * 28;
     const angleRad = (angleDeg * Math.PI) / 180;
-    const x = centerX + 360 * Math.cos(angleRad) - 110;
-    const y = centerY + 360 * Math.sin(angleRad) - 40;
+    const x = centerX + 400 * Math.cos(angleRad) - 110;
+    const y = centerY + 400 * Math.sin(angleRad) - 40;
 
     flowNodes.push({
       id: findingNodeId,
@@ -355,7 +577,8 @@ function layoutGraphElements(
     });
 
     const targetNodeId = finding.node_id || finding.nodeId;
-    const sourceNode = targetNodeId && flowNodes.some((n) => n.id === targetNodeId) ? targetNodeId : rootId;
+    const sourceNode =
+      targetNodeId && flowNodes.some((n) => n.id === targetNodeId) ? targetNodeId : rootId;
 
     flowEdges.push({
       id: `edge-${sourceNode}-${findingNodeId}`,
@@ -368,7 +591,6 @@ function layoutGraphElements(
 
   // 4. Transform Shared Edges
   edges.forEach((edge) => {
-    // Only add if source and target exist in flowNodes
     const sourceExists = flowNodes.some((n) => n.id === edge.source);
     const targetExists = flowNodes.some((n) => n.id === edge.target);
 
@@ -411,9 +633,42 @@ function FlowCanvasInner({
   onSelectFinding,
   onPivot,
 }: GraphCanvasProps) {
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const { fitView } = useReactFlow();
 
-  // Layout conversion
+  // State to manage which clusters are expanded (default: collapsed for clean initial graph)
+  const [expandedClusters, setExpandedClusters] = useState<Set<string>>(new Set());
+
+  // Toggle single cluster
+  const toggleCluster = useCallback((clusterId: string) => {
+    setExpandedClusters((prev) => {
+      const next = new Set(prev);
+      if (next.has(clusterId)) {
+        next.delete(clusterId);
+      } else {
+        next.add(clusterId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Expand all / Collapse all helpers
+  const handleExpandAll = useCallback(() => {
+    setExpandedClusters(
+      new Set([
+        'cluster-subdomain',
+        'cluster-ip',
+        'cluster-port',
+        'cluster-breach',
+        'cluster-username',
+      ])
+    );
+  }, []);
+
+  const handleCollapseAll = useCallback(() => {
+    setExpandedClusters(new Set());
+  }, []);
+
+  // Compute Layout with current expansion state
   const { initialFlowNodes, initialFlowEdges } = useMemo(() => {
     const { flowNodes, flowEdges } = layoutGraphElements(
       sharedNodes,
@@ -421,27 +676,40 @@ function FlowCanvasInner({
       findings,
       target,
       targetType,
-      isScanning
+      isScanning,
+      expandedClusters,
+      toggleCluster,
+      onPivot
     );
     return { initialFlowNodes: flowNodes, initialFlowEdges: flowEdges };
-  }, [sharedNodes, sharedEdges, findings, target, targetType, isScanning]);
+  }, [
+    sharedNodes,
+    sharedEdges,
+    findings,
+    target,
+    targetType,
+    isScanning,
+    expandedClusters,
+    toggleCluster,
+    onPivot,
+  ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialFlowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlowEdges);
 
-  // Sync when props change
+  // Sync state whenever props or expansion toggles change
   useEffect(() => {
     setNodes(initialFlowNodes);
     setEdges(initialFlowEdges);
   }, [initialFlowNodes, initialFlowEdges, setNodes, setEdges]);
 
-  // Auto-fit on initial render or node count change
+  // Fit View with transition
   useEffect(() => {
     const timer = setTimeout(() => {
-      fitView({ padding: 0.2, duration: 600 });
+      fitView({ padding: 0.25, duration: 500 });
     }, 150);
     return () => clearTimeout(timer);
-  }, [sharedNodes.length, findings.length, fitView]);
+  }, [sharedNodes.length, findings.length, expandedClusters.size, fitView]);
 
   // Handle node clicks
   const handleNodeClick = useCallback(
@@ -465,7 +733,7 @@ function FlowCanvasInner({
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.25 }}
         minZoom={0.2}
         maxZoom={2.5}
         attributionPosition="bottom-left"
@@ -500,29 +768,51 @@ function FlowCanvasInner({
           {isScanning && (
             <div className="bg-vsc-card/90 backdrop-blur border border-vsc-accent-blue px-2.5 py-1 rounded text-[11px] font-mono text-vsc-accent-blue flex items-center gap-1.5 shadow-lg shadow-blue-950/20">
               <span className="w-2 h-2 rounded-full bg-vsc-accent-blue animate-ping" />
-              <span>Streaming Graph Nodes...</span>
+              <span>Streaming Recon Graph...</span>
             </div>
           )}
 
+          {/* Cluster controls */}
+          <div className="bg-vsc-sidebar/90 backdrop-blur border border-vsc-border p-0.5 rounded flex items-center gap-1 shadow-md">
+            <button
+              onClick={handleExpandAll}
+              className="px-2 py-0.5 rounded text-[10px] font-mono text-vsc-muted hover:text-vsc-bright hover:bg-vsc-panel transition-colors"
+              title="Expand all clusters"
+            >
+              Expand All
+            </button>
+            <span className="text-vsc-border">•</span>
+            <button
+              onClick={handleCollapseAll}
+              className="px-2 py-0.5 rounded text-[10px] font-mono text-vsc-muted hover:text-vsc-bright hover:bg-vsc-panel transition-colors"
+              title="Collapse all clusters to avoid hairball"
+            >
+              Fold All
+            </button>
+          </div>
+
+          {/* Node and Edge Counter */}
           <div className="bg-vsc-sidebar/90 backdrop-blur border border-vsc-border px-3 py-1 rounded text-xs font-mono text-vsc-muted flex items-center gap-2 shadow-md">
-            <span className="text-vsc-bright font-bold">{nodes.length} Nodes</span>
+            <span className="text-vsc-bright font-bold">{nodes.length} Visible</span>
             <span>•</span>
             <span>{edges.length} Links</span>
           </div>
 
+          {/* Fit View Button */}
           <button
-            onClick={() => fitView({ padding: 0.2, duration: 400 })}
+            onClick={() => fitView({ padding: 0.25, duration: 400 })}
             className="bg-vsc-sidebar hover:bg-vsc-card text-vsc-bright border border-vsc-border p-1.5 rounded text-xs font-mono shadow transition-colors flex items-center gap-1"
             title="Fit View"
           >
             <Maximize2 className="w-3.5 h-3.5 text-vsc-muted" />
           </button>
 
+          {/* Reset Layout Button */}
           <button
             onClick={() => {
               setNodes(initialFlowNodes);
               setEdges(initialFlowEdges);
-              fitView({ padding: 0.2, duration: 400 });
+              fitView({ padding: 0.25, duration: 400 });
             }}
             className="bg-vsc-sidebar hover:bg-vsc-card text-vsc-bright border border-vsc-border p-1.5 rounded text-xs font-mono shadow transition-colors flex items-center gap-1"
             title="Reset Graph Layout"
