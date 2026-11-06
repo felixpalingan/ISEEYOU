@@ -1,8 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { EntityType } from '@iseeyou/shared-types';
 
 export type SeverityVariant = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'success';
-export type EntityVariant = 'domain' | 'subdomain' | 'ip' | 'email' | 'username' | 'port' | 'breach' | 'secret';
+export type EntityVariant = EntityType;
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: SeverityVariant | EntityVariant | 'default';
@@ -28,6 +29,7 @@ const variantStyles: Record<string, string> = {
   port: 'bg-vsc-dropdown border-vsc-borderSubtle text-cyan-300 font-mono',
   breach: 'bg-red-950/80 border-vsc-critical text-vsc-critical font-mono font-bold',
   secret: 'bg-rose-950/80 border-rose-500 text-rose-300 font-mono font-bold',
+  document: 'bg-vsc-dropdown border-vsc-border text-vsc-text font-mono',
 
   default: 'bg-vsc-dropdown border-vsc-border text-vsc-muted',
 };
@@ -70,3 +72,4 @@ export function Badge({
     </span>
   );
 }
+

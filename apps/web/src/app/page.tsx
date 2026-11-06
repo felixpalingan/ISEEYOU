@@ -18,12 +18,22 @@ import {
   FileCode,
   Check,
 } from 'lucide-react';
+import { OmniSearchBar } from '@/components/OmniSearchBar';
+import { EntityType } from '@iseeyou/shared-types';
 
 export default function WorkspacePage() {
   const [activeTab, setActiveTab] = useState<'graph' | 'table'>('graph');
   const [bottomTab, setBottomTab] = useState<'terminal' | 'problems'>('terminal');
-  const [targetInput, setTargetInput] = useState('example-target.com');
+  const [targetInput, setTargetInput] = useState('example.com');
+  const [isScanning, setIsScanning] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const handleScan = (target: string, type: EntityType) => {
+    setTargetInput(target);
+    setIsScanning(true);
+    // Temporary simulation state; Task 2.3 will wire live SSE streams
+    setTimeout(() => setIsScanning(false), 1500);
+  };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -46,23 +56,12 @@ export default function WorkspacePage() {
           </span>
         </div>
 
-        {/* Center Omni-Search (VS Code Quick-Open style) */}
-        <div className="flex items-center bg-vsc-canvas border border-vsc-border rounded px-3 py-1 w-[420px] shadow-sm focus-within:border-vsc-borderFocus transition-colors">
-          <Search className="w-3.5 h-3.5 text-vsc-muted mr-2" />
-          <input
-            type="text"
-            value={targetInput}
-            onChange={(e) => setTargetInput(e.target.value)}
-            placeholder="Type seed: domain, email, ip, or username..."
-            className="bg-transparent border-none outline-none text-xs text-vsc-bright w-full font-mono placeholder:text-vsc-muted"
-          />
-          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-vsc-dropdown text-vsc-keyword border border-vsc-borderSubtle">
-            DOMAIN
-          </span>
-          <button className="ml-2 bg-vsc-blue hover:bg-vsc-blueHover text-white text-[11px] font-semibold px-2 py-0.5 rounded transition-colors">
-            Scan
-          </button>
-        </div>
+        {/* Center Omni-Search (VS Code Quick-Open with Auto-Classifier) */}
+        <OmniSearchBar
+          onScan={handleScan}
+          isScanning={isScanning}
+          initialValue={targetInput}
+        />
 
         {/* Right Status Badge */}
         <div className="flex items-center gap-2">
