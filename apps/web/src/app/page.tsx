@@ -32,6 +32,7 @@ import {
   Sparkles,
   Bot,
   ArrowRight,
+  Scale,
 } from 'lucide-react';
 import { OmniSearchBar } from '@/components/OmniSearchBar';
 import { TelemetryTerminal } from '@/components/TelemetryTerminal';
@@ -40,6 +41,7 @@ import { GraphCanvas } from '@/components/GraphCanvas';
 import { RiskGauge } from '@/components/RiskGauge';
 import { AIAnalystCard } from '@/components/AIAnalystCard';
 import { RemediationPlaybookCard } from '@/components/RemediationPlaybookCard';
+import { LegalTakedownModal } from '@/components/LegalTakedownModal';
 import { Badge, Button, Card, StatusIndicator } from '@/components/ui';
 import { useScanStream } from '@/hooks/useScanStream';
 import { useAIAnalyst } from '@/hooks/useAIAnalyst';
@@ -51,6 +53,7 @@ export default function WorkspacePage() {
   const [bottomTab, setBottomTab] = useState<'terminal' | 'problems'>('terminal');
   const [copied, setCopied] = useState(false);
   const [isProvenanceModalOpen, setIsProvenanceModalOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
 
   // Window Layout & Resizing States (VS Code Parity)
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -386,6 +389,13 @@ export default function WorkspacePage() {
             className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-vsc-bright mb-1"
           >
             <BookOpen className="w-5 h-5" />
+          </button>
+          <button
+            title="Legal Takedown & Privacy Assistant (UU PDP & GDPR)"
+            onClick={() => setIsLegalModalOpen(true)}
+            className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-emerald-400 mb-1 transition-colors"
+          >
+            <Scale className="w-5 h-5" />
           </button>
           <div className="flex-1" />
           <button
@@ -913,6 +923,14 @@ export default function WorkspacePage() {
 
             <div className="space-y-2 pt-2 border-t border-vsc-border">
               <Button
+                variant="primary"
+                onClick={() => setIsLegalModalOpen(true)}
+                className="w-full py-1.5 font-semibold text-xs flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-600 text-white"
+              >
+                <Scale className="w-3.5 h-3.5" />
+                <span>Draft Legal Takedown (UU PDP)</span>
+              </Button>
+              <Button
                 variant="secondary"
                 onClick={() => window.print()}
                 className="w-full py-1.5 text-xs flex items-center justify-center gap-2"
@@ -1042,6 +1060,15 @@ export default function WorkspacePage() {
           </div>
         </div>
       )}
+
+      {/* 5. LEGAL TAKEDOWN & PRIVACY ASSISTANT MODAL (TASK 4.3) */}
+      <LegalTakedownModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        target={target}
+        findings={findings}
+        nodes={nodes}
+      />
     </div>
   );
 }
