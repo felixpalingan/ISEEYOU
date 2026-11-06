@@ -285,3 +285,4 @@ class BreachCredentialHunter(BaseOSINTProvider):
 
 # Register singleton instance in central provider registry
 provider_registry.register(BreachCredentialHunter())
+
