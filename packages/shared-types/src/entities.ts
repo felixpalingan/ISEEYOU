@@ -37,12 +37,15 @@ export interface EntityEdge {
 
 export interface VulnerabilityFinding {
   id: string;
-  nodeId: string;
+  nodeId?: string;
+  node_id?: string;
   title: string;
   severity: SeverityLevel;
   cveId?: string;
+  cve_id?: string;
   evidence: string;
-  discoveredAt: string;
+  discoveredAt?: string;
+  discovered_at?: string;
 }
 
 export interface RemediationAction {

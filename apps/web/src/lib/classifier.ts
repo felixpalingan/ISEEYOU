@@ -91,3 +91,4 @@ export const ENTITY_BADGE_CONFIGS: Record<EntityType, EntityBadgeConfig> = {
     iconName: 'Globe',
   },
 };
+
