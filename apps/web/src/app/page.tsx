@@ -44,7 +44,9 @@ export default function WorkspacePage() {
     findings,
     isScanning,
     selectedFinding,
+    pivotHistory,
     startScan,
+    revertPivot,
     clearLogs,
     selectFinding,
   } = useScanStream();
@@ -197,8 +199,16 @@ export default function WorkspacePage() {
               </div>
               <div className="pl-5 space-y-0.5 text-vsc-muted text-[11px]">
                 {subdomains.slice(0, 5).map((s) => (
-                  <div key={s.id} className="hover:text-vsc-bright cursor-pointer truncate">
-                    ├─ {s.value}
+                  <div
+                    key={s.id}
+                    onClick={() => startScan(s.value, 'subdomain', true)}
+                    title={`Click to pivot on ${s.value}`}
+                    className="hover:text-sky-300 hover:underline cursor-pointer truncate flex items-center justify-between group"
+                  >
+                    <span>├─ {s.value}</span>
+                    <span className="opacity-0 group-hover:opacity-100 text-[9px] text-vsc-accent-blue font-bold">
+                      Pivot ↗
+                    </span>
                   </div>
                 ))}
                 {subdomains.length > 5 && (
@@ -215,8 +225,16 @@ export default function WorkspacePage() {
                   </div>
                   <div className="pl-5 space-y-0.5 text-emerald-400 text-[11px]">
                     {ips.map((ip) => (
-                      <div key={ip.id} className="hover:text-emerald-300 cursor-pointer truncate">
-                        ├─ {ip.value}
+                      <div
+                        key={ip.id}
+                        onClick={() => startScan(ip.value, 'ip', true)}
+                        title={`Click to pivot on ${ip.value}`}
+                        className="hover:text-emerald-200 hover:underline cursor-pointer truncate flex items-center justify-between group"
+                      >
+                        <span>├─ {ip.value}</span>
+                        <span className="opacity-0 group-hover:opacity-100 text-[9px] text-emerald-400 font-bold">
+                          Pivot ↗
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -339,20 +357,46 @@ export default function WorkspacePage() {
             </div>
           </div>
 
-          {/* Breadcrumb Bar */}
-          <div className="h-6 bg-vsc-canvas border-b border-vsc-border flex items-center px-3 text-[11px] font-mono text-vsc-muted gap-1 select-none flex-shrink-0">
-            <span className="hover:text-vsc-bright cursor-pointer">workspace</span>
-            <span>&gt;</span>
-            <span className="text-vsc-bright">{target}</span>
-            <span>&gt;</span>
-            <span className="text-vsc-keyword uppercase font-bold">{targetType}</span>
-            <span>&gt;</span>
-            <span className="text-sky-400 font-bold uppercase">{activeTab === 'graph' ? 'GRAPH VIEW' : 'STRUCTURED TABLE'}</span>
-            {selectedFinding && (
-              <>
-                <span>&gt;</span>
-                <span className="text-vsc-critical font-bold truncate max-w-xs">{selectedFinding.title}</span>
-              </>
+          {/* Breadcrumb Bar with Pivot Investigation Trail */}
+          <div className="h-6 bg-vsc-canvas border-b border-vsc-border flex items-center justify-between px-3 text-[11px] font-mono text-vsc-muted select-none flex-shrink-0">
+            <div className="flex items-center gap-1 overflow-hidden">
+              <span className="hover:text-vsc-bright cursor-pointer">workspace</span>
+              <span>&gt;</span>
+              {pivotHistory.map((item, idx) => (
+                <React.Fragment key={`pivot-${idx}`}>
+                  <span
+                    onClick={() => revertPivot()}
+                    className="hover:text-sky-300 hover:underline cursor-pointer text-vsc-muted truncate max-w-[120px]"
+                    title={`Click to revert to ${item.target}`}
+                  >
+                    {item.target}
+                  </span>
+                  <span>&gt;</span>
+                </React.Fragment>
+              ))}
+              <span className="text-vsc-bright font-bold">{target}</span>
+              <span>&gt;</span>
+              <span className="text-vsc-keyword uppercase font-bold">{targetType}</span>
+              <span>&gt;</span>
+              <span className="text-sky-400 font-bold uppercase">
+                {activeTab === 'graph' ? 'GRAPH CANVAS' : 'STRUCTURED TABLE'}
+              </span>
+              {selectedFinding && (
+                <>
+                  <span>&gt;</span>
+                  <span className="text-vsc-critical font-bold truncate max-w-xs">{selectedFinding.title}</span>
+                </>
+              )}
+            </div>
+
+            {pivotHistory.length > 0 && (
+              <button
+                onClick={() => revertPivot()}
+                className="text-[10px] text-vsc-accent-blue hover:text-sky-300 flex items-center gap-1 hover:underline ml-2 flex-shrink-0"
+                title="Return to parent reconnaissance pivot"
+              >
+                <span>↶ Revert Pivot</span>
+              </button>
             )}
           </div>
 
@@ -369,7 +413,7 @@ export default function WorkspacePage() {
               isScanning={isScanning}
               selectedFindingId={selectedFinding?.id}
               onSelectFinding={selectFinding}
-              onPivot={(pTarget, pType) => startScan(pTarget, pType)}
+              onPivot={(pTarget, pType) => startScan(pTarget, pType, true)}
             />
           ) : (
             <GraphCanvas
@@ -381,7 +425,7 @@ export default function WorkspacePage() {
               isScanning={isScanning}
               selectedFindingId={selectedFinding?.id}
               onSelectFinding={selectFinding}
-              onPivot={(pTarget, pType) => startScan(pTarget, pType)}
+              onPivot={(pTarget, pType) => startScan(pTarget, pType, true)}
             />
           )}
 

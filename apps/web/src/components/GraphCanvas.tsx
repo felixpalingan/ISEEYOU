@@ -27,6 +27,7 @@ import {
   SeverityLevel,
 } from '@iseeyou/shared-types';
 import { Badge } from '@/components/ui/Badge';
+import { GraphContextMenu, ContextMenuTarget } from '@/components/GraphContextMenu';
 import {
   Globe,
   Server,
@@ -711,9 +712,76 @@ function FlowCanvasInner({
     return () => clearTimeout(timer);
   }, [sharedNodes.length, findings.length, expandedClusters.size, fitView]);
 
+  // State for right-click context menu
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    target: ContextMenuTarget;
+    hasFindings?: boolean;
+  } | null>(null);
+
+  // Handle right-click on canvas nodes to trigger context menu
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      let targetData: ContextMenuTarget;
+
+      if (node.type === 'rootSeed') {
+        targetData = {
+          id: node.id,
+          value: String(node.data?.value || target),
+          type: (node.data?.type as EntityType) || targetType,
+          severity: 'info',
+          label: String(node.data?.label || target),
+        };
+      } else if (node.type === 'findingNode') {
+        const f = node.data?.finding as VulnerabilityFinding | undefined;
+        targetData = {
+          id: node.id,
+          value: String(node.data?.title || f?.title || 'Exposure'),
+          type: 'domain',
+          severity: (node.data?.severity as SeverityLevel) || 'critical',
+          label: f?.cve_id || f?.cveId || 'Vulnerability',
+        };
+      } else if (node.type === 'clusterNode') {
+        targetData = {
+          id: node.id,
+          value: `${node.data?.clusterType} cluster (${node.data?.count} items)`,
+          type: (node.data?.clusterType as EntityType) || 'domain',
+          severity: node.data?.hasCritical ? 'critical' : 'info',
+        };
+      } else {
+        const entity = node.data?.node as SharedEntityNode | undefined;
+        targetData = {
+          id: node.id,
+          value: String(node.data?.value || entity?.value || ''),
+          type: (node.data?.type as EntityType) || entity?.type || 'domain',
+          severity: (node.data?.severity as SeverityLevel) || entity?.severity || 'info',
+          label: entity?.label,
+          metadata: entity?.metadata,
+        };
+      }
+
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        target: targetData,
+        hasFindings: findings.some(
+          (f) =>
+            (f.node_id && f.node_id === targetData.id) ||
+            (f.nodeId && f.nodeId === targetData.id)
+        ),
+      });
+    },
+    [target, targetType, findings]
+  );
+
   // Handle node clicks
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
+      setContextMenu(null);
       if (node.type === 'findingNode' && node.data?.finding) {
         onSelectFinding?.(node.data.finding as VulnerabilityFinding);
       } else if (node.type === 'customEntity' && node.data?.node) {
@@ -732,6 +800,8 @@ function FlowCanvasInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onNodeContextMenu={handleNodeContextMenu}
+        onPaneClick={() => setContextMenu(null)}
         fitView
         fitViewOptions={{ padding: 0.25 }}
         minZoom={0.2}
@@ -821,6 +891,28 @@ function FlowCanvasInner({
           </button>
         </Panel>
       </ReactFlow>
+
+      {/* Right-Click Context Menu */}
+      {contextMenu && (
+        <GraphContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          target={contextMenu.target}
+          hasFindings={contextMenu.hasFindings}
+          onClose={() => setContextMenu(null)}
+          onPivot={(pTarget, pType) => onPivot?.(pTarget, pType)}
+          onInspectFindings={() => {
+            const matched = findings.find(
+              (f) =>
+                (f.node_id && f.node_id === contextMenu.target.id) ||
+                (f.nodeId && f.nodeId === contextMenu.target.id)
+            );
+            if (matched) {
+              onSelectFinding?.(matched);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

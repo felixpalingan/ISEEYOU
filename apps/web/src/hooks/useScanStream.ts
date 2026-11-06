@@ -23,6 +23,7 @@ export interface ScanStreamState {
   findings: VulnerabilityFinding[];
   isScanning: boolean;
   selectedFinding: VulnerabilityFinding | null;
+  pivotHistory: { target: string; type: EntityType; timestamp: string }[];
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
@@ -48,6 +49,7 @@ export function useScanStream() {
     findings: [],
     isScanning: false,
     selectedFinding: null,
+    pivotHistory: [],
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -68,31 +70,74 @@ export function useScanStream() {
   }, [closeEventSource]);
 
   const startScan = useCallback(
-    async (target: string, type: EntityType) => {
+    async (target: string, type: EntityType, isPivot: boolean = false) => {
       closeEventSource();
 
-      // Reset state for new scan session
-      setState((prev) => ({
-        ...prev,
-        status: 'running',
-        isScanning: true,
-        target,
-        targetType: type,
-        riskScore: 0,
-        nodes: [],
-        edges: [],
-        findings: [],
-        selectedFinding: null,
-        logs: [
-          {
-            id: `start-${Date.now()}`,
-            timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-            module: 'orchestrator',
-            level: 'info',
-            message: `Dispatching reconnaissance mission for [${type.toUpperCase()}]: ${target}`,
-          },
-        ],
-      }));
+      // Configure state for scan (retain graph if pivoting)
+      setState((prev) => {
+        if (isPivot) {
+          const newHistory = [
+            ...prev.pivotHistory,
+            {
+              target: prev.target,
+              type: prev.targetType,
+              timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+            },
+          ];
+
+          const pivotEdge: EntityEdge = {
+            id: `edge-pivot-${Date.now()}`,
+            source: `root-${prev.target}`,
+            target: `root-${target}`,
+            relation: 'PIVOTED_TO',
+            confidence: 1.0,
+          };
+
+          return {
+            ...prev,
+            status: 'running',
+            isScanning: true,
+            target,
+            targetType: type,
+            pivotHistory: newHistory,
+            edges: [...prev.edges, pivotEdge],
+            logs: [
+              ...prev.logs,
+              {
+                id: `pivot-${Date.now()}`,
+                timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                module: 'orchestrator',
+                level: 'info',
+                message: `[PIVOT] Recursively pivoting recon investigation onto: [${type.toUpperCase()}] ${target}`,
+              },
+            ],
+          };
+        }
+
+        // Full fresh scan session
+        return {
+          ...prev,
+          status: 'running',
+          isScanning: true,
+          target,
+          targetType: type,
+          riskScore: 0,
+          nodes: [],
+          edges: [],
+          findings: [],
+          selectedFinding: null,
+          pivotHistory: [],
+          logs: [
+            {
+              id: `start-${Date.now()}`,
+              timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+              module: 'orchestrator',
+              level: 'info',
+              message: `Dispatching reconnaissance mission for [${type.toUpperCase()}]: ${target}`,
+            },
+          ],
+        };
+      });
 
       try {
         // 1. Initialize scan session via POST
@@ -291,12 +336,37 @@ export function useScanStream() {
     setState((prev) => ({ ...prev, selectedFinding: finding }));
   }, []);
 
+  const revertPivot = useCallback(() => {
+    setState((prev) => {
+      if (prev.pivotHistory.length === 0) return prev;
+      const prevItem = prev.pivotHistory[prev.pivotHistory.length - 1];
+      const remainingHistory = prev.pivotHistory.slice(0, -1);
+      return {
+        ...prev,
+        target: prevItem.target,
+        targetType: prevItem.type,
+        pivotHistory: remainingHistory,
+        logs: [
+          ...prev.logs,
+          {
+            id: `revert-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+            module: 'orchestrator',
+            level: 'info',
+            message: `[PIVOT] Reverted investigation focus back to: [${prevItem.type.toUpperCase()}] ${prevItem.target}`,
+          },
+        ],
+      };
+    });
+  }, []);
+
   return {
     ...state,
     startScan,
     cancelScan,
     clearLogs,
     selectFinding,
+    revertPivot,
   };
 }
 
