@@ -122,3 +122,36 @@ class ScanStatusResponse(BaseModel):
     edges_count: int
     started_at: str
     completed_at: Optional[str] = None
+
+
+class AttackChainStep(BaseModel):
+    step: int
+    title: str
+    technique: str
+    target_asset: str
+    description: str
+    impact: str
+
+
+class AIAnalysisRequest(BaseModel):
+    target: str
+    target_type: str
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    edges: List[Dict[str, Any]] = Field(default_factory=list)
+    findings: List[Dict[str, Any]] = Field(default_factory=list)
+    risk_score: float = 0.0
+
+
+class AIAnalysisResponse(BaseModel):
+    status: str = "success"
+    model: str = "gemini-1.5-flash"
+    target: str
+    target_type: str
+    executive_summary: str
+    threat_level: str
+    key_exposures: List[str] = Field(default_factory=list)
+    attack_chain: List[AttackChainStep] = Field(default_factory=list)
+    mitre_techniques: List[str] = Field(default_factory=list)
+    recommendations: List[str] = Field(default_factory=list)
+    generated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+

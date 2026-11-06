@@ -13,9 +13,16 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from engine.models.entities import ScanRequest, ScanStatusResponse, EntityType
+from engine.models.entities import (
+    ScanRequest,
+    ScanStatusResponse,
+    EntityType,
+    AIAnalysisRequest,
+    AIAnalysisResponse,
+)
 from engine.core.event_bus import event_bus
 from engine.core.base_provider import provider_registry
+from engine.services.ai_analyst import ai_analyst_service
 import engine.providers  # Ensures all provider modules self-register
 
 router = APIRouter()
@@ -254,6 +261,16 @@ async def direct_stream_scan(target: str = Query(..., description="Target seed (
             event_bus.unsubscribe(session_id, queue)
 
     return EventSourceResponse(event_generator(), ping=15)
+
+
+@router.post("/analyze/ai", response_model=AIAnalysisResponse)
+async def analyze_attack_surface(req: AIAnalysisRequest):
+    """
+    AI Recon Analyst endpoint (Task 4.1).
+    Processes target graph, findings, and infrastructure topology to produce
+    an Executive Summary + MITRE ATT&CK Chain Hypothesis.
+    """
+    return await ai_analyst_service.analyze(req)
 
 
 @router.get("/health")

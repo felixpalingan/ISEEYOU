@@ -29,19 +29,24 @@ import {
   Database,
   ShieldCheck,
   Info,
+  Sparkles,
+  Bot,
+  ArrowRight,
 } from 'lucide-react';
 import { OmniSearchBar } from '@/components/OmniSearchBar';
 import { TelemetryTerminal } from '@/components/TelemetryTerminal';
 import { StructuredDataView } from '@/components/StructuredDataView';
 import { GraphCanvas } from '@/components/GraphCanvas';
 import { RiskGauge } from '@/components/RiskGauge';
+import { AIAnalystCard } from '@/components/AIAnalystCard';
 import { Badge, Button, Card, StatusIndicator } from '@/components/ui';
 import { useScanStream } from '@/hooks/useScanStream';
+import { useAIAnalyst } from '@/hooks/useAIAnalyst';
 import { VulnerabilityFinding } from '@iseeyou/shared-types';
 import { getFindingProvenance, PROVENANCE_PROVIDERS, ProvenanceInfo } from '@/lib/provenance';
 
 export default function WorkspacePage() {
-  const [activeTab, setActiveTab] = useState<'graph' | 'table'>('graph');
+  const [activeTab, setActiveTab] = useState<'graph' | 'table' | 'ai'>('graph');
   const [bottomTab, setBottomTab] = useState<'terminal' | 'problems'>('terminal');
   const [copied, setCopied] = useState(false);
   const [isProvenanceModalOpen, setIsProvenanceModalOpen] = useState(false);
@@ -156,6 +161,21 @@ export default function WorkspacePage() {
     clearLogs,
     selectFinding,
   } = useScanStream();
+
+  // AI Recon Analyst Copilot hook (Gemini Flash API & Heuristic Security Engine)
+  const {
+    report: aiReport,
+    isAnalyzing: isAIAnalyzing,
+    runAnalysis: runAIAnalysis,
+  } = useAIAnalyst({
+    target,
+    targetType,
+    nodes,
+    edges,
+    findings,
+    riskScore,
+    isScanning,
+  });
 
   // Group discovered nodes by entity type for Target Explorer
   const subdomains = nodes.filter((n) => n.type === 'subdomain');
@@ -335,6 +355,25 @@ export default function WorkspacePage() {
             }`}
           >
             <ShieldAlert className="w-5 h-5" />
+          </button>
+          <button
+            title="AI Recon Analyst Copilot"
+            onClick={() => {
+              setActiveTab('ai');
+              if (!aiReport && !isAIAnalyzing) {
+                runAIAnalysis();
+              }
+            }}
+            className={`w-10 h-10 flex items-center justify-center mb-1 transition-colors relative ${
+              activeTab === 'ai'
+                ? 'text-vsc-bright border-l-2 border-vsc-accent-blue bg-vsc-canvas'
+                : 'text-vsc-muted hover:text-vsc-bright'
+            }`}
+          >
+            <Sparkles className="w-5 h-5 text-vsc-keyword" />
+            {isAIAnalyzing && (
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-vsc-accent-blue animate-pulse" />
+            )}
           </button>
           <button
             title="Remediation Playbooks & Problems"
@@ -614,6 +653,28 @@ export default function WorkspacePage() {
               <Table className="w-3.5 h-3.5 text-sky-400" />
               <span>Structured Intel & Findings ({findings.length})</span>
             </button>
+            <button
+              onClick={() => {
+                setActiveTab('ai');
+                if (!aiReport && !isAIAnalyzing) {
+                  runAIAnalysis();
+                }
+              }}
+              className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors flex-shrink-0 ${
+                activeTab === 'ai'
+                  ? 'bg-vsc-canvas text-vsc-bright font-medium border-t-2 border-vsc-accent-blue'
+                  : 'bg-vsc-sidebar text-vsc-muted hover:text-vsc-bright'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-vsc-keyword" />
+              <span>AI Recon Analyst [Copilot ⚡]</span>
+              {isAIAnalyzing && <span className="w-1.5 h-1.5 rounded-full bg-vsc-accent-blue animate-ping" />}
+              {aiReport && !isAIAnalyzing && (
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-vsc-dropdown text-sky-400 border border-vsc-borderSubtle font-mono">
+                  {aiReport.threatLevel}
+                </span>
+              )}
+            </button>
             <div
               onClick={() => {
                 setBottomTab('terminal');
@@ -649,7 +710,7 @@ export default function WorkspacePage() {
               <span className="text-vsc-keyword uppercase font-bold">{targetType}</span>
               <span>&gt;</span>
               <span className="text-sky-400 font-bold uppercase">
-                {activeTab === 'graph' ? 'GRAPH CANVAS' : 'STRUCTURED TABLE'}
+                {activeTab === 'graph' ? 'GRAPH CANVAS' : activeTab === 'table' ? 'STRUCTURED TABLE' : 'AI COPILOT REPORT'}
               </span>
               {selectedFinding && (
                 <>
@@ -670,9 +731,16 @@ export default function WorkspacePage() {
             )}
           </div>
 
-          {/* Main Workspace Display: Toggle between Graph Canvas and Structured Data View */}
+          {/* Main Workspace Display: Toggle between Graph Canvas, Structured Data View, and AI Analyst */}
           <div className="flex-1 overflow-hidden relative">
-            {activeTab === 'table' ? (
+            {activeTab === 'ai' ? (
+              <AIAnalystCard
+                report={aiReport}
+                isAnalyzing={isAIAnalyzing}
+                onRefresh={runAIAnalysis}
+                target={target}
+              />
+            ) : activeTab === 'table' ? (
               <StructuredDataView
                 nodes={nodes}
                 edges={edges}
@@ -762,6 +830,26 @@ export default function WorkspacePage() {
                   className="p-1 text-vsc-muted hover:text-vsc-bright hover:bg-vsc-dropdown rounded transition-colors"
                 >
                   <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Quick AI Threat Forecast Pill */}
+              <div className="mb-3 p-2 rounded bg-vsc-panel border border-vsc-border flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-1.5 font-bold text-vsc-bright">
+                  <Sparkles className="w-3.5 h-3.5 text-vsc-keyword" />
+                  <span>AI Threat Forecast:</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveTab('ai');
+                    if (!aiReport && !isAIAnalyzing) {
+                      runAIAnalysis();
+                    }
+                  }}
+                  className="text-[10px] text-vsc-accent-blue hover:text-sky-300 hover:underline flex items-center gap-1 font-mono font-bold"
+                >
+                  <span>{aiReport ? `${aiReport.threatLevel} Attack Chain` : 'View Analysis'}</span>
+                  <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
 
@@ -858,6 +946,12 @@ export default function WorkspacePage() {
           <span className="font-bold">Risk: {riskScore}/100</span>
           <span className="opacity-75">|</span>
           <span>Nodes: {nodes.length}</span>
+          {aiReport && (
+            <>
+              <span className="opacity-75">|</span>
+              <span className="text-amber-200 font-bold">AI Threat: {aiReport.threatLevel}</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {/* Clickable Terminal Toggle Status Indicator */}
