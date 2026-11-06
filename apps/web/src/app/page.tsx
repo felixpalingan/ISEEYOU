@@ -28,20 +28,23 @@ import {
   X,
   Database,
   ShieldCheck,
+  Info,
 } from 'lucide-react';
 import { OmniSearchBar } from '@/components/OmniSearchBar';
-import { TelemetryTerminal, getFindingProvenance } from '@/components/TelemetryTerminal';
+import { TelemetryTerminal } from '@/components/TelemetryTerminal';
 import { StructuredDataView } from '@/components/StructuredDataView';
 import { GraphCanvas } from '@/components/GraphCanvas';
 import { RiskGauge } from '@/components/RiskGauge';
 import { Badge, Button, Card, StatusIndicator } from '@/components/ui';
 import { useScanStream } from '@/hooks/useScanStream';
 import { VulnerabilityFinding } from '@iseeyou/shared-types';
+import { getFindingProvenance, PROVENANCE_PROVIDERS, ProvenanceInfo } from '@/lib/provenance';
 
 export default function WorkspacePage() {
   const [activeTab, setActiveTab] = useState<'graph' | 'table'>('graph');
   const [bottomTab, setBottomTab] = useState<'terminal' | 'problems'>('terminal');
   const [copied, setCopied] = useState(false);
+  const [isProvenanceModalOpen, setIsProvenanceModalOpen] = useState(false);
 
   // Window Layout & Resizing States (VS Code Parity)
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
@@ -165,15 +168,9 @@ export default function WorkspacePage() {
     riskScore >= 70 ? 'CRITICAL' : riskScore >= 40 ? 'HIGH' : riskScore >= 15 ? 'MEDIUM' : 'LOW';
 
   // Selected finding provenance data source
-  const findingProvenance = selectedFinding
+  const findingProvenance: ProvenanceInfo = selectedFinding
     ? getFindingProvenance(selectedFinding)
-    : {
-        provider: 'Shodan / crt.sh / HIBP',
-        type: 'Passive OSINT Synthesis',
-        badgeColor: 'border-cyan-500/50 text-cyan-400 bg-cyan-950/40',
-        url: 'https://internetdb.shodan.io',
-        method: 'Zero-Auth Stream Correlation',
-      };
+    : PROVENANCE_PROVIDERS.shodan;
 
   // Dynamic remediation playbook generator based on selected finding
   const getRemediationCommand = (finding: VulnerabilityFinding | null) => {
@@ -212,6 +209,18 @@ export default function WorkspacePage() {
           <span className="text-xs text-vsc-muted px-2 py-0.5 rounded bg-vsc-dropdown border border-vsc-borderSubtle">
             Session: <strong className="text-vsc-bright">{target}</strong>
           </span>
+
+          {/* Clickable OSINT Sources Provenance Pill */}
+          <button
+            type="button"
+            onClick={() => setIsProvenanceModalOpen(true)}
+            className="hidden md:flex items-center gap-1.5 text-xs text-vsc-muted hover:text-vsc-bright px-2 py-0.5 rounded bg-vsc-dropdown hover:bg-vsc-panel border border-vsc-borderSubtle transition-colors cursor-pointer group"
+            title="Inspect Upstream OSINT Data Sources & Methodology"
+          >
+            <Database className="w-3.5 h-3.5 text-vsc-keyword group-hover:text-sky-400 transition-colors" />
+            <span className="font-mono text-[11px]">Sources:</span>
+            <span className="text-[10px] text-emerald-400 font-bold font-mono">4 Active</span>
+          </button>
         </div>
 
         {/* Center Omni-Search with instant auto-classification */}
@@ -340,6 +349,13 @@ export default function WorkspacePage() {
           </button>
           <div className="flex-1" />
           <button
+            title="Inspect Data Provenance & Methodology"
+            onClick={() => setIsProvenanceModalOpen(true)}
+            className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-vsc-bright"
+          >
+            <Database className="w-5 h-5" />
+          </button>
+          <button
             title="Settings"
             className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-vsc-bright"
           >
@@ -378,9 +394,14 @@ export default function WorkspacePage() {
 
                 <div className="pl-4 space-y-1">
                   {/* Subdomains Group */}
-                  <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                    <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                    <span>📁 subdomains ({subdomains.length})</span>
+                  <div className="flex items-center justify-between text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                    <div className="flex items-center gap-1.5">
+                      <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                      <span>📁 subdomains ({subdomains.length})</span>
+                    </div>
+                    <span className="text-[9px] px-1 py-0.2 rounded border border-sky-800 text-sky-400 bg-sky-950/60 font-mono">
+                      crt.sh
+                    </span>
                   </div>
                   <div className="pl-5 space-y-0.5 text-vsc-muted text-[11px]">
                     {subdomains.slice(0, 5).map((s) => (
@@ -404,9 +425,14 @@ export default function WorkspacePage() {
                   {/* IPs & Infrastructure */}
                   {ips.length > 0 && (
                     <>
-                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                        <span>🌐 origin IPs ({ips.length})</span>
+                      <div className="flex items-center justify-between text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <div className="flex items-center gap-1.5">
+                          <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                          <span>🌐 origin IPs ({ips.length})</span>
+                        </div>
+                        <span className="text-[9px] px-1 py-0.2 rounded border border-emerald-800 text-emerald-400 bg-emerald-950/60 font-mono">
+                          ip-api
+                        </span>
                       </div>
                       <div className="pl-5 space-y-0.5 text-emerald-400 text-[11px]">
                         {ips.map((ip) => (
@@ -429,9 +455,14 @@ export default function WorkspacePage() {
                   {/* Open Ports */}
                   {ports.length > 0 && (
                     <>
-                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                        <span>🔌 open ports ({ports.length})</span>
+                      <div className="flex items-center justify-between text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <div className="flex items-center gap-1.5">
+                          <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                          <span>🔌 open ports ({ports.length})</span>
+                        </div>
+                        <span className="text-[9px] px-1 py-0.2 rounded border border-cyan-800 text-cyan-400 bg-cyan-950/60 font-mono">
+                          Shodan
+                        </span>
                       </div>
                       <div className="pl-5 space-y-0.5 text-cyan-300 text-[11px]">
                         {ports.map((p) => (
@@ -446,9 +477,14 @@ export default function WorkspacePage() {
                   {/* Breaches & Credentials */}
                   {breaches.length > 0 && (
                     <>
-                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                        <span>🚨 breach exposures ({breaches.length})</span>
+                      <div className="flex items-center justify-between text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <div className="flex items-center gap-1.5">
+                          <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                          <span>🚨 breach exposures ({breaches.length})</span>
+                        </div>
+                        <span className="text-[9px] px-1 py-0.2 rounded border border-amber-800 text-amber-400 bg-amber-950/60 font-mono">
+                          HIBP
+                        </span>
                       </div>
                       <div className="pl-5 space-y-0.5 text-vsc-critical text-[11px]">
                         {breaches.map((b) => (
@@ -463,9 +499,14 @@ export default function WorkspacePage() {
                   {/* Social Profiles */}
                   {profiles.length > 0 && (
                     <>
-                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                        <span>👤 social profiles ({profiles.length})</span>
+                      <div className="flex items-center justify-between text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <div className="flex items-center gap-1.5">
+                          <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                          <span>👤 social profiles ({profiles.length})</span>
+                        </div>
+                        <span className="text-[9px] px-1 py-0.2 rounded border border-purple-800 text-purple-400 bg-purple-950/60 font-mono">
+                          Direct
+                        </span>
                       </div>
                       <div className="pl-5 space-y-0.5 text-purple-300 text-[11px]">
                         {profiles.slice(0, 4).map((prof) => (
@@ -476,6 +517,35 @@ export default function WorkspacePage() {
                       </div>
                     </>
                   )}
+                </div>
+              </div>
+
+              {/* Data Provenance Pipeline Info Box */}
+              <div className="p-2 border-t border-vsc-border bg-vsc-panel text-[11px]">
+                <div className="text-vsc-muted uppercase font-bold text-[10px] mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1 text-vsc-bright">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <span>Telemetry Sources</span>
+                  </span>
+                  <span className="text-[9px] text-emerald-400 font-mono">100% Passive</span>
+                </div>
+                <div className="space-y-1 font-mono text-[10px] text-vsc-muted">
+                  <div className="flex items-center justify-between">
+                    <span>• Subdomains:</span>
+                    <span className="text-sky-400">crt.sh Logs</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• Origin ASN:</span>
+                    <span className="text-emerald-400">ip-api.com</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• Open Ports:</span>
+                    <span className="text-cyan-300">Shodan InternetDB</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>• Breached PWD:</span>
+                    <span className="text-amber-400">HaveIBeenPwned</span>
+                  </div>
                 </div>
               </div>
 
@@ -734,11 +804,10 @@ export default function WorkspacePage() {
                   </div>
                   <div className="flex items-center justify-between text-vsc-muted">
                     <span>Pipeline:</span>
-                    <span className="text-emerald-400">Zero-Auth / Passive SSL</span>
+                    <span className="text-emerald-400 font-semibold">{findingProvenance.compliance}</span>
                   </div>
-                  <div className="flex items-center justify-between text-vsc-muted">
-                    <span>Target Ref:</span>
-                    <span className="text-vsc-text truncate max-w-[130px]">{target}</span>
+                  <div className="text-[10px] text-vsc-muted pt-1 border-t border-vsc-borderSubtle/60 leading-tight">
+                    {findingProvenance.description}
                   </div>
                 </div>
               </div>
@@ -814,6 +883,79 @@ export default function WorkspacePage() {
           <span>ISEEYOU v0.1.0</span>
         </div>
       </footer>
+
+      {/* 4. OSINT DATA PROVENANCE MODAL DIALOG */}
+      {isProvenanceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-vsc-card border border-vsc-border w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden font-mono text-xs flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="h-10 bg-vsc-sidebar px-4 border-b border-vsc-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-vsc-keyword" />
+                <span className="font-bold text-sm text-vsc-bright">OSINT Data Sources & Provenance Architecture</span>
+              </div>
+              <button
+                onClick={() => setIsProvenanceModalOpen(false)}
+                className="p-1 text-vsc-muted hover:text-vsc-bright rounded hover:bg-vsc-panel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto space-y-3 flex-1 select-text">
+              <p className="text-vsc-muted text-xs leading-relaxed">
+                ISEEYOU beroperasi dengan prinsip <strong>100% Passive Reconnaissance</strong>. Sistem tidak melakukan intrusi, port scan agresif, atau eksploitasi langsung ke host target, melainkan menyinkronkan data dari register publik, transparansi sertifikat kriptografi, dan intelijen ancaman zero-auth:
+              </p>
+
+              <div className="space-y-2.5 pt-1">
+                {Object.entries(PROVENANCE_PROVIDERS).map(([key, prov]) => (
+                  <div
+                    key={key}
+                    className="p-3 bg-vsc-panel rounded border border-vsc-border hover:border-vsc-borderSubtle transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] px-2 py-0.5 rounded border font-bold ${prov.badgeColor}`}>
+                          {prov.provider}
+                        </span>
+                        <span className="text-vsc-bright font-bold">{prov.type}</span>
+                      </div>
+                      <a
+                        href={prov.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-vsc-accent-blue hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Official Endpoint</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <p className="text-[11px] text-vsc-muted leading-relaxed mb-2">{prov.description}</p>
+                    <div className="flex items-center justify-between text-[10px] text-vsc-muted pt-1.5 border-t border-vsc-borderSubtle">
+                      <span>Method: <strong className="text-sky-300">{prov.method}</strong></span>
+                      <span className="text-emerald-400 font-semibold">✓ {prov.compliance}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="h-10 bg-vsc-sidebar px-4 border-t border-vsc-border flex items-center justify-between text-vsc-muted text-[11px]">
+              <span>Zero-knowledge & RFC 6962 compliance guarantee</span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsProvenanceModalOpen(false)}
+                className="text-xs h-7 px-3"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

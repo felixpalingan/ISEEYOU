@@ -10,7 +10,7 @@ import {
 } from '@iseeyou/shared-types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { getFindingProvenance } from '@/components/TelemetryTerminal';
+import { getFindingProvenance, getNodeProvenance } from '@/lib/provenance';
 import {
   ShieldAlert,
   AlertCircle,
@@ -651,6 +651,7 @@ export function StructuredDataView({
                   <th className="py-2.5 px-3">Type</th>
                   <th className="py-2.5 px-3">Asset Value</th>
                   <th className="py-2.5 px-3">Risk Level</th>
+                  <th className="py-2.5 px-3">Data Source</th>
                   <th className="py-2.5 px-3">Intelligence & Context</th>
                   <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
@@ -658,13 +659,19 @@ export function StructuredDataView({
               <tbody className="divide-y divide-vsc-border text-vsc-text">
                 {filteredNodes.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-vsc-muted">
+                    <td colSpan={6} className="py-8 text-center text-vsc-muted">
                       No assets found matching the current filter.
                     </td>
                   </tr>
                 ) : (
                   filteredNodes.map((node) => {
                     const isCopied = copiedId === node.id;
+                    const prov = getNodeProvenance({
+                      type: node.type,
+                      value: node.value,
+                      label: node.label,
+                      metadata: node.metadata,
+                    });
                     return (
                       <tr
                         key={node.id}
@@ -691,6 +698,17 @@ export function StructuredDataView({
                           >
                             {node.severity}
                           </Badge>
+                        </td>
+
+                        {/* Data Source Provenance */}
+                        <td className="py-2 px-3 whitespace-nowrap">
+                          <span
+                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${prov.badgeColor}`}
+                            title={`Upstream OSINT: ${prov.provider} (${prov.method})`}
+                          >
+                            <span className="opacity-75">src:</span>
+                            <span className="font-semibold">{prov.provider}</span>
+                          </span>
                         </td>
 
                         {/* Intelligence metadata */}

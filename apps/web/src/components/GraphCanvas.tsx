@@ -28,6 +28,7 @@ import {
 } from '@iseeyou/shared-types';
 import { Badge } from '@/components/ui/Badge';
 import { GraphContextMenu, ContextMenuTarget } from '@/components/GraphContextMenu';
+import { getNodeProvenance } from '@/lib/provenance';
 import {
   Globe,
   Server,
@@ -205,6 +206,22 @@ function CustomEntityNode({ data }: NodeProps) {
           {type === 'breach' && String(node.metadata.maskedPassword || 'Pwned')}
         </div>
       )}
+
+      {/* Data Source Provenance Attribution Chip */}
+      {(() => {
+        const prov = getNodeProvenance({ type, value, metadata: node?.metadata });
+        return (
+          <div className="flex items-center gap-1 text-[9px] font-mono mt-1 text-vsc-muted">
+            <span className="opacity-70">src:</span>
+            <span
+              className={`px-1 py-0.2 rounded border font-semibold truncate max-w-[150px] ${prov.badgeColor}`}
+              title={`Discovered via ${prov.provider} (${prov.method})`}
+            >
+              {prov.provider}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Quick Action Bar (Visible on Hover) */}
       <div className="mt-2 pt-1.5 border-t border-vsc-border/60 flex items-center justify-between opacity-75 group-hover:opacity-100 transition-opacity">

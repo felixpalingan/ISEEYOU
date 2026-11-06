@@ -18,77 +18,8 @@ import { TelemetryLogLine } from '@/hooks/useScanStream';
 import { VulnerabilityFinding, SeverityLevel } from '@iseeyou/shared-types';
 import { Badge, Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
-
-// Helper to derive provenance source for finding
-export function getFindingProvenance(finding: VulnerabilityFinding) {
-  const text = `${finding.title} ${finding.evidence} ${finding.id}`.toLowerCase();
-  if (
-    text.includes('shodan') ||
-    text.includes('port') ||
-    text.includes('cve-') ||
-    text.includes('service') ||
-    text.includes('protocol') ||
-    text.includes('mysql') ||
-    text.includes('postgres') ||
-    text.includes('redis') ||
-    text.includes('telnet') ||
-    text.includes('smb')
-  ) {
-    return {
-      provider: 'Shodan InternetDB',
-      type: 'Zero-Auth Port & CVE Engine',
-      badgeColor: 'border-cyan-500/50 text-cyan-400 bg-cyan-950/40',
-      url: 'https://internetdb.shodan.io',
-      method: 'Passive Banner & CVE Analysis',
-    };
-  }
-  if (
-    text.includes('crt.sh') ||
-    text.includes('subdomain') ||
-    text.includes('cname') ||
-    text.includes('takeover') ||
-    text.includes('dns')
-  ) {
-    return {
-      provider: 'crt.sh & Cloudflare DoH',
-      type: 'Certificate Transparency Logs',
-      badgeColor: 'border-sky-500/50 text-sky-400 bg-sky-950/40',
-      url: 'https://crt.sh',
-      method: 'Append-Only SSL/TLS Logs',
-    };
-  }
-  if (
-    text.includes('pwned') ||
-    text.includes('breach') ||
-    text.includes('credential') ||
-    text.includes('password') ||
-    text.includes('hibp')
-  ) {
-    return {
-      provider: 'HaveIBeenPwned',
-      type: 'k-Anonymity SHA-1 Breach DB',
-      badgeColor: 'border-amber-500/50 text-amber-400 bg-amber-950/40',
-      url: 'https://haveibeenpwned.com',
-      method: 'SHA-1 Hash Prefix Search',
-    };
-  }
-  if (text.includes('asn') || text.includes('isp') || text.includes('geolocation') || text.includes('ip-api')) {
-    return {
-      provider: 'ip-api.com',
-      type: 'BGP & ASN Geolocation',
-      badgeColor: 'border-emerald-500/50 text-emerald-400 bg-emerald-950/40',
-      url: 'https://ip-api.com',
-      method: 'Autonomous System Registry',
-    };
-  }
-  return {
-    provider: 'ISEEYOU Recon Engine',
-    type: 'Multi-Source OSINT Synthesis',
-    badgeColor: 'border-purple-500/50 text-purple-400 bg-purple-950/40',
-    url: 'https://github.com/flx/ISEEYOU',
-    method: 'Correlation & Graph Analysis',
-  };
-}
+import { getFindingProvenance } from '@/lib/provenance';
+export { getFindingProvenance } from '@/lib/provenance';
 
 interface TelemetryTerminalProps {
   logs: TelemetryLogLine[];
