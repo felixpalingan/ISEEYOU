@@ -33,6 +33,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+test-results/
+playwright-report/
+blob-report/
 
 # Python & Backend Workers
 __pycache__/

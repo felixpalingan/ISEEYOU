@@ -145,16 +145,17 @@ class AIReconAnalystService:
 
             parsed = json.loads(clean_json)
 
+            raw_attack_chain = parsed.get("attack_chain") or parsed.get("attackChain") or []
             steps = [
                 AttackChainStep(
                     step=s.get("step", idx + 1),
                     title=s.get("title", f"Step {idx + 1}"),
                     technique=s.get("technique", "MITRE ATT&CK T1596"),
-                    target_asset=s.get("target_asset", req.target),
+                    target_asset=s.get("target_asset") or s.get("targetAsset") or req.target,
                     description=s.get("description", ""),
                     impact=s.get("impact", ""),
                 )
-                for idx, s in enumerate(parsed.get("attack_chain", []))
+                for idx, s in enumerate(raw_attack_chain)
             ]
 
             return AIAnalysisResponse(
@@ -162,14 +163,13 @@ class AIReconAnalystService:
                 model="gemini-1.5-flash",
                 target=req.target,
                 target_type=req.target_type,
-                executive_summary=parsed.get(
-                    "executive_summary",
-                    f"External attack surface assessment for {req.target}.",
-                ),
-                threat_level=parsed.get("threat_level", "HIGH").upper(),
-                key_exposures=parsed.get("key_exposures", []),
+                executive_summary=parsed.get("executive_summary")
+                or parsed.get("executiveSummary")
+                or f"External attack surface assessment for {req.target}.",
+                threat_level=str(parsed.get("threat_level") or parsed.get("threatLevel") or "HIGH").upper(),
+                key_exposures=parsed.get("key_exposures") or parsed.get("keyExposures") or [],
                 attack_chain=steps,
-                mitre_techniques=parsed.get("mitre_techniques", []),
+                mitre_techniques=parsed.get("mitre_techniques") or parsed.get("mitreTechniques") or [],
                 recommendations=parsed.get("recommendations", []),
                 generated_at=datetime.utcnow().isoformat(),
             )

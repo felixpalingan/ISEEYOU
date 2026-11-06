@@ -387,6 +387,7 @@ export function StructuredDataView({
         <div className="flex items-center gap-1 bg-vsc-panel p-0.5 rounded border border-vsc-border">
           <button
             onClick={() => setActiveTab('findings')}
+            data-testid="subtab-exposures"
             className={`px-3 py-1 rounded text-xs font-medium font-mono transition-all flex items-center gap-1.5 ${
               activeTab === 'findings'
                 ? 'bg-vsc-card text-vsc-bright shadow-sm font-semibold'
@@ -398,6 +399,7 @@ export function StructuredDataView({
           </button>
           <button
             onClick={() => setActiveTab('assets')}
+            data-testid="subtab-assets"
             className={`px-3 py-1 rounded text-xs font-medium font-mono transition-all flex items-center gap-1.5 ${
               activeTab === 'assets'
                 ? 'bg-vsc-card text-vsc-bright shadow-sm font-semibold'
@@ -409,6 +411,7 @@ export function StructuredDataView({
           </button>
           <button
             onClick={() => setActiveTab('edges')}
+            data-testid="subtab-links"
             className={`px-3 py-1 rounded text-xs font-medium font-mono transition-all flex items-center gap-1.5 ${
               activeTab === 'edges'
                 ? 'bg-vsc-card text-vsc-bright shadow-sm font-semibold'
@@ -496,6 +499,7 @@ export function StructuredDataView({
               variant="secondary"
               size="sm"
               onClick={handleExportCSV}
+              data-testid="btn-export-csv"
               title="Export Findings to CSV"
               className="h-7 px-2 text-[11px] font-mono flex items-center gap-1"
             >
@@ -506,6 +510,7 @@ export function StructuredDataView({
               variant="secondary"
               size="sm"
               onClick={handleExportJSON}
+              data-testid="btn-export-json"
               title="Export Full Intelligence to JSON"
               className="h-7 px-2 text-[11px] font-mono flex items-center gap-1"
             >
@@ -517,6 +522,7 @@ export function StructuredDataView({
                 variant="secondary"
                 size="sm"
                 onClick={onExportPDF}
+                data-testid="btn-export-pdf"
                 title="Export Official PDF Audit Report"
                 className="h-7 px-2 text-[11px] font-mono flex items-center gap-1 text-sky-400 hover:text-sky-300"
               >

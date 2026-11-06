@@ -115,7 +115,10 @@ export function LegalTakedownModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 md:p-6 select-none font-mono">
-      <div className="bg-vsc-card border border-vsc-border w-full max-w-4xl rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        data-testid="legal-takedown-modal"
+        className="bg-vsc-card border border-vsc-border w-full max-w-4xl rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
         {/* 1. Modal Header */}
         <div className="h-11 bg-vsc-sidebar px-4 border-b border-vsc-border flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2">

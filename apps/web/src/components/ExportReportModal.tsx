@@ -103,7 +103,10 @@ export function ExportReportModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-[#1E1E1E] border border-vsc-border rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div
+        data-testid="export-pdf-modal"
+        className="relative w-full max-w-2xl bg-[#1E1E1E] border border-vsc-border rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-vsc-border bg-[#252526]">
           <div className="flex items-center gap-2.5">
@@ -363,3 +366,4 @@ export function ExportReportModal({
     </div>
   );
 }
+

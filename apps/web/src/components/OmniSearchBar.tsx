@@ -115,6 +115,7 @@ export function OmniSearchBar({
         <Badge
           variant={detectedType}
           size="xs"
+          data-testid="detected-entity-badge"
           className="mr-2 flex-shrink-0 flex items-center font-bold tracking-wider"
         >
           {renderIcon()}

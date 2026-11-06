@@ -350,6 +350,8 @@ export default function WorkspacePage() {
           </button>
           <button
             title="Structured Table & Exposures"
+            aria-label="Structured Table & Exposures"
+            data-testid="btn-activity-table"
             onClick={() => {
               setActiveTab('table');
               setBottomTab('problems');
@@ -365,6 +367,8 @@ export default function WorkspacePage() {
           </button>
           <button
             title="AI Recon Analyst Copilot"
+            aria-label="AI Recon Analyst Copilot"
+            data-testid="btn-activity-ai"
             onClick={() => {
               setActiveTab('ai');
               if (!aiReport && !isAIAnalyzing) {
@@ -384,6 +388,8 @@ export default function WorkspacePage() {
           </button>
           <button
             title="Remediation Playbooks & Problems"
+            aria-label="Remediation Playbooks & Problems"
+            data-testid="btn-activity-problems"
             onClick={() => {
               setBottomTab('problems');
               setIsBottomTerminalOpen(true);
@@ -395,6 +401,8 @@ export default function WorkspacePage() {
           </button>
           <button
             title="Legal Takedown & Privacy Assistant (UU PDP & GDPR)"
+            aria-label="Legal Takedown & Privacy Assistant"
+            data-testid="btn-activity-legal"
             onClick={() => setIsLegalModalOpen(true)}
             className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-emerald-400 mb-1 transition-colors"
           >
@@ -402,6 +410,8 @@ export default function WorkspacePage() {
           </button>
           <button
             title="Export Professional PDF Audit Report (Task 4.4)"
+            aria-label="Export Professional PDF Audit Report"
+            data-testid="btn-activity-export-pdf"
             onClick={() => setIsExportModalOpen(true)}
             className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-sky-400 mb-1 transition-colors"
           >
@@ -410,6 +420,8 @@ export default function WorkspacePage() {
           <div className="flex-1" />
           <button
             title="Inspect Data Provenance & Methodology"
+            aria-label="Inspect Data Provenance & Methodology"
+            data-testid="btn-activity-provenance"
             onClick={() => setIsProvenanceModalOpen(true)}
             className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-vsc-bright"
           >
@@ -654,6 +666,7 @@ export default function WorkspacePage() {
           <div className="h-9 bg-vsc-sidebar flex items-center border-b border-vsc-border overflow-x-auto flex-shrink-0">
             <button
               onClick={() => setActiveTab('graph')}
+              data-testid="tab-workspace-graph"
               className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors flex-shrink-0 ${
                 activeTab === 'graph'
                   ? 'bg-vsc-canvas text-vsc-bright font-medium border-t-2 border-vsc-accent-blue'
@@ -665,6 +678,7 @@ export default function WorkspacePage() {
             </button>
             <button
               onClick={() => setActiveTab('table')}
+              data-testid="tab-workspace-table"
               className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors flex-shrink-0 ${
                 activeTab === 'table'
                   ? 'bg-vsc-canvas text-vsc-bright font-medium border-t-2 border-vsc-accent-blue'
@@ -681,6 +695,7 @@ export default function WorkspacePage() {
                   runAIAnalysis();
                 }
               }}
+              data-testid="tab-workspace-ai"
               className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors flex-shrink-0 ${
                 activeTab === 'ai'
                   ? 'bg-vsc-canvas text-vsc-bright font-medium border-t-2 border-vsc-accent-blue'
@@ -1002,7 +1017,10 @@ export default function WorkspacePage() {
       {/* 4. OSINT DATA PROVENANCE MODAL DIALOG */}
       {isProvenanceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-vsc-card border border-vsc-border w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden font-mono text-xs flex flex-col max-h-[85vh]">
+          <div
+            data-testid="provenance-modal"
+            className="bg-vsc-card border border-vsc-border w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden font-mono text-xs flex flex-col max-h-[85vh]"
+          >
             {/* Modal Header */}
             <div className="h-10 bg-vsc-sidebar px-4 border-b border-vsc-border flex items-center justify-between">
               <div className="flex items-center gap-2">
