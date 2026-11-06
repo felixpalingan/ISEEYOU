@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 720" width="100%" height="100%" style="background:#090A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <!-- Title Banner -->
+  <rect x="30" y="20" width="1040" height="55" rx="10" fill="#12151F" stroke="#242B3D" stroke-width="1"/>
+  <text x="50" y="55" fill="#FFFFFF" font-size="20" font-weight="bold">ISEEYOU — Database Schema (Entity-Relationship Diagram)</text>
+  <rect x="940" y="33" width="110" height="28" rx="6" fill="#1E2333" stroke="#3B82F6" stroke-width="1"/>
+  <text x="955" y="51" fill="#3B82F6" font-size="11" font-weight="bold">POSTGRESQL 16</text>
+
+  <!-- TABLE 1: PROJECTS -->
+  <g transform="translate(50, 110)">
+    <rect x="0" y="0" width="280" height="170" rx="8" fill="#12151F" stroke="#3B82F6" stroke-width="1.5"/>
+    <rect x="0" y="0" width="280" height="35" rx="8" fill="#1E293B"/>
+    <text x="15" y="23" fill="#38BDF8" font-size="13" font-weight="bold">📁 projects</text>
+    
+    <g transform="translate(15, 55)" font-family="monospace" font-size="12">
+      <text x="0" y="0" fill="#F43F5E" font-weight="bold">PK</text><text x="30" y="0" fill="#F1F5F9">id</text><text x="170" y="0" fill="#64748B">uuid</text>
+      <text x="0" y="24" fill="#94A3B8">  </text><text x="30" y="24" fill="#F1F5F9">user_id</text><text x="170" y="24" fill="#64748B">uuid</text>
+      <text x="0" y="48" fill="#94A3B8">  </text><text x="30" y="48" fill="#F1F5F9">name</text><text x="170" y="48" fill="#64748B">varchar(255)</text>
+      <text x="0" y="72" fill="#94A3B8">  </text><text x="30" y="72" fill="#F1F5F9">description</text><text x="170" y="72" fill="#64748B">text</text>
+      <text x="0" y="96" fill="#94A3B8">  </text><text x="30" y="96" fill="#F1F5F9">created_at</text><text x="170" y="96" fill="#64748B">timestamptz</text>
+    </g>
+  </g>
+
+  <!-- Line Projects -> Scan Sessions -->
+  <line x1="330" y1="195" x2="410" y2="195" stroke="#3B82F6" stroke-width="2"/>
+  <circle cx="330" cy="195" r="4" fill="#3B82F6"/>
+  <polyline points="400,188 410,195 400,202" fill="none" stroke="#3B82F6" stroke-width="2"/>
+
+  <!-- TABLE 2: SCAN_SESSIONS -->
+  <g transform="translate(410, 110)">
+    <rect x="0" y="0" width="280" height="210" rx="8" fill="#12151F" stroke="#8B5CF6" stroke-width="1.5"/>
+    <rect x="0" y="0" width="280" height="35" rx="8" fill="#2E1065"/>
+    <text x="15" y="23" fill="#C084FC" font-size="13" font-weight="bold">⚡ scan_sessions</text>
+    
+    <g transform="translate(15, 55)" font-family="monospace" font-size="12">
+      <text x="0" y="0" fill="#F43F5E" font-weight="bold">PK</text><text x="30" y="0" fill="#F1F5F9">id</text><text x="170" y="0" fill="#64748B">uuid</text>
+      <text x="0" y="24" fill="#38BDF8" font-weight="bold">FK</text><text x="30" y="24" fill="#F1F5F9">project_id</text><text x="170" y="24" fill="#64748B">uuid</text>
+      <text x="0" y="48" fill="#94A3B8">  </text><text x="30" y="48" fill="#F1F5F9">seed_input</text><text x="170" y="48" fill="#64748B">varchar(255)</text>
+      <text x="0" y="72" fill="#94A3B8">  </text><text x="30" y="72" fill="#F1F5F9">seed_type</text><text x="170" y="72" fill="#64748B">varchar(50)</text>
+      <text x="0" y="96" fill="#94A3B8">  </text><text x="30" y="96" fill="#F1F5F9">status</text><text x="170" y="96" fill="#64748B">varchar(30)</text>
+      <text x="0" y="120" fill="#F59E0B">  </text><text x="30" y="120" fill="#F1F5F9">risk_score</text><text x="170" y="120" fill="#F59E0B">int (0-100)</text>
+      <text x="0" y="144" fill="#94A3B8">  </text><text x="30" y="144" fill="#F1F5F9">completed_at</text><text x="170" y="144" fill="#64748B">timestamptz</text>
+    </g>
+  </g>
+
+  <!-- Line Scan Sessions -> Entity Nodes -->
+  <line x1="690" y1="195" x2="770" y2="195" stroke="#8B5CF6" stroke-width="2"/>
+  <circle cx="690" cy="195" r="4" fill="#8B5CF6"/>
+  <polyline points="760,188 770,195 760,202" fill="none" stroke="#8B5CF6" stroke-width="2"/>
+
+  <!-- TABLE 3: ENTITY_NODES -->
+  <g transform="translate(770, 110)">
+    <rect x="0" y="0" width="280" height="230" rx="8" fill="#12151F" stroke="#06B6D4" stroke-width="1.5"/>
+    <rect x="0" y="0" width="280" height="35" rx="8" fill="#164E63"/>
+    <text x="15" y="23" fill="#67E8F9" font-size="13" font-weight="bold">🌐 entity_nodes</text>
+    
+    <g transform="translate(15, 55)" font-family="monospace" font-size="12">
+      <text x="0" y="0" fill="#F43F5E" font-weight="bold">PK</text><text x="30" y="0" fill="#F1F5F9">id</text><text x="170" y="0" fill="#64748B">uuid</text>
+      <text x="0" y="24" fill="#38BDF8" font-weight="bold">FK</text><text x="30" y="24" fill="#F1F5F9">scan_id</text><text x="170" y="24" fill="#64748B">uuid</text>
+      <text x="0" y="48" fill="#94A3B8">  </text><text x="30" y="48" fill="#F1F5F9">entity_type</text><text x="170" y="48" fill="#64748B">varchar(50)</text>
+      <text x="0" y="72" fill="#94A3B8">  </text><text x="30" y="72" fill="#F1F5F9">value</text><text x="170" y="72" fill="#64748B">text</text>
+      <text x="0" y="96" fill="#F43F5E">  </text><text x="30" y="96" fill="#F1F5F9">severity</text><text x="170" y="96" fill="#F43F5E">varchar(20)</text>
+      <text x="0" y="120" fill="#94A3B8">  </text><text x="30" y="120" fill="#F1F5F9">is_cluster</text><text x="170" y="120" fill="#64748B">boolean</text>
+      <text x="0" y="144" fill="#94A3B8">  </text><text x="30" y="144" fill="#F1F5F9">metadata</text><text x="170" y="144" fill="#64748B">jsonb</text>
+      <text x="0" y="168" fill="#94A3B8">  </text><text x="30" y="168" fill="#F1F5F9">created_at</text><text x="170" y="168" fill="#64748B">timestamptz</text>
+    </g>
+  </g>
+
+  <!-- TABLE 4: ENTITY_EDGES -->
+  <g transform="translate(50, 420)">
+    <rect x="0" y="0" width="280" height="190" rx="8" fill="#12151F" stroke="#242B3D" stroke-width="1.5"/>
+    <rect x="0" y="0" width="280" height="35" rx="8" fill="#1E2333"/>
+    <text x="15" y="23" fill="#94A3B8" font-size="13" font-weight="bold">🔗 entity_edges</text>
+    
+    <g transform="translate(15, 55)" font-family="monospace" font-size="12">
+      <text x="0" y="0" fill="#F43F5E" font-weight="bold">PK</text><text x="30" y="0" fill="#F1F5F9">id</text><text x="170" y="0" fill="#64748B">uuid</text>
+      <text x="0" y="24" fill="#38BDF8" font-weight="bold">FK</text><text x="30" y="24" fill="#F1F5F9">scan_id</text><text x="170" y="24" fill="#64748B">uuid</text>
+      <text x="0" y="48" fill="#38BDF8" font-weight="bold">FK</text><text x="30" y="48" fill="#F1F5F9">source_node_id</text><text x="170" y="48" fill="#64748B">uuid</text>
+      <text x="0" y="72" fill="#38BDF8" font-weight="bold">FK</text><text x="30" y="72" fill="#F1F5F9">target_node_id</text><text x="170" y="72" fill="#64748B">uuid</text>
+      <text x="0" y="96" fill="#94A3B8">  </text><text x="30" y="96" fill="#F1F5F9">relation_type</text><text x="170" y="96" fill="#64748B">varchar(50)</text>
+      <text x="0" y="120" fill="#94A3B8">  </text><text x="30" y="120" fill="#F1F5F9">confidence</text><text x="170" y="120" fill="#64748B">float</text>
+    </g>
+  </g>
+
+  <!-- TABLE 5: VULNERABILITY_FINDINGS -->
+  <g transform="translate(410, 420)">
+    <rect x="0" y="0" width="280" height="210" rx="8" fill="#12151F" stroke="#F43F5E" stroke-width="1.5"/>
+    <rect x="0" y="0" width="280" height="35" rx="8" fill="#4C0519"/>
+    <text x="15" y="23" fill="#FDA4AF" font-size="13" font-weight="bold">🚨 vulnerability_findings</text>
+    
+    <g transform="translate(15, 55)" font-family="monospace" font-size="12">
+      <text x="0" y="0" fill="#F43F5E" font-weight="bold">PK</text><text x="30" y="0" fill="#F1F5F9">id</text><text x="170" y="0" fill="#64748B">uuid</text>
+      <text x="0" y="24" fill="#38BDF8" font-weight="bold">FK</text><text x="30" y="24" fill="#F1F5F9">entity_node_id</text><text x="170" y="24" fill="#64748B">uuid</text>
+      <text x="0" y="48" fill="#94A3B8">  </text><text x="30" y="48" fill="#F1F5F9">title</text><text x="170" y="48" fill="#64748B">varchar(255)</text>
+      <text x="0" y="72" fill="#F43F5E">  </text><text x="30" y="72" fill="#F1F5F9">severity</text><text x="170" y="72" fill="#F43F5E">varchar(20)</text>
+      <text x="0" y="96" fill="#94A3B8">  </text><text x="30" y="96" fill="#F1F5F9">cve_id</text><text x="170" y="96" fill="#64748B">varchar(50)</text>
+      <text x="0" y="120" fill="#94A3B8">  </text><text x="30" y="120" fill="#F1F5F9">evidence</text><text x="170" y="120" fill="#64748B">text (masked)</text>
+      <text x="0" y="144" fill="#94A3B8">  </text><text x="30" y="144" fill="#F1F5F9">discovered_at</text><text x="170" y="144" fill="#64748B">timestamptz</text>
+    </g>
+  </g>
+
+  <!-- TABLE 6: REMEDIATION_ACTIONS -->
+  <g transform="translate(770, 420)">
+    <rect x="0" y="0" width="280" height="210" rx="8" fill="#12151F" stroke="#10B981" stroke-width="1.5"/>
+    <rect x="0" y="0" width="280" height="35" rx="8" fill="#064E3B"/>
+    <text x="15" y="23" fill="#6EE7B7" font-size="13" font-weight="bold">🛡️ remediation_actions</text>
+    
+    <g transform="translate(15, 55)" font-family="monospace" font-size="12">
+      <text x="0" y="0" fill="#F43F5E" font-weight="bold">PK</text><text x="30" y="0" fill="#F1F5F9">id</text><text x="170" y="0" fill="#64748B">uuid</text>
+      <text x="0" y="24" fill="#38BDF8" font-weight="bold">FK</text><text x="30" y="24" fill="#F1F5F9">vulnerability_id</text><text x="170" y="24" fill="#64748B">uuid</text>
+      <text x="0" y="48" fill="#94A3B8">  </text><text x="30" y="48" fill="#F1F5F9">action_type</text><text x="170" y="48" fill="#64748B">varchar(50)</text>
+      <text x="0" y="72" fill="#94A3B8">  </text><text x="30" y="72" fill="#F1F5F9">title</text><text x="170" y="72" fill="#64748B">varchar(255)</text>
+      <text x="0" y="96" fill="#94A3B8">  </text><text x="30" y="96" fill="#F1F5F9">playbook_md</text><text x="170" y="96" fill="#64748B">text</text>
+      <text x="0" y="120" fill="#10B981">  </text><text x="30" y="120" fill="#F1F5F9">action_url</text><text x="170" y="120" fill="#10B981">text</text>
+      <text x="0" y="144" fill="#94A3B8">  </text><text x="30" y="144" fill="#F1F5F9">is_resolved</text><text x="170" y="144" fill="#64748B">boolean</text>
+    </g>
+  </g>
+
+  <!-- Connectors -->
+  <!-- Entity Nodes to Vuln -->
+  <path d="M 850 340 L 850 380 L 550 380 L 550 420" stroke="#F43F5E" stroke-width="1.5" fill="none"/>
+  <circle cx="850" cy="340" r="4" fill="#F43F5E"/>
+  <polyline points="543,410 550,420 557,410" fill="none" stroke="#F43F5E" stroke-width="2"/>
+
+  <!-- Vuln to Remediation -->
+  <line x1="690" y1="520" x2="770" y2="520" stroke="#10B981" stroke-width="2"/>
+  <circle cx="690" cy="520" r="4" fill="#10B981"/>
+  <polyline points="760,513 770,520 760,527" fill="none" stroke="#10B981" stroke-width="2"/>
+</svg>

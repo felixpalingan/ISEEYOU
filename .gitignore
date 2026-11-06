@@ -8,6 +8,8 @@ PRODUCT.md
 DESIGN.md
 *.svg
 !logo.svg
+!docs/diagrams/*.svg
+!apps/web/public/*.svg
 scratch/
 .agent/
 .gemini/

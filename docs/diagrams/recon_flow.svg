@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 750" width="100%" height="100%" style="background:#090A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <defs>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="dangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F43F5E"/>
+      <stop offset="100%" stop-color="#BE123C"/>
+    </linearGradient>
+    <marker id="arrowCyan" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#06B6D4" />
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#F43F5E" />
+    </marker>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="30" y="20" width="1040" height="55" rx="10" fill="#12151F" stroke="#242B3D" stroke-width="1"/>
+  <text x="50" y="55" fill="#FFFFFF" font-size="20" font-weight="bold">ISEEYOU — Alur Investigasi &amp; Korelasi Entitas (Graph Model)</text>
+  <rect x="940" y="33" width="110" height="28" rx="6" fill="#1E2333" stroke="#06B6D4" stroke-width="1"/>
+  <text x="965" y="51" fill="#06B6D4" font-size="11" font-weight="bold">PIVOT FLOW</text>
+
+  <!-- Step 1: Omni-Search Input -->
+  <g transform="translate(40, 110)">
+    <rect x="0" y="0" width="220" height="90" rx="10" fill="#12151F" stroke="#3B82F6" stroke-width="2"/>
+    <text x="15" y="28" fill="#3B82F6" font-size="12" font-weight="bold">STEP 1: OMNI-INPUT</text>
+    <text x="15" y="52" fill="#FFFFFF" font-size="14" font-weight="bold">Single Input Bar</text>
+    <text x="15" y="72" fill="#94A3B8" font-size="11">Email, Domain, IP, Username</text>
+  </g>
+
+  <!-- Arrow to Classifier -->
+  <line x1="260" y1="155" x2="310" y2="155" stroke="#06B6D4" stroke-width="2" marker-end="url(#arrowCyan)"/>
+
+  <!-- Step 2: Auto Classifier -->
+  <g transform="translate(315, 110)">
+    <polygon points="110,0 220,45 110,90 0,45" fill="#181C2A" stroke="#06B6D4" stroke-width="2"/>
+    <text x="45" y="42" fill="#F1F5F9" font-size="12" font-weight="bold">Smart Input</text>
+    <text x="45" y="58" fill="#06B6D4" font-size="12" font-weight="bold">Classifier</text>
+  </g>
+
+  <!-- Branches from Classifier -->
+  <!-- Branch 1: Email -->
+  <path d="M 535 135 L 590 135" stroke="#06B6D4" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+  <g transform="translate(595, 100)">
+    <rect x="0" y="0" width="190" height="70" rx="8" fill="#12151F" stroke="#F43F5E" stroke-width="1.5"/>
+    <text x="12" y="24" fill="#F43F5E" font-size="11" font-weight="bold">ENTITY: EMAIL</text>
+    <text x="12" y="44" fill="#FFFFFF" font-size="12">Breach &amp; Leaks (HIBP)</text>
+    <text x="12" y="60" fill="#94A3B8" font-size="10">Gravatar Profile Hash</text>
+  </g>
+
+  <!-- Branch 2: Domain -->
+  <path d="M 425 200 L 425 240 L 590 240" stroke="#06B6D4" stroke-width="1.5" fill="none" marker-end="url(#arrowCyan)"/>
+  <g transform="translate(595, 205)">
+    <rect x="0" y="0" width="190" height="70" rx="8" fill="#12151F" stroke="#3B82F6" stroke-width="1.5"/>
+    <text x="12" y="24" fill="#3B82F6" font-size="11" font-weight="bold">ENTITY: DOMAIN</text>
+    <text x="12" y="44" fill="#FFFFFF" font-size="12">crt.sh Subdomains (32)</text>
+    <text x="12" y="60" fill="#94A3B8" font-size="10">Dork Matrix &amp; DNS Records</text>
+  </g>
+
+  <!-- Branch 3: IP Address -->
+  <path d="M 425 200 L 425 345 L 590 345" stroke="#06B6D4" stroke-width="1.5" fill="none" marker-end="url(#arrowCyan)"/>
+  <g transform="translate(595, 310)">
+    <rect x="0" y="0" width="190" height="70" rx="8" fill="#12151F" stroke="#F59E0B" stroke-width="1.5"/>
+    <text x="12" y="24" fill="#F59E0B" font-size="11" font-weight="bold">ENTITY: IP ADDRESS</text>
+    <text x="12" y="44" fill="#FFFFFF" font-size="12">Open Ports &amp; CVEs</text>
+    <text x="12" y="60" fill="#94A3B8" font-size="10">ASN &amp; AbuseIPDB Score</text>
+  </g>
+
+  <!-- Branch 4: Username -->
+  <path d="M 425 200 L 425 450 L 590 450" stroke="#06B6D4" stroke-width="1.5" fill="none" marker-end="url(#arrowCyan)"/>
+  <g transform="translate(595, 415)">
+    <rect x="0" y="0" width="190" height="70" rx="8" fill="#12151F" stroke="#10B981" stroke-width="1.5"/>
+    <text x="12" y="24" fill="#10B981" font-size="11" font-weight="bold">ENTITY: USERNAME</text>
+    <text x="12" y="44" fill="#FFFFFF" font-size="12">30+ Social Networks</text>
+    <text x="12" y="60" fill="#94A3B8" font-size="10">GitHub Public Commits</text>
+  </g>
+
+  <!-- Correlation Lines from all 4 to Engine -->
+  <path d="M 785 135 L 850 135 L 850 280 L 890 280" stroke="#8B5CF6" stroke-width="1.5" fill="none"/>
+  <path d="M 785 240 L 850 240 L 850 280 L 890 280" stroke="#8B5CF6" stroke-width="1.5" fill="none"/>
+  <path d="M 785 345 L 850 345 L 850 280 L 890 280" stroke="#8B5CF6" stroke-width="1.5" fill="none"/>
+  <path d="M 785 450 L 850 450 L 850 280 L 890 280" stroke="#8B5CF6" stroke-width="1.5" fill="none" marker-end="url(#arrowCyan)"/>
+
+  <!-- Correlation Engine & Risk Scoring -->
+  <g transform="translate(895, 230)">
+    <rect x="0" y="0" width="175" height="100" rx="10" fill="#181C2A" stroke="#8B5CF6" stroke-width="2"/>
+    <text x="15" y="25" fill="#A78BFA" font-size="11" font-weight="bold">CORRELATION ENGINE</text>
+    <text x="15" y="48" fill="#FFFFFF" font-size="13" font-weight="bold">Risk Score Matrix</text>
+    <rect x="15" y="60" width="145" height="26" rx="4" fill="#2E1065"/>
+    <text x="25" y="78" fill="#E9D5FF" font-size="11" font-weight="bold">SCORE: 78 / 100</text>
+  </g>
+
+  <!-- Output Bottom Section -->
+  <g transform="translate(40, 540)">
+    <rect x="0" y="0" width="1020" height="160" rx="12" fill="#12151F" stroke="#242B3D" stroke-width="1.5"/>
+    <text x="25" y="32" fill="#FFFFFF" font-size="16" font-weight="bold">Actionable Output &amp; Blue Team Defense</text>
+    
+    <g transform="translate(25, 55)">
+      <rect x="0" y="0" width="300" height="85" rx="8" fill="#161A26" stroke="#06B6D4" stroke-width="1"/>
+      <text x="15" y="25" fill="#06B6D4" font-size="13" font-weight="bold">🤖 AI Recon Analyst (LLM)</text>
+      <text x="15" y="48" fill="#94A3B8" font-size="11">• Merangkum bukti dalam bahasa manusia</text>
+      <text x="15" y="68" fill="#94A3B8" font-size="11">• Menghubungkan titik serangan hacker</text>
+    </g>
+
+    <g transform="translate(355, 55)">
+      <rect x="0" y="0" width="310" height="85" rx="8" fill="#161A26" stroke="#F43F5E" stroke-width="1"/>
+      <text x="15" y="25" fill="#F43F5E" font-size="13" font-weight="bold">📋 1-Click Remediation Playbook</text>
+      <text x="15" y="48" fill="#94A3B8" font-size="11">• Script UFW Firewall &amp; Nginx Rule</text>
+      <text x="15" y="68" fill="#94A3B8" font-size="11">• Form Google Cache De-Index Link</text>
+    </g>
+
+    <g transform="translate(695, 55)">
+      <rect x="0" y="0" width="300" height="85" rx="8" fill="#161A26" stroke="#10B981" stroke-width="1"/>
+      <text x="15" y="25" fill="#10B981" font-size="13" font-weight="bold">⚖️ UU PDP &amp; PDF Report</text>
+      <text x="15" y="48" fill="#94A3B8" font-size="11">• Template Surat Hapus Data UU PDP</text>
+      <text x="15" y="68" fill="#94A3B8" font-size="11">• Laporan Pentest Profesional (.PDF)</text>
+    </g>
+  </g>
+
+  <!-- Connect Correlation to Output -->
+  <path d="M 982 330 L 982 540" stroke="#8B5CF6" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrowCyan)"/>
+</svg>

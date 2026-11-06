@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 820" width="100%" height="100%" style="background:#090A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <defs>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="dangerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F43F5E"/>
+      <stop offset="100%" stop-color="#E11D48"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#06B6D4" />
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3B82F6" />
+    </marker>
+  </defs>
+
+  <!-- Title Banner -->
+  <rect x="30" y="20" width="1040" height="55" rx="10" fill="#12151F" stroke="#242B3D" stroke-width="1"/>
+  <text x="50" y="55" fill="#FFFFFF" font-size="20" font-weight="bold">ISEEYOU — Arsitektur &amp; Topologi Sistem</text>
+  <text x="440" y="54" fill="#94A3B8" font-size="13">Command Center OSINT &amp; External Attack Surface Management</text>
+  <rect x="940" y="33" width="110" height="28" rx="6" fill="#1E2333" stroke="#3B82F6" stroke-width="1"/>
+  <text x="955" y="51" fill="#3B82F6" font-size="11" font-weight="bold">v2.0 PRODUCTION</text>
+
+  <!-- 1. Client Browser Layer -->
+  <rect x="380" y="100" width="340" height="75" rx="10" fill="#12151F" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="400" y="130" fill="#F1F5F9" font-size="15" font-weight="bold">💻 1. Client Layer (Browser)</text>
+  <text x="400" y="153" fill="#94A3B8" font-size="12">Next.js 15 Client • React Flow Graph Canvas • SSE Listener</text>
+
+  <!-- Arrow Client -> Cloudflare -->
+  <line x1="550" y1="175" x2="550" y2="215" stroke="#06B6D4" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="560" y="200" fill="#06B6D4" font-size="11" font-family="monospace">HTTPS / WSS / SSE</text>
+
+  <!-- 2. Edge / Ingress Layer -->
+  <rect x="340" y="220" width="420" height="80" rx="10" fill="#12151F" stroke="#242B3D" stroke-width="1.5"/>
+  <text x="360" y="250" fill="#F59E0B" font-size="15" font-weight="bold">🛡️ 2. Edge &amp; Ingress (Cloudflare)</text>
+  <text x="360" y="273" fill="#94A3B8" font-size="12">Cloudflare WAF • DDoS Mitigation • TLS 1.3 Termination (Strict HSTS)</text>
+
+  <!-- Arrow Cloudflare -> Next.js Gateway -->
+  <line x1="550" y1="300" x2="550" y2="340" stroke="#06B6D4" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- 3. Gateway Layer (Next.js 15) -->
+  <rect x="300" y="345" width="500" height="95" rx="10" fill="#12151F" stroke="#8B5CF6" stroke-width="1.5"/>
+  <text x="320" y="375" fill="#A78BFA" font-size="15" font-weight="bold">⚡ 3. Frontend &amp; API Gateway (Next.js 15 App Router)</text>
+  <text x="320" y="400" fill="#CBD5E1" font-size="12">• Supabase Auth Guard (JWT Check)   • Redis Token-Bucket Rate Limiter</text>
+  <text x="320" y="422" fill="#CBD5E1" font-size="12">• Server-Sent Events (SSE) Stream Controller   • Zod Schema Validator</text>
+
+  <!-- Arrow Next.js -> Worker Mesh -->
+  <line x1="550" y1="440" x2="550" y2="485" stroke="#06B6D4" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="560" y="468" fill="#06B6D4" font-size="11" font-family="monospace">Internal Task Queue</text>
+
+  <!-- 4. Worker Mesh Container -->
+  <rect x="40" y="490" width="1020" height="185" rx="12" fill="#0F121C" stroke="#242B3D" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="60" y="518" fill="#38BDF8" font-size="15" font-weight="bold">⚙️ 4. Asynchronous OSINT Worker Mesh (Python FastAPI + Redis ARQ)</text>
+  
+  <!-- Sub-boxes for workers -->
+  <g transform="translate(60, 535)">
+    <rect x="0" y="0" width="180" height="120" rx="8" fill="#161A26" stroke="#242B3D" stroke-width="1"/>
+    <text x="15" y="25" fill="#F1F5F9" font-size="13" font-weight="bold">🌐 DNS &amp; Subdomains</text>
+    <text x="15" y="48" fill="#94A3B8" font-size="11">• crt.sh (Cert Logs)</text>
+    <text x="15" y="68" fill="#94A3B8" font-size="11">• Cloudflare DoH</text>
+    <text x="15" y="88" fill="#94A3B8" font-size="11">• HackerTarget API</text>
+    <text x="15" y="108" fill="#10B981" font-size="10" font-weight="bold">100% GRATIS</text>
+  </g>
+
+  <g transform="translate(255, 535)">
+    <rect x="0" y="0" width="180" height="120" rx="8" fill="#161A26" stroke="#242B3D" stroke-width="1"/>
+    <text x="15" y="25" fill="#F43F5E" font-size="13" font-weight="bold">🔓 Breach &amp; Leaks</text>
+    <text x="15" y="48" fill="#94A3B8" font-size="11">• HIBP k-Anonymity</text>
+    <text x="15" y="68" fill="#94A3B8" font-size="11">• Leak-Lookup API</text>
+    <text x="15" y="88" fill="#94A3B8" font-size="11">• Masked Hash Output</text>
+    <text x="15" y="108" fill="#F43F5E" font-size="10" font-weight="bold">RISK: CRITICAL</text>
+  </g>
+
+  <g transform="translate(450, 535)">
+    <rect x="0" y="0" width="180" height="120" rx="8" fill="#161A26" stroke="#242B3D" stroke-width="1"/>
+    <text x="15" y="25" fill="#F1F5F9" font-size="13" font-weight="bold">👤 Social &amp; Identity</text>
+    <text x="15" y="48" fill="#94A3B8" font-size="11">• Async 30+ Socials</text>
+    <text x="15" y="68" fill="#94A3B8" font-size="11">• Gravatar MD5/SHA</text>
+    <text x="15" y="88" fill="#94A3B8" font-size="11">• GitHub Public API</text>
+    <text x="15" y="108" fill="#10B981" font-size="10" font-weight="bold">RATE-LIMIT SAFE</text>
+  </g>
+
+  <g transform="translate(645, 535)">
+    <rect x="0" y="0" width="180" height="120" rx="8" fill="#161A26" stroke="#242B3D" stroke-width="1"/>
+    <text x="15" y="25" fill="#F59E0B" font-size="13" font-weight="bold">🛡️ Threat &amp; Ports</text>
+    <text x="15" y="48" fill="#94A3B8" font-size="11">• Shodan InternetDB</text>
+    <text x="15" y="68" fill="#94A3B8" font-size="11">• AbuseIPDB Intel</text>
+    <text x="15" y="88" fill="#94A3B8" font-size="11">• AlienVault OTX</text>
+    <text x="15" y="108" fill="#F59E0B" font-size="10" font-weight="bold">CVE MAPPING</text>
+  </g>
+
+  <g transform="translate(840, 535)">
+    <rect x="0" y="0" width="180" height="120" rx="8" fill="#161A26" stroke="#242B3D" stroke-width="1"/>
+    <text x="15" y="25" fill="#F1F5F9" font-size="13" font-weight="bold">📜 Archive &amp; Secrets</text>
+    <text x="15" y="48" fill="#94A3B8" font-size="11">• Wayback CDX API</text>
+    <text x="15" y="68" fill="#94A3B8" font-size="11">• Regex Secret Scan</text>
+    <text x="15" y="88" fill="#94A3B8" font-size="11">• Exiftool Metadata</text>
+    <text x="15" y="108" fill="#10B981" font-size="10" font-weight="bold">OFFLINE ENGINE</text>
+  </g>
+
+  <!-- 5. Persistence Layer (Bottom Left) -->
+  <g transform="translate(150, 705)">
+    <rect x="0" y="0" width="380" height="85" rx="10" fill="#12151F" stroke="#242B3D" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#38BDF8" font-size="14" font-weight="bold">🗄️ PostgreSQL 16 (Supabase)</text>
+    <text x="20" y="54" fill="#94A3B8" font-size="12">Simpan Projects, Scan History, Entity Nodes &amp; Edges</text>
+    <text x="20" y="72" fill="#64748B" font-size="11">Row-Level Security (RLS) &amp; Encrypted At-Rest</text>
+  </g>
+
+  <!-- 6. Cache Layer (Bottom Right) -->
+  <g transform="translate(570, 705)">
+    <rect x="0" y="0" width="380" height="85" rx="10" fill="#12151F" stroke="#242B3D" stroke-width="1.5"/>
+    <text x="20" y="32" fill="#F43F5E" font-size="14" font-weight="bold">⚡ Redis Smart Cache (TTL 24-72h)</text>
+    <text x="20" y="54" fill="#94A3B8" font-size="12">Mencegah pemborosan kuota API &amp; Hasil Instan</text>
+    <text x="20" y="72" fill="#64748B" font-size="11">Anti-Spam Sliding Window Rate Limiting</text>
+  </g>
+
+  <!-- Connectors to DB and Cache -->
+  <line x1="340" y1="675" x2="340" y2="705" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="3 3"/>
+  <line x1="760" y1="675" x2="760" y2="705" stroke="#F43F5E" stroke-width="1.5" stroke-dasharray="3 3"/>
+</svg>

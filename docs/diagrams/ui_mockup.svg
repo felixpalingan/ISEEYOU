@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="100%" height="100%" style="background:#090A0F;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <defs>
+    <filter id="glowRed" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#F43F5E" flood-opacity="0.5"/>
+    </filter>
+    <filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#3B82F6" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- App Window Frame -->
+  <rect x="10" y="10" width="1180" height="730" rx="12" fill="#0D101A" stroke="#242B3D" stroke-width="1.5"/>
+
+  <!-- Topbar -->
+  <rect x="10" y="10" width="1180" height="60" rx="12" fill="#12151F"/>
+  <rect x="10" y="60" width="1180" height="10" fill="#12151F"/>
+  <line x1="10" y1="70" x2="1190" y2="70" stroke="#242B3D" stroke-width="1"/>
+
+  <!-- Brand Logo -->
+  <rect x="30" y="24" width="32" height="32" rx="6" fill="#3B82F6"/>
+  <text x="40" y="46" fill="#FFFFFF" font-size="16" font-weight="bold">I</text>
+  <text x="75" y="46" fill="#FFFFFF" font-size="16" font-weight="bold" letter-spacing="1">ISEEYOU</text>
+  <text x="160" y="45" fill="#64748B" font-size="11" font-family="monospace">// OSINT_OPERATOR</text>
+
+  <!-- Project Selector -->
+  <rect x="300" y="24" width="220" height="32" rx="6" fill="#181C2A" stroke="#242B3D" stroke-width="1"/>
+  <text x="315" y="45" fill="#94A3B8" font-size="12">Project: <tspan fill="#FFFFFF" font-weight="bold">Audit E-Commerce</tspan> ▾</text>
+
+  <!-- Omni Search Input -->
+  <rect x="540" y="22" width="450" height="36" rx="8" fill="#090A0F" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="560" y="45" fill="#94A3B8" font-size="13">🔍</text>
+  <text x="585" y="45" fill="#F1F5F9" font-size="13" font-family="monospace">target-domain.com</text>
+  <rect x="880" y="28" width="55" height="24" rx="4" fill="#1E293B"/>
+  <text x="890" y="44" fill="#38BDF8" font-size="10" font-weight="bold" font-family="monospace">DOMAIN</text>
+  <rect x="945" y="28" width="35" height="24" rx="4" fill="#3B82F6"/>
+  <text x="955" y="44" fill="#FFFFFF" font-size="11" font-weight="bold">GO</text>
+
+  <!-- Risk Score Badge Top Right -->
+  <rect x="1010" y="24" width="160" height="32" rx="6" fill="#2E1020" stroke="#F43F5E" stroke-width="1"/>
+  <text x="1025" y="45" fill="#F43F5E" font-size="12" font-weight="bold" font-family="monospace">RISK: 78/100 (CRITICAL)</text>
+
+  <!-- 3-PANEL LAYOUT -->
+  <!-- 1. LEFT PANEL (Target Tree + Terminal) -->
+  <rect x="10" y="70" width="280" height="670" fill="#0D101A"/>
+  <line x1="290" y1="70" x2="290" y2="740" stroke="#242B3D" stroke-width="1"/>
+  <text x="25" y="100" fill="#64748B" font-size="11" font-weight="bold" letter-spacing="1">TARGET HIERARCHY</text>
+
+  <g transform="translate(25, 120)" font-family="monospace" font-size="12">
+    <text x="0" y="0" fill="#38BDF8">▼ 🌐 target-domain.com</text>
+    <text x="15" y="25" fill="#CBD5E1">├─ 📁 Subdomains (32)</text>
+    <text x="35" y="50" fill="#94A3B8">├─ api.target...</text>
+    <text x="35" y="75" fill="#F43F5E" font-weight="bold">└─ 🚨 staging-db.target...</text>
+    <text x="15" y="105" fill="#CBD5E1">├─ 📧 Exposed Emails (4)</text>
+    <text x="35" y="130" fill="#94A3B8">├─ admin@target...</text>
+    <text x="35" y="155" fill="#F43F5E">└─ dev@target... (Breached)</text>
+    <text x="15" y="185" fill="#CBD5E1">└─ 📜 Git Secrets (1 Leaked)</text>
+  </g>
+
+  <!-- Mini Terminal (Bottom Left) -->
+  <rect x="10" y="490" width="280" height="250" fill="#06080D"/>
+  <line x1="10" y1="490" x2="290" y2="490" stroke="#242B3D" stroke-width="1"/>
+  <text x="25" y="515" fill="#64748B" font-size="11" font-weight="bold" letter-spacing="1">LIVE TELEMETRY STREAM</text>
+  <g transform="translate(25, 540)" font-family="monospace" font-size="11">
+    <text x="0" y="0" fill="#38BDF8">[00:01] Classifier: DOMAIN target</text>
+    <text x="0" y="20" fill="#10B981">[00:02] crt.sh query finished (32)</text>
+    <text x="0" y="40" fill="#10B981">[00:03] DoH resolved 103.28.12.44</text>
+    <text x="0" y="60" fill="#F43F5E">[00:05] [CRITICAL] Port 5432 OPEN</text>
+    <text x="0" y="80" fill="#F59E0B">[00:07] HIBP found 1 breach incident</text>
+    <text x="0" y="100" fill="#94A3B8">[00:08] AI Copilot synthesizing...</text>
+    <text x="0" y="125" fill="#3B82F6">_ (Ready for pivot)</text>
+  </g>
+
+  <!-- 2. CENTER PANEL (React Flow Canvas) -->
+  <rect x="290" y="70" width="580" height="670" fill="#090A0F"/>
+  <line x1="870" y1="70" x2="870" y2="740" stroke="#242B3D" stroke-width="1"/>
+
+  <!-- Canvas Grid Dots -->
+  <g fill="#181F30">
+    <circle cx="330" cy="110" r="1.5"/><circle cx="370" cy="110" r="1.5"/><circle cx="410" cy="110" r="1.5"/><circle cx="450" cy="110" r="1.5"/><circle cx="490" cy="110" r="1.5"/><circle cx="530" cy="110" r="1.5"/>
+    <circle cx="330" cy="160" r="1.5"/><circle cx="370" cy="160" r="1.5"/><circle cx="410" cy="160" r="1.5"/><circle cx="450" cy="160" r="1.5"/><circle cx="490" cy="160" r="1.5"/><circle cx="530" cy="160" r="1.5"/>
+    <circle cx="330" cy="210" r="1.5"/><circle cx="370" cy="210" r="1.5"/><circle cx="410" cy="210" r="1.5"/><circle cx="450" cy="210" r="1.5"/><circle cx="490" cy="210" r="1.5"/><circle cx="530" cy="210" r="1.5"/>
+    <circle cx="330" cy="260" r="1.5"/><circle cx="370" cy="260" r="1.5"/><circle cx="410" cy="260" r="1.5"/><circle cx="450" cy="260" r="1.5"/><circle cx="490" cy="260" r="1.5"/><circle cx="530" cy="260" r="1.5"/>
+  </g>
+
+  <!-- Connectors in Canvas -->
+  <path d="M 580 180 L 580 240 L 420 240 L 420 290" stroke="#3B82F6" stroke-width="2" fill="none"/>
+  <path d="M 580 180 L 580 240 L 720 240 L 720 290" stroke="#F43F5E" stroke-width="2" fill="none"/>
+  <path d="M 720 370 L 720 440" stroke="#F43F5E" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+
+  <!-- Root Node (Domain) -->
+  <g transform="translate(470, 120)" filter="url(#glowBlue)">
+    <rect x="0" y="0" width="220" height="60" rx="8" fill="#181C2A" stroke="#3B82F6" stroke-width="2"/>
+    <text x="15" y="24" fill="#3B82F6" font-size="10" font-weight="bold">ROOT SEED DOMAIN</text>
+    <text x="15" y="45" fill="#FFFFFF" font-size="13" font-family="monospace" font-weight="bold">target-domain.com</text>
+  </g>
+
+  <!-- Subdomain Cluster Node (Folded) -->
+  <g transform="translate(320, 290)">
+    <rect x="0" y="0" width="200" height="80" rx="8" fill="#12151F" stroke="#242B3D" stroke-width="1.5"/>
+    <text x="15" y="25" fill="#94A3B8" font-size="10" font-weight="bold">SUBDOMAINS (FOLDED)</text>
+    <text x="15" y="50" fill="#FFFFFF" font-size="13" font-weight="bold">📁 32 Subdomains</text>
+    <text x="15" y="68" fill="#06B6D4" font-size="10">[ Klik untuk Expand ▾ ]</text>
+  </g>
+
+  <!-- Staging Subdomain Node (Critical) -->
+  <g transform="translate(620, 290)">
+    <rect x="0" y="0" width="200" height="80" rx="8" fill="#1A1522" stroke="#F59E0B" stroke-width="1.5"/>
+    <text x="15" y="25" fill="#F59E0B" font-size="10" font-weight="bold">ORIGIN HOST</text>
+    <text x="15" y="48" fill="#FFFFFF" font-size="12" font-family="monospace">staging-db.target...</text>
+    <text x="15" y="68" fill="#94A3B8" font-size="10">IP: 103.28.12.44</text>
+  </g>
+
+  <!-- Open Port Node (Red Alert) -->
+  <g transform="translate(620, 440)" filter="url(#glowRed)">
+    <rect x="0" y="0" width="200" height="75" rx="8" fill="#2E1020" stroke="#F43F5E" stroke-width="2"/>
+    <text x="15" y="24" fill="#F43F5E" font-size="10" font-weight="bold">CRITICAL VULNERABILITY</text>
+    <text x="15" y="48" fill="#FFFFFF" font-size="14" font-weight="bold">Port 5432 (Postgres)</text>
+    <text x="15" y="65" fill="#FDA4AF" font-size="10">Status: EXPOSED TO INTERNET</text>
+  </g>
+
+  <!-- Canvas Controls (Bottom Left of Canvas) -->
+  <rect x="310" y="680" width="160" height="34" rx="6" fill="#12151F" stroke="#242B3D" stroke-width="1"/>
+  <text x="325" y="702" fill="#94A3B8" font-size="12">Zoom: [ - ] 100% [ + ] [ ⛶ ]</text>
+
+  <!-- 3. RIGHT PANEL (Inspector & Playbook) -->
+  <rect x="870" y="70" width="320" height="670" fill="#0D101A"/>
+  <text x="890" y="100" fill="#64748B" font-size="11" font-weight="bold" letter-spacing="1">FINDING INSPECTOR &amp; PLAYBOOK</text>
+
+  <!-- Finding Details Card -->
+  <g transform="translate(890, 120)">
+    <rect x="0" y="0" width="280" height="135" rx="8" fill="#181C2A" stroke="#F43F5E" stroke-width="1"/>
+    <rect x="15" y="15" width="85" height="20" rx="4" fill="#2E1020"/>
+    <text x="25" y="29" fill="#F43F5E" font-size="10" font-weight="bold">CRITICAL SEV</text>
+    <text x="15" y="55" fill="#FFFFFF" font-size="14" font-weight="bold">Database Port 5432 Exposed</text>
+    <text x="15" y="78" fill="#94A3B8" font-size="11">Host: staging-db.target-domain.com</text>
+    <text x="15" y="98" fill="#94A3B8" font-size="11">Port database PostgreSQL terbuka tanpa</text>
+    <text x="15" y="115" fill="#94A3B8" font-size="11">firewall pembatas IP jaringan internal.</text>
+  </g>
+
+  <!-- Remediation Script Snippet -->
+  <g transform="translate(890, 275)">
+    <text x="0" y="0" fill="#FFFFFF" font-size="12" font-weight="bold">Remediation Script (UFW Firewall):</text>
+    <rect x="0" y="12" width="280" height="70" rx="6" fill="#06080D" stroke="#242B3D" stroke-width="1"/>
+    <text x="12" y="35" fill="#A5B4FC" font-size="10" font-family="monospace">sudo ufw deny 5432/tcp</text>
+    <text x="12" y="55" fill="#A5B4FC" font-size="10" font-family="monospace">sudo ufw allow from 10.0.0.0/8</text>
+    <text x="12" y="70" fill="#A5B4FC" font-size="10" font-family="monospace">to any port 5432</text>
+  </g>
+
+  <!-- Action Buttons -->
+  <g transform="translate(890, 385)">
+    <rect x="0" y="0" width="280" height="40" rx="6" fill="#3B82F6"/>
+    <text x="70" y="25" fill="#FFFFFF" font-size="12" font-weight="bold">📋 Salin Script Mitigasi</text>
+
+    <rect x="0" y="50" width="280" height="40" rx="6" fill="#1E2333" stroke="#242B3D" stroke-width="1"/>
+    <text x="65" y="75" fill="#CBD5E1" font-size="12" font-weight="bold">🚀 1-Click Launch Shodan ↗</text>
+
+    <rect x="0" y="100" width="280" height="40" rx="6" fill="#1E2333" stroke="#242B3D" stroke-width="1"/>
+    <text x="60" y="125" fill="#CBD5E1" font-size="12" font-weight="bold">⚖️ Unduh Draf Surat UU PDP</text>
+
+    <rect x="0" y="150" width="280" height="40" rx="6" fill="#1E2333" stroke="#242B3D" stroke-width="1"/>
+    <text x="75" y="175" fill="#CBD5E1" font-size="12" font-weight="bold">📄 Ekspor Laporan PDF</text>
+  </g>
+</svg>
