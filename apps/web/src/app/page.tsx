@@ -23,6 +23,7 @@ import {
 import { OmniSearchBar } from '@/components/OmniSearchBar';
 import { TelemetryTerminal } from '@/components/TelemetryTerminal';
 import { StructuredDataView } from '@/components/StructuredDataView';
+import { GraphCanvas } from '@/components/GraphCanvas';
 import { Badge, Button, Card, StatusIndicator } from '@/components/ui';
 import { useScanStream } from '@/hooks/useScanStream';
 import { VulnerabilityFinding } from '@iseeyou/shared-types';
@@ -371,74 +372,17 @@ export default function WorkspacePage() {
               onPivot={(pTarget, pType) => startScan(pTarget, pType)}
             />
           ) : (
-            /* Interactive Canvas Area */
-            <div className="flex-1 relative flex items-center justify-center p-8 bg-[#1e1e1e] bg-[radial-gradient(#2b2b2b_1px,transparent_1px)] [background-size:16px_16px] overflow-hidden">
-              {/* Live Node Layout */}
-              <div className="flex flex-col items-center gap-8 z-10">
-                {/* Root Node */}
-                <div className="bg-vsc-card border-2 border-vsc-accent-blue rounded p-3 w-64 shadow-lg shadow-blue-950/20">
-                  <div className="flex items-center justify-between text-[10px] font-mono font-bold text-vsc-accent-blue mb-1">
-                    <span>ROOT SEED {targetType.toUpperCase()}</span>
-                    <Radio className={`w-3 h-3 text-vsc-accent-blue ${isScanning ? 'animate-pulse' : ''}`} />
-                  </div>
-                  <div className="font-mono text-sm font-bold text-vsc-bright truncate">{target}</div>
-                  <div className="text-[11px] text-vsc-muted mt-1 font-mono">
-                    {isScanning ? 'Analyzing modules in progress...' : `Status: Completed (${nodes.length} nodes)`}
-                  </div>
-                </div>
-
-                {/* Connected Discovered Metric Cards */}
-                <div className="flex items-center gap-6 flex-wrap justify-center max-w-2xl">
-                  {subdomains.length > 0 && (
-                    <div className="bg-vsc-card border border-vsc-borderSubtle hover:border-vsc-accent-blue rounded p-3 w-52 transition-all">
-                      <div className="text-[10px] font-mono text-vsc-muted uppercase">SUBDOMAINS</div>
-                      <div className="font-bold text-xs text-vsc-bright mt-1">📁 {subdomains.length} Discovered</div>
-                      <div className="text-[10px] text-sky-400 mt-1 font-mono">crt.sh & Cloudflare DoH</div>
-                    </div>
-                  )}
-
-                  {ips.length > 0 && (
-                    <div className="bg-vsc-card border border-vsc-borderSubtle hover:border-emerald-500 rounded p-3 w-52 transition-all">
-                      <div className="text-[10px] font-mono text-vsc-muted uppercase">ORIGIN IPS</div>
-                      <div className="font-bold text-xs text-emerald-400 mt-1">🌐 {ips.length} Host IP(s)</div>
-                      <div className="text-[10px] text-vsc-muted mt-1 font-mono truncate">{String(ips[0]?.metadata?.city || 'Resolved')}</div>
-                    </div>
-                  )}
-
-                  {findings.length > 0 && (
-                    <div
-                      data-testid="vuln-finding-card"
-                      onClick={() => selectFinding(findings[0])}
-                      className="bg-red-950/40 border-2 border-vsc-critical rounded p-3 w-64 shadow-lg shadow-red-950/30 cursor-pointer hover:bg-red-950/60 transition-colors"
-                    >
-                      <div className="flex items-center justify-between text-[10px] font-mono font-bold text-vsc-critical mb-1">
-                        <span>CRITICAL EXPOSURES</span>
-                        <AlertCircle className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="font-mono text-xs font-bold text-vsc-bright truncate">
-                        {findings[0]?.title}
-                      </div>
-                      <div className="text-[11px] text-red-300 mt-1 font-mono">
-                        {findings.length} Vulnerability finding(s)
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom Right Minimap */}
-              <div className="absolute bottom-4 right-4 bg-vsc-sidebar/80 backdrop-blur border border-vsc-border rounded p-2 w-36 h-28 pointer-events-none flex flex-col justify-between">
-                <span className="text-[9px] font-mono text-vsc-muted flex items-center justify-between">
-                  <span>MINIMAP</span>
-                  <span className="text-[8px] text-vsc-info">{nodes.length} N / {edges.length} E</span>
-                </span>
-                <div className="w-full h-16 bg-vsc-canvas/50 border border-vsc-borderSubtle rounded relative overflow-hidden">
-                  <div className="w-2.5 h-2.5 rounded-full bg-vsc-blue absolute top-3 left-6 animate-pulse" />
-                  {ips.length > 0 && <div className="w-2 h-2 rounded-full bg-emerald-400 absolute top-8 left-12" />}
-                  {findings.length > 0 && <div className="w-2.5 h-2.5 rounded-full bg-vsc-critical absolute top-6 right-6" />}
-                </div>
-              </div>
-            </div>
+            <GraphCanvas
+              nodes={nodes}
+              edges={edges}
+              findings={findings}
+              target={target}
+              targetType={targetType}
+              isScanning={isScanning}
+              selectedFindingId={selectedFinding?.id}
+              onSelectFinding={selectFinding}
+              onPivot={(pTarget, pType) => startScan(pTarget, pType)}
+            />
           )}
 
           {/* Integrated Live Telemetry Terminal & Problems Drawer */}

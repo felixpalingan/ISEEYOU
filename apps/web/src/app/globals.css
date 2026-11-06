@@ -1,3 +1,5 @@
+@import '@xyflow/react/dist/style.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -55,4 +57,46 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* React Flow Dark Modern Overrides */
+.react-flow__controls {
+  background-color: #252526 !important;
+  border: 1px solid #2B2B2B !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  border-radius: 4px !important;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background-color: #252526 !important;
+  border-bottom: 1px solid #2B2B2B !important;
+  fill: #CCCCCC !important;
+  color: #CCCCCC !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: #333333 !important;
+  fill: #FFFFFF !important;
+  color: #FFFFFF !important;
+}
+
+.react-flow__minimap {
+  background-color: #181818 !important;
+  border: 1px solid #2B2B2B !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.react-flow__edge-path {
+  stroke: #007ACC !important;
+  stroke-width: 1.5 !important;
+}
+
+.react-flow__handle {
+  width: 8px !important;
+  height: 8px !important;
+  background-color: #007ACC !important;
+  border: 2px solid #1E1E1E !important;
+  border-radius: 50% !important;
 }
