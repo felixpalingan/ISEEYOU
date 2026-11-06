@@ -63,6 +63,7 @@ class SubdomainDNSResolver(BaseOSINTProvider):
     """
 
     CRTSH_URL = "https://crt.sh/"
+    CERTSPOTTER_URL = "https://api.certspotter.com/v1/issuances"
     CLOUDFLARE_DOH_URL = "https://cloudflare-dns.com/dns-query"
 
     def __init__(
@@ -106,6 +107,32 @@ class SubdomainDNSResolver(BaseOSINTProvider):
                                 discovered.add(clean_sub)
         except Exception as e:
             logger.warning(f"crt.sh lookup failed or timed out for {domain}: {e}")
+
+        return discovered
+
+    async def _fetch_certspotter_subdomains(
+        self, domain: str, client: httpx.AsyncClient
+    ) -> Set[str]:
+        """
+        Queries CertSpotter API as a reliable secondary Certificate Transparency provider.
+        """
+        discovered: Set[str] = set()
+        url = f"{self.CERTSPOTTER_URL}?domain={domain}&include_subdomains=true&expand=dns_names"
+
+        try:
+            response = await client.get(url, timeout=10.0)
+            if response.status_code == 200:
+                data = response.json()
+                if isinstance(data, list):
+                    for entry in data:
+                        for dns_name in entry.get("dns_names", []):
+                            clean_sub = dns_name.strip().lower()
+                            if clean_sub.startswith("*."):
+                                clean_sub = clean_sub[2:]
+                            if clean_sub.endswith(domain) and clean_sub != domain:
+                                discovered.add(clean_sub)
+        except Exception as e:
+            logger.debug(f"CertSpotter lookup error for {domain}: {e}")
 
         return discovered
 
@@ -176,20 +203,34 @@ class SubdomainDNSResolver(BaseOSINTProvider):
         async with self.get_http_client() as client:
             yield self.create_log(
                 TelemetryLevel.INFO,
-                f"Querying Certificate Transparency logs on crt.sh for '{target}'...",
+                f"Querying dual Certificate Transparency providers (crt.sh & CertSpotter) for '{target}'...",
             )
 
-            discovered_subdomains = await self._fetch_crtsh_subdomains(target, client)
+            crtsh_task = self._fetch_crtsh_subdomains(target, client)
+            certspotter_task = self._fetch_certspotter_subdomains(target, client)
+            res_crtsh, res_certspotter = await asyncio.gather(
+                crtsh_task, certspotter_task, return_exceptions=True
+            )
+
+            discovered_subdomains: Set[str] = set()
+            sources_reported = []
+
+            if isinstance(res_crtsh, set) and res_crtsh:
+                discovered_subdomains.update(res_crtsh)
+                sources_reported.append(f"crt.sh ({len(res_crtsh)})")
+            if isinstance(res_certspotter, set) and res_certspotter:
+                discovered_subdomains.update(res_certspotter)
+                sources_reported.append(f"CertSpotter ({len(res_certspotter)})")
 
             if discovered_subdomains:
                 yield self.create_log(
                     TelemetryLevel.SUCCESS,
-                    f"crt.sh returned {len(discovered_subdomains)} unique subdomains for '{target}'.",
+                    f"Certificate Transparency discovered {len(discovered_subdomains)} unique subdomain(s) via {', '.join(sources_reported)}.",
                 )
             else:
                 yield self.create_log(
                     TelemetryLevel.WARN,
-                    f"crt.sh returned 0 subdomains (or timed out). Activating fallback DNS prefix probe...",
+                    f"No subdomains indexed in public CT logs. Probing standard DNS prefixes (www, api, mail, etc.)...",
                 )
                 # Fallback to high-value prefixes
                 discovered_subdomains = {f"{prefix}.{target}" for prefix in FALLBACK_PREFIXES}

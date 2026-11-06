@@ -123,6 +123,30 @@ class TestBreachCredentialHunter(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("*", f["evidence"])
                 self.assertNotIn("admin123", f["evidence"])
 
+    async def test_execute_recon_domain_target_no_fake_breaches(self):
+        """Verifies that scanning a domain never attaches fake historical breach dumps"""
+        with patch.object(
+            self.hunter, "_query_dns_txt", new_callable=AsyncMock
+        ) as mock_txt:
+            # Simulate domain with no SPF / DMARC records
+            mock_txt.return_value = []
+
+            events = []
+            async for event in self.hunter.execute("mybrandnewwebsite.org", EntityType.DOMAIN, "s-dom"):
+                events.append(event)
+
+            # Assert ZERO fake breach nodes were emitted
+            breach_nodes = [
+                e["data"] for e in events if e["type"] == "node" and e["data"]["type"] == "breach"
+            ]
+            self.assertEqual(len(breach_nodes), 0, "Domain must not have fake breach nodes attached")
+
+            # Assert real SPF/DMARC findings were generated instead
+            vulns = [e["data"] for e in events if e["type"] == "vuln"]
+            titles = [v["title"] for v in vulns]
+            self.assertTrue(any("Missing SPF" in t for t in titles))
+            self.assertTrue(any("Missing DMARC" in t for t in titles))
+
     def test_registered_in_registry(self):
         registered = provider_registry.get_provider("breach_credential_hunter")
         self.assertIsNotNone(registered)
