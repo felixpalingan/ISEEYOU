@@ -1,0 +1,41 @@
+# Version control & docs
+.git
+.gitignore
+.github
+*.md
+diagrams.html
+logo_showcase.html
+scratch/
+
+# Dependencies & Build outputs
+node_modules
+npm-debug.log*
+.next
+out
+build
+dist
+.turbo
+test-results
+playwright-report
+blob-report
+
+# Python artifacts
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.venv
+venv
+env
+*.egg-info
+.coverage
+htmlcov
+
+# Local secrets & envs
+.env
+.env*.local
+.env.development
+.env.test
+.env.production
+*.pem
+*.key
