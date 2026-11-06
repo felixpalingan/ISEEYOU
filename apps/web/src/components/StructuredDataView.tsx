@@ -32,6 +32,7 @@ import {
   Layers,
   FileSpreadsheet,
   FileJson,
+  FileDown,
   XCircle,
   Radio,
 } from 'lucide-react';
@@ -48,6 +49,7 @@ interface StructuredDataViewProps {
   selectedFindingId?: string;
   onSelectFinding: (finding: VulnerabilityFinding) => void;
   onPivot?: (target: string, type: EntityType) => void;
+  onExportPDF?: () => void;
 }
 
 type TabMode = 'findings' | 'assets' | 'edges';
@@ -75,6 +77,7 @@ export function StructuredDataView({
   selectedFindingId,
   onSelectFinding,
   onPivot,
+  onExportPDF,
 }: StructuredDataViewProps) {
   // Navigation & Filter State
   const [activeTab, setActiveTab] = useState<TabMode>('findings');
@@ -509,6 +512,18 @@ export function StructuredDataView({
               <FileJson className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">JSON</span>
             </Button>
+            {onExportPDF && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onExportPDF}
+                title="Export Official PDF Audit Report"
+                className="h-7 px-2 text-[11px] font-mono flex items-center gap-1 text-sky-400 hover:text-sky-300"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">PDF</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>
