@@ -11,7 +11,7 @@ import re
 import json
 import asyncio
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from engine.models.entities import (
     ScanRequest,
@@ -52,11 +52,17 @@ def classify_input(seed: str) -> EntityType:
     return EntityType.USERNAME
 
 
-async def run_scan_worker(session_id: str, seed: str, entity_type: EntityType):
+async def run_scan_worker(
+    session_id: str,
+    seed: str,
+    entity_type: EntityType,
+    enabled_modules: Optional[List[str]] = None,
+):
     """
     Asynchronous pipeline orchestrator:
     - Emits seed identification telemetry
     - Queries provider registry for modules supporting the entity type
+    - Filters by enabled_modules when specified by modular scan toggles
     - Sequentially executes providers and streams real-time SSE events
     - Tracks aggregate metrics (nodes, edges, risk score)
     - Signals scan completion
@@ -74,6 +80,19 @@ async def run_scan_worker(session_id: str, seed: str, entity_type: EntityType):
         )
 
         providers = provider_registry.get_providers_for_type(entity_type)
+        if enabled_modules is not None:
+            providers = [p for p in providers if p.name in enabled_modules]
+            await event_bus.publish(
+                session_id,
+                "log",
+                {
+                    "timestamp": datetime.utcnow().strftime("%H:%M:%S"),
+                    "module": "orchestrator",
+                    "level": "info",
+                    "message": f"Modular filter active -> Executing {len(providers)} selected module(s): {', '.join(p.name for p in providers) or 'none'}",
+                },
+            )
+
         if not providers:
             await event_bus.publish(
                 session_id,
@@ -187,7 +206,7 @@ async def create_scan(request: ScanRequest, req: Request):
 
     # Launch task with lifecycle tracking in EventBus
     task = asyncio.create_task(
-        run_scan_worker(session_id, clean_target, seed_type)
+        run_scan_worker(session_id, clean_target, seed_type, request.enabled_modules)
     )
     event_bus.register_task(session_id, task)
 

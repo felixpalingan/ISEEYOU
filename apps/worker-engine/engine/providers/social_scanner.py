@@ -39,6 +39,7 @@ SOCIAL_PLATFORMS: List[Dict[str, Any]] = [
         "name": "Reddit",
         "category": "Community",
         "url_template": "https://www.reddit.com/user/{username}/about.json",
+        "profile_url_template": "https://www.reddit.com/user/{username}",
         "check_type": "status_code",
     },
     {
@@ -69,6 +70,7 @@ SOCIAL_PLATFORMS: List[Dict[str, Any]] = [
         "name": "DockerHub",
         "category": "Developer",
         "url_template": "https://hub.docker.com/v2/users/{username}",
+        "profile_url_template": "https://hub.docker.com/u/{username}",
         "check_type": "status_code",
     },
     {
@@ -126,6 +128,7 @@ SOCIAL_PLATFORMS: List[Dict[str, Any]] = [
         "name": "Twitch",
         "category": "Streaming",
         "url_template": "https://m.twitch.tv/{username}",
+        "profile_url_template": "https://www.twitch.tv/{username}",
         "check_type": "status_code",
     },
     {
@@ -189,6 +192,7 @@ SOCIAL_PLATFORMS: List[Dict[str, Any]] = [
         "name": "Chess.com",
         "category": "Gaming",
         "url_template": "https://api.chess.com/pub/player/{username}",
+        "profile_url_template": "https://www.chess.com/member/{username}",
         "check_type": "status_code",
     },
     {
@@ -196,6 +200,7 @@ SOCIAL_PLATFORMS: List[Dict[str, Any]] = [
         "name": "Gravatar",
         "category": "Identity",
         "url_template": "https://en.gravatar.com/{username}.json",
+        "profile_url_template": "https://gravatar.com/{username}",
         "check_type": "status_code",
     },
 ]
@@ -238,6 +243,9 @@ class SocialPresenceScanner(BaseOSINTProvider):
         Queries a single platform URL with concurrency control and error tolerance
         """
         url = platform["url_template"].format(username=username)
+        public_profile_url = platform.get(
+            "profile_url_template", platform["url_template"]
+        ).format(username=username)
 
         async with self.semaphore:
             try:
@@ -264,7 +272,7 @@ class SocialPresenceScanner(BaseOSINTProvider):
                         return {
                             "platform": platform["name"],
                             "category": platform["category"],
-                            "url": url,
+                            "url": public_profile_url,
                         }
                     elif check_type == "body_text":
                         neg = platform.get("negative_match")
@@ -272,7 +280,7 @@ class SocialPresenceScanner(BaseOSINTProvider):
                             return {
                                 "platform": platform["name"],
                                 "category": platform["category"],
-                                "url": url,
+                                "url": public_profile_url,
                             }
             except Exception as e:
                 logger.debug(f"Failed query for {platform['name']} ({username}): {e}")
@@ -345,6 +353,7 @@ class SocialPresenceScanner(BaseOSINTProvider):
                         "platform": platform_name,
                         "category": category,
                         "profile_url": profile_url,
+                        "handle": username,
                     },
                 )
 

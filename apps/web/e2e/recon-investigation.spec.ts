@@ -104,4 +104,36 @@ test.describe('E2E: Reconnaissance & Visual Graph Investigation', () => {
     await expect(page.getByTestId('detected-entity-badge')).toContainText('DOMAIN');
     await expect(scanButton).toBeEnabled();
   });
+
+  test('should separate Web Mode from Identity Mode and open Settings Modal & Auto-Tidy', async ({ page }) => {
+    const searchInput = page.getByPlaceholder('Enter target: domain, IP, email, or username...');
+
+    // 1. Type a username -> UI should switch to Identity Mode and hide server firewall commands
+    await searchInput.fill('torvalds');
+    await expect(page.getByText('👤 IDENTITY MODE')).toBeVisible();
+    await expect(page.getByText(/Identity & Privacy Playbook/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /UFW Firewall/i })).not.toBeVisible();
+
+    // 2. Switch back to a domain -> UI should switch back to Web & Infra Mode
+    await searchInput.fill('example.com');
+    await expect(page.getByText('🌐 WEB & INFRA')).toBeVisible();
+    await expect(page.getByRole('button', { name: /UFW Firewall/i })).toBeVisible();
+
+    // 3. Verify Auto-Tidy Graph button works
+    const autoTidyBtn = page.getByTestId('auto-tidy-graph-btn');
+    await expect(autoTidyBtn).toBeVisible();
+    await autoTidyBtn.click();
+
+    // 4. Verify Activity Bar Settings button opens the Settings Modal
+    const settingsBtn = page.getByTestId('btn-activity-settings');
+    await expect(settingsBtn).toBeVisible();
+    await settingsBtn.click();
+
+    const settingsModal = page.getByTestId('settings-modal');
+    await expect(settingsModal).toBeVisible();
+    await expect(page.getByText('Workspace & Modular Scan Settings')).toBeVisible();
+
+    await page.getByRole('button', { name: /^Done$/i }).click();
+    await expect(settingsModal).not.toBeVisible();
+  });
 });

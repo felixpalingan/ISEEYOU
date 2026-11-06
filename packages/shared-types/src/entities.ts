@@ -22,9 +22,16 @@ export interface EntityNode {
   severity: SeverityLevel;
   metadata: Record<string, unknown>;
   parentId?: string;
+  parent_id?: string;
   isCluster?: boolean;
   clusterCount?: number;
   discoveredAt: string;
+}
+
+export interface ScanRequestPayload {
+  seed_input: string;
+  force_refresh?: boolean;
+  enabled_modules?: string[];
 }
 
 export interface EntityEdge {

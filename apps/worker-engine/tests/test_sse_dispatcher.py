@@ -103,6 +103,20 @@ class TestAPIRoutes(unittest.TestCase):
         response = self.client.get("/api/v1/scan/non-existent-uuid")
         self.assertEqual(response.status_code, 404)
 
+    def test_create_scan_with_enabled_modules(self):
+        response = self.client.post(
+            "/api/v1/scan",
+            json={
+                "seed_input": "example.com",
+                "enabled_modules": ["subdomain_dns_resolver"],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["seed_input"], "example.com")
+        self.assertEqual(data["seed_type"], "domain")
+        self.client.post(f"/api/v1/scan/{data['session_id']}/cancel")
+
 
 if __name__ == "__main__":
     unittest.main()

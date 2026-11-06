@@ -110,6 +110,7 @@ class ProviderResultSummary(BaseModel):
 class ScanRequest(BaseModel):
     seed_input: str
     force_refresh: bool = False
+    enabled_modules: Optional[List[str]] = None
 
     @field_validator("seed_input")
     @classmethod

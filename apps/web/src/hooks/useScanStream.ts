@@ -23,10 +23,44 @@ export interface ScanStreamState {
   findings: VulnerabilityFinding[];
   isScanning: boolean;
   selectedFinding: VulnerabilityFinding | null;
+  selectedNode: EntityNode | null;
   pivotHistory: { target: string; type: EntityType; timestamp: string }[];
+  lastEnabledModules: string[] | null;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
+/**
+ * Normalizes a pivot or search target so social URLs are never turned into
+ * generic domain scans (e.g., https://github.com/torvalds -> torvalds when type is username).
+ */
+export function normalizeTargetForType(rawInput: string, type: EntityType): string {
+  const trimmed = rawInput.trim();
+  if (!trimmed) return trimmed;
+
+  if (type === 'username' && /^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      // Check query param id (e.g. HackerNews user?id=xxx)
+      const idParam = parsed.searchParams.get('id');
+      if (idParam) return idParam.trim();
+
+      const segments = parsed.pathname
+        .split('/')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && s !== 'about.json' && s !== 'user' && s !== 'users' && s !== 'u' && s !== 'id' && s !== 'by' && s !== 'member' && s !== 'player' && s !== 'pub' && s !== 'v2');
+
+      if (segments.length > 0) {
+        const last = segments[segments.length - 1].replace(/^@/, '').replace(/\.json$/i, '');
+        if (last) return last;
+      }
+    } catch {
+      // Fallback to raw input
+    }
+  }
+
+  return trimmed;
+}
 
 export function useScanStream() {
   const [state, setState] = useState<ScanStreamState>({
@@ -41,7 +75,7 @@ export function useScanStream() {
         timestamp: '00:00:00',
         module: 'system',
         level: 'info',
-        message: 'ISEEYOU Reconnaissance Command Center Initialized. Ready for target stream.',
+        message: 'ISEEYOU Reconnaissance Command Center Initialized. Select mode & modules to begin.',
       },
     ],
     nodes: [],
@@ -49,7 +83,9 @@ export function useScanStream() {
     findings: [],
     isScanning: false,
     selectedFinding: null,
+    selectedNode: null,
     pivotHistory: [],
+    lastEnabledModules: null,
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -70,37 +106,80 @@ export function useScanStream() {
   }, [closeEventSource]);
 
   const startScan = useCallback(
-    async (target: string, type: EntityType, isPivot: boolean = false) => {
+    async (
+      rawTarget: string,
+      type: EntityType,
+      isPivot: boolean = false,
+      enabledModules?: string[],
+      parentNodeId?: string
+    ) => {
+      // Guard against non-scannable entity types (e.g., port numbers or breach titles)
+      if (type === 'port' || type === 'breach' || type === 'secret' || type === 'document') {
+        setState((prev) => ({
+          ...prev,
+          logs: [
+            ...prev.logs,
+            {
+              id: `guard-${Date.now()}`,
+              timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+              module: 'orchestrator',
+              level: 'warn',
+              message: `Entity type [${type.toUpperCase()}] (${rawTarget}) is an endpoint attribute — open the Node Inspector to view details or remediate.`,
+            },
+          ],
+        }));
+        return;
+      }
+
+      const target = normalizeTargetForType(rawTarget, type);
+      if (!target) return;
+
       closeEventSource();
 
-      // Configure state for scan (retain graph if pivoting)
+      // Configure state for scan (retain graph if pivoting or running incremental module)
       setState((prev) => {
         if (isPivot) {
-          const newHistory = [
-            ...prev.pivotHistory,
-            {
-              target: prev.target,
-              type: prev.targetType,
-              timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-            },
-          ];
+          const isSameTargetModuleRun = prev.target.toLowerCase() === target.toLowerCase();
+          const newHistory = isSameTargetModuleRun
+            ? prev.pivotHistory
+            : [
+                ...prev.pivotHistory,
+                {
+                  target: prev.target,
+                  type: prev.targetType,
+                  timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                },
+              ];
 
-          const pivotEdge: EntityEdge = {
-            id: `edge-pivot-${Date.now()}`,
-            source: `root-${prev.target}`,
-            target: `root-${target}`,
-            relation: 'PIVOTED_TO',
-            confidence: 1.0,
-          };
+          const sourceId = parentNodeId || `root-${prev.target}`;
+          const targetId = `root-${target}`;
+          const pivotEdgeExists = prev.edges.some(
+            (e) => e.source === sourceId && e.target === targetId
+          );
+
+          const nextEdges =
+            !isSameTargetModuleRun && !pivotEdgeExists
+              ? [
+                  ...prev.edges,
+                  {
+                    id: `edge-pivot-${Date.now()}`,
+                    source: sourceId,
+                    target: targetId,
+                    relation: 'PIVOTED_TO',
+                    confidence: 1.0,
+                  },
+                ]
+              : prev.edges;
 
           return {
             ...prev,
             status: 'running',
             isScanning: true,
-            target,
-            targetType: type,
+            target: isSameTargetModuleRun ? prev.target : target,
+            targetType: isSameTargetModuleRun ? prev.targetType : type,
             pivotHistory: newHistory,
-            edges: [...prev.edges, pivotEdge],
+            edges: nextEdges,
+            lastEnabledModules: enabledModules ?? prev.lastEnabledModules,
             logs: [
               ...prev.logs,
               {
@@ -108,7 +187,9 @@ export function useScanStream() {
                 timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
                 module: 'orchestrator',
                 level: 'info',
-                message: `[PIVOT] Recursively pivoting recon investigation onto: [${type.toUpperCase()}] ${target}`,
+                message: enabledModules?.length
+                  ? `[STEP-SCAN] Running module(s) [${enabledModules.join(', ')}] on [${type.toUpperCase()}] ${target}`
+                  : `[PIVOT] Recursively pivoting recon investigation onto: [${type.toUpperCase()}] ${target}`,
               },
             ],
           };
@@ -126,14 +207,18 @@ export function useScanStream() {
           edges: [],
           findings: [],
           selectedFinding: null,
+          selectedNode: null,
           pivotHistory: [],
+          lastEnabledModules: enabledModules ?? null,
           logs: [
             {
               id: `start-${Date.now()}`,
               timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
               module: 'orchestrator',
               level: 'info',
-              message: `Dispatching reconnaissance mission for [${type.toUpperCase()}]: ${target}`,
+              message: `Dispatching reconnaissance mission for [${type.toUpperCase()}]: ${target}${
+                enabledModules ? ` (Active modules: ${enabledModules.join(', ')})` : ''
+              }`,
             },
           ],
         };
@@ -141,14 +226,33 @@ export function useScanStream() {
 
       try {
         // 1. Initialize scan session via POST
+        const requestBody: {
+          seed_input: string;
+          force_refresh: boolean;
+          enabled_modules?: string[];
+        } = {
+          seed_input: target,
+          force_refresh: false,
+        };
+        if (enabledModules && enabledModules.length > 0) {
+          requestBody.enabled_modules = enabledModules;
+        }
+
         const res = await fetch(`${API_BASE_URL}/api/v1/scan`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ seed_input: target, force_refresh: false }),
+          body: JSON.stringify(requestBody),
         });
 
         if (!res.ok) {
-          throw new Error(`Backend returned HTTP ${res.status}`);
+          let errDetail = `Backend returned HTTP ${res.status}`;
+          try {
+            const errJson = await res.json();
+            if (errJson?.detail) errDetail = errJson.detail;
+          } catch {
+            // ignore
+          }
+          throw new Error(errDetail);
         }
 
         const session = await res.json();
@@ -166,7 +270,8 @@ export function useScanStream() {
             const data = JSON.parse(e.data);
             const line: TelemetryLogLine = {
               id: `log-${Date.now()}-${Math.random()}`,
-              timestamp: data.timestamp || new Date().toLocaleTimeString('en-US', { hour12: false }),
+              timestamp:
+                data.timestamp || new Date().toLocaleTimeString('en-US', { hour12: false }),
               module: data.module || 'engine',
               level: data.level || 'info',
               message: data.message || '',
@@ -179,11 +284,60 @@ export function useScanStream() {
 
         es.addEventListener('node', (e: MessageEvent) => {
           try {
-            const node: EntityNode = JSON.parse(e.data);
+            const rawNode: EntityNode = JSON.parse(e.data);
+            // Attach parentNodeId if this was a targeted node scan
+            const node: EntityNode =
+              parentNodeId && !rawNode.parentId && !rawNode.parent_id
+                ? { ...rawNode, parentId: parentNodeId, parent_id: parentNodeId }
+                : rawNode;
+
             setState((prev) => {
-              // Deduplicate nodes by id
-              if (prev.nodes.some((n) => n.id === node.id)) return prev;
-              return { ...prev, nodes: [...prev.nodes, node] };
+              // Skip if node matches the current root target seed itself
+              if (
+                node.value.toLowerCase() === prev.target.toLowerCase() &&
+                (node.metadata?.role === 'seed' || node.metadata?.role === 'identity_seed')
+              ) {
+                return prev;
+              }
+
+              // Deduplicate nodes by ID OR by (type + normalized value)
+              const existingIdx = prev.nodes.findIndex(
+                (n) =>
+                  n.id === node.id ||
+                  (n.type === node.type && n.value.trim().toLowerCase() === node.value.trim().toLowerCase())
+              );
+
+              if (existingIdx !== -1) {
+                const existing = prev.nodes[existingIdx];
+                const updatedNode: EntityNode = {
+                  ...existing,
+                  metadata: { ...existing.metadata, ...node.metadata },
+                  severity:
+                    existing.severity === 'info' && node.severity !== 'info'
+                      ? node.severity
+                      : existing.severity,
+                };
+                const nextNodes = [...prev.nodes];
+                nextNodes[existingIdx] = updatedNode;
+                return { ...prev, nodes: nextNodes };
+              }
+
+              // If parentNodeId was specified, also create a direct edge from parentNodeId to this node
+              const nextEdges = [...prev.edges];
+              if (parentNodeId && parentNodeId !== node.id) {
+                const edgeId = `edge-step-${parentNodeId}-${node.id}`;
+                if (!nextEdges.some((ed) => ed.id === edgeId)) {
+                  nextEdges.push({
+                    id: edgeId,
+                    source: parentNodeId,
+                    target: node.id,
+                    relation: 'DISCOVERED_FROM',
+                    confidence: 1.0,
+                  });
+                }
+              }
+
+              return { ...prev, nodes: [...prev.nodes, node], edges: nextEdges };
             });
           } catch (err) {
             console.error('Failed to parse SSE node:', err);
@@ -194,7 +348,15 @@ export function useScanStream() {
           try {
             const edge: EntityEdge = JSON.parse(e.data);
             setState((prev) => {
-              if (prev.edges.some((ed) => ed.id === edge.id)) return prev;
+              if (
+                prev.edges.some(
+                  (ed) =>
+                    ed.id === edge.id ||
+                    (ed.source === edge.source && ed.target === edge.target && ed.relation === edge.relation)
+                )
+              ) {
+                return prev;
+              }
               return { ...prev, edges: [...prev.edges, edge] };
             });
           } catch (err) {
@@ -204,9 +366,20 @@ export function useScanStream() {
 
         es.addEventListener('vuln', (e: MessageEvent) => {
           try {
-            const finding: VulnerabilityFinding = JSON.parse(e.data);
+            const rawFinding: VulnerabilityFinding = JSON.parse(e.data);
+            const finding: VulnerabilityFinding =
+              parentNodeId && !rawFinding.nodeId && !rawFinding.node_id
+                ? { ...rawFinding, nodeId: parentNodeId, node_id: parentNodeId }
+                : rawFinding;
+
             setState((prev) => {
-              if (prev.findings.some((f) => f.id === finding.id)) return prev;
+              if (
+                prev.findings.some(
+                  (f) => f.id === finding.id || f.title.toLowerCase() === finding.title.toLowerCase()
+                )
+              ) {
+                return prev;
+              }
               return {
                 ...prev,
                 findings: [...prev.findings, finding],
@@ -238,7 +411,7 @@ export function useScanStream() {
               ...prev,
               status: 'completed',
               isScanning: false,
-              riskScore: sessionResult.risk_score ?? prev.riskScore,
+              riskScore: Math.max(prev.riskScore, sessionResult.risk_score ?? 0),
             }));
             closeEventSource();
           } catch (err) {
@@ -271,7 +444,6 @@ export function useScanStream() {
         });
 
         es.onerror = () => {
-          // If connection drops, conclude scanning gracefully
           setState((prev) => ({
             ...prev,
             isScanning: false,
@@ -291,7 +463,7 @@ export function useScanStream() {
               timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
               module: 'network',
               level: 'error',
-              message: `Could not reach backend at ${API_BASE_URL}: ${error.message}. Ensure FastAPI is running on port 8000.`,
+              message: `Scan request failed: ${error.message}`,
             },
           ],
         }));
@@ -332,9 +504,41 @@ export function useScanStream() {
     setState((prev) => ({ ...prev, logs: [] }));
   }, []);
 
-  const selectFinding = useCallback((finding: VulnerabilityFinding) => {
+  const selectFinding = useCallback((finding: VulnerabilityFinding | null) => {
     setState((prev) => ({ ...prev, selectedFinding: finding }));
   }, []);
+
+  const selectNode = useCallback((node: EntityNode | null) => {
+    setState((prev) => ({ ...prev, selectedNode: node }));
+  }, []);
+
+  const resetWorkspace = useCallback(() => {
+    closeEventSource();
+    setState({
+      sessionId: null,
+      status: 'idle',
+      target: 'example.com',
+      targetType: 'domain',
+      riskScore: 0,
+      logs: [
+        {
+          id: `reset-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+          module: 'system',
+          level: 'info',
+          message: 'Workspace cleared. Ready for new reconnaissance target.',
+        },
+      ],
+      nodes: [],
+      edges: [],
+      findings: [],
+      isScanning: false,
+      selectedFinding: null,
+      selectedNode: null,
+      pivotHistory: [],
+      lastEnabledModules: null,
+    });
+  }, [closeEventSource]);
 
   const revertPivot = useCallback(() => {
     setState((prev) => {
@@ -366,7 +570,8 @@ export function useScanStream() {
     cancelScan,
     clearLogs,
     selectFinding,
+    selectNode,
+    resetWorkspace,
     revertPivot,
   };
 }
-

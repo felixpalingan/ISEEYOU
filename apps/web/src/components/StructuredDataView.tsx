@@ -48,6 +48,7 @@ interface StructuredDataViewProps {
   isScanning: boolean;
   selectedFindingId?: string;
   onSelectFinding: (finding: VulnerabilityFinding) => void;
+  onSelectNode?: (node: EntityNode) => void;
   onPivot?: (target: string, type: EntityType) => void;
   onExportPDF?: () => void;
 }
@@ -76,6 +77,7 @@ export function StructuredDataView({
   isScanning,
   selectedFindingId,
   onSelectFinding,
+  onSelectNode,
   onPivot,
   onExportPDF,
 }: StructuredDataViewProps) {
@@ -783,7 +785,7 @@ export function StructuredDataView({
 
                         {/* Actions */}
                         <td className="py-2 px-3 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100">
+                          <div className="flex items-center justify-end gap-1.5 opacity-85 group-hover:opacity-100">
                             <button
                               onClick={() => handleCopy(node.value, node.id)}
                               className="p-1 rounded hover:bg-vsc-border text-vsc-muted hover:text-vsc-bright"
@@ -795,15 +797,61 @@ export function StructuredDataView({
                                 <Copy className="w-3.5 h-3.5" />
                               )}
                             </button>
-                            {onPivot && (
-                              <button
-                                onClick={() => onPivot(node.value, node.type)}
-                                className="px-1.5 py-0.5 rounded border border-vsc-border hover:border-vsc-accent-blue text-[10px] text-vsc-muted hover:text-vsc-accent-blue"
-                                title={`Pivot scan on ${node.value}`}
+
+                            {/* Open external profile/web URL if available */}
+                            {(typeof node.metadata?.profile_url === 'string' ||
+                              /^https?:\/\//i.test(node.value)) && (
+                              <a
+                                href={
+                                  typeof node.metadata?.profile_url === 'string'
+                                    ? node.metadata.profile_url
+                                    : node.value
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-1.5 py-0.5 rounded border border-emerald-700/60 bg-emerald-950/30 hover:bg-emerald-800/40 text-[10px] text-emerald-300 flex items-center gap-1"
+                                title="Open URL in new tab"
                               >
-                                Pivot ↗
+                                <span>Open</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+
+                            {/* Inspect node in Right Drawer */}
+                            {onSelectNode && (
+                              <button
+                                onClick={() => onSelectNode(node)}
+                                className="px-1.5 py-0.5 rounded border border-vsc-border hover:border-sky-500 text-[10px] text-vsc-muted hover:text-sky-300"
+                                title={`Inspect ${node.label || node.value}`}
+                              >
+                                Inspect
                               </button>
                             )}
+
+                            {/* Pivot only on pivotable entity types */}
+                            {onPivot &&
+                              ['domain', 'subdomain', 'ip', 'username', 'email'].includes(
+                                node.type
+                              ) && (
+                                <button
+                                  onClick={() => {
+                                    const pivotVal =
+                                      typeof node.metadata?.handle === 'string' &&
+                                      node.metadata.handle
+                                        ? node.metadata.handle
+                                        : node.value;
+                                    onPivot(pivotVal, node.type);
+                                  }}
+                                  className="px-1.5 py-0.5 rounded border border-vsc-border hover:border-vsc-accent-blue text-[10px] text-vsc-muted hover:text-vsc-accent-blue"
+                                  title={`Pivot scan on ${
+                                    typeof node.metadata?.handle === 'string'
+                                      ? node.metadata.handle
+                                      : node.value
+                                  }`}
+                                >
+                                  Pivot ↗
+                                </button>
+                              )}
                           </div>
                         </td>
                       </tr>
