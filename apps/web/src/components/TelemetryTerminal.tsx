@@ -9,11 +9,86 @@ import {
   ArrowDown,
   Check,
   ShieldAlert,
+  Maximize2,
+  Minimize2,
+  X,
+  GripHorizontal,
 } from 'lucide-react';
 import { TelemetryLogLine } from '@/hooks/useScanStream';
 import { VulnerabilityFinding, SeverityLevel } from '@iseeyou/shared-types';
 import { Badge, Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
+
+// Helper to derive provenance source for finding
+export function getFindingProvenance(finding: VulnerabilityFinding) {
+  const text = `${finding.title} ${finding.evidence} ${finding.id}`.toLowerCase();
+  if (
+    text.includes('shodan') ||
+    text.includes('port') ||
+    text.includes('cve-') ||
+    text.includes('service') ||
+    text.includes('protocol') ||
+    text.includes('mysql') ||
+    text.includes('postgres') ||
+    text.includes('redis') ||
+    text.includes('telnet') ||
+    text.includes('smb')
+  ) {
+    return {
+      provider: 'Shodan InternetDB',
+      type: 'Zero-Auth Port & CVE Engine',
+      badgeColor: 'border-cyan-500/50 text-cyan-400 bg-cyan-950/40',
+      url: 'https://internetdb.shodan.io',
+      method: 'Passive Banner & CVE Analysis',
+    };
+  }
+  if (
+    text.includes('crt.sh') ||
+    text.includes('subdomain') ||
+    text.includes('cname') ||
+    text.includes('takeover') ||
+    text.includes('dns')
+  ) {
+    return {
+      provider: 'crt.sh & Cloudflare DoH',
+      type: 'Certificate Transparency Logs',
+      badgeColor: 'border-sky-500/50 text-sky-400 bg-sky-950/40',
+      url: 'https://crt.sh',
+      method: 'Append-Only SSL/TLS Logs',
+    };
+  }
+  if (
+    text.includes('pwned') ||
+    text.includes('breach') ||
+    text.includes('credential') ||
+    text.includes('password') ||
+    text.includes('hibp')
+  ) {
+    return {
+      provider: 'HaveIBeenPwned',
+      type: 'k-Anonymity SHA-1 Breach DB',
+      badgeColor: 'border-amber-500/50 text-amber-400 bg-amber-950/40',
+      url: 'https://haveibeenpwned.com',
+      method: 'SHA-1 Hash Prefix Search',
+    };
+  }
+  if (text.includes('asn') || text.includes('isp') || text.includes('geolocation') || text.includes('ip-api')) {
+    return {
+      provider: 'ip-api.com',
+      type: 'BGP & ASN Geolocation',
+      badgeColor: 'border-emerald-500/50 text-emerald-400 bg-emerald-950/40',
+      url: 'https://ip-api.com',
+      method: 'Autonomous System Registry',
+    };
+  }
+  return {
+    provider: 'ISEEYOU Recon Engine',
+    type: 'Multi-Source OSINT Synthesis',
+    badgeColor: 'border-purple-500/50 text-purple-400 bg-purple-950/40',
+    url: 'https://github.com/flx/ISEEYOU',
+    method: 'Correlation & Graph Analysis',
+  };
+}
 
 interface TelemetryTerminalProps {
   logs: TelemetryLogLine[];
@@ -25,6 +100,11 @@ interface TelemetryTerminalProps {
   onSelectFinding: (finding: VulnerabilityFinding) => void;
   selectedFindingId?: string;
   className?: string;
+  height?: number;
+  isMaximized?: boolean;
+  onToggleMaximize?: () => void;
+  onClose?: () => void;
+  onStartResize?: (e: React.MouseEvent) => void;
 }
 
 export function TelemetryTerminal({
@@ -37,6 +117,11 @@ export function TelemetryTerminal({
   onSelectFinding,
   selectedFindingId,
   className,
+  height,
+  isMaximized = false,
+  onToggleMaximize,
+  onClose,
+  onStartResize,
 }: TelemetryTerminalProps) {
   const [levelFilter, setLevelFilter] = useState<'all' | 'info' | 'success' | 'warn' | 'error'>('all');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -78,7 +163,21 @@ export function TelemetryTerminal({
   };
 
   return (
-    <div className={cn('h-48 bg-vsc-panel border-t border-vsc-border flex flex-col font-mono', className)}>
+    <div
+      style={{ height: isMaximized ? '75%' : height ? `${height}px` : undefined }}
+      className={cn('h-48 bg-vsc-panel border-t border-vsc-border flex flex-col font-mono relative', className)}
+    >
+      {/* Top Draggable Resizer Handle */}
+      {onStartResize && !isMaximized && (
+        <div
+          onMouseDown={onStartResize}
+          className="h-1.5 w-full -top-1 left-0 absolute cursor-row-resize hover:bg-vsc-accent-blue/80 bg-transparent transition-all z-20 group flex items-center justify-center"
+          title="Drag to resize terminal panel"
+        >
+          <GripHorizontal className="w-3.5 h-3 text-vsc-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      )}
+
       {/* 1. Header Bar: Tabs & Controls */}
       <div className="h-8 bg-vsc-sidebar flex items-center justify-between px-2 text-xs border-b border-vsc-border select-none flex-shrink-0">
         <div className="flex items-center h-full">
@@ -184,6 +283,31 @@ export function TelemetryTerminal({
               </button>
             </>
           )}
+
+          {/* Window Action Controls (Maximize / Minimize / Close) */}
+          <div className="flex items-center gap-1 border-l border-vsc-borderSubtle pl-1.5 ml-0.5">
+            {onToggleMaximize && (
+              <button
+                type="button"
+                onClick={onToggleMaximize}
+                title={isMaximized ? 'Restore Terminal Size' : 'Maximize Terminal Panel'}
+                className="p-1 text-vsc-muted hover:text-vsc-bright hover:bg-vsc-panel rounded transition-colors"
+              >
+                {isMaximized ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              </button>
+            )}
+
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                title="Close / Hide Panel"
+                className="p-1 text-vsc-muted hover:text-vsc-bright hover:bg-vsc-panel rounded transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -228,40 +352,54 @@ export function TelemetryTerminal({
                 <span>No vulnerability findings detected yet. Target appears secure.</span>
               </div>
             ) : (
-              findings.map((finding) => (
-                <div
-                  key={finding.id}
-                  onClick={() => onSelectFinding(finding)}
-                  className={cn(
-                    'p-2.5 rounded border transition-all cursor-pointer flex items-start justify-between gap-3',
-                    selectedFindingId === finding.id
-                      ? 'bg-vsc-canvas border-vsc-accent-blue ring-1 ring-vsc-accent-blue/50'
-                      : 'bg-vsc-sidebar hover:bg-vsc-canvas border-vsc-border'
-                  )}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={finding.severity.toLowerCase() as any}
-                        size="xs"
-                        className="font-bold"
-                      >
-                        {finding.severity.toUpperCase()}
-                      </Badge>
-                      <span className="font-bold text-xs text-vsc-bright">{finding.title}</span>
-                      {(finding.cve_id || finding.cveId) && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800">
-                          {finding.cve_id || finding.cveId}
+              findings.map((finding) => {
+                const prov = getFindingProvenance(finding);
+                return (
+                  <div
+                    key={finding.id}
+                    onClick={() => onSelectFinding(finding)}
+                    className={cn(
+                      'p-2.5 rounded border transition-all cursor-pointer flex items-start justify-between gap-3',
+                      selectedFindingId === finding.id
+                        ? 'bg-vsc-canvas border-vsc-accent-blue ring-1 ring-vsc-accent-blue/50'
+                        : 'bg-vsc-sidebar hover:bg-vsc-canvas border-vsc-border'
+                    )}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                          variant={finding.severity.toLowerCase() as any}
+                          size="xs"
+                          className="font-bold"
+                        >
+                          {finding.severity.toUpperCase()}
+                        </Badge>
+                        <span className="font-bold text-xs text-vsc-bright">{finding.title}</span>
+                        {(finding.cve_id || finding.cveId) && (
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-950 text-red-300 border border-red-800">
+                            {finding.cve_id || finding.cveId}
+                          </span>
+                        )}
+                        {/* Data Provenance Chip */}
+                        <span
+                          className={cn(
+                            'text-[10px] font-mono px-1.5 py-0.2 rounded border flex items-center gap-1',
+                            prov.badgeColor
+                          )}
+                          title={`Verified via ${prov.provider} (${prov.type})`}
+                        >
+                          <span className="opacity-75">src:</span>
+                          <span className="font-semibold">{prov.provider}</span>
                         </span>
-                      )}
+                      </div>
+                      <p className="text-[11px] text-vsc-muted line-clamp-1">{finding.evidence}</p>
                     </div>
-                    <p className="text-[11px] text-vsc-muted line-clamp-1">{finding.evidence}</p>
+                    <span className="text-[10px] text-vsc-muted font-mono flex-shrink-0">
+                      node: {finding.node_id || finding.nodeId}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-vsc-muted font-mono flex-shrink-0">
-                    node: {finding.node_id || finding.nodeId}
-                  </span>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}

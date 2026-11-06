@@ -8,6 +8,7 @@ import {
   Settings,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   ExternalLink,
   Globe,
   Radio,
@@ -19,9 +20,17 @@ import {
   Lock,
   User,
   Table,
+  PanelLeft,
+  PanelBottom,
+  PanelRight,
+  Maximize2,
+  Minimize2,
+  X,
+  Database,
+  ShieldCheck,
 } from 'lucide-react';
 import { OmniSearchBar } from '@/components/OmniSearchBar';
-import { TelemetryTerminal } from '@/components/TelemetryTerminal';
+import { TelemetryTerminal, getFindingProvenance } from '@/components/TelemetryTerminal';
 import { StructuredDataView } from '@/components/StructuredDataView';
 import { GraphCanvas } from '@/components/GraphCanvas';
 import { RiskGauge } from '@/components/RiskGauge';
@@ -33,6 +42,99 @@ export default function WorkspacePage() {
   const [activeTab, setActiveTab] = useState<'graph' | 'table'>('graph');
   const [bottomTab, setBottomTab] = useState<'terminal' | 'problems'>('terminal');
   const [copied, setCopied] = useState(false);
+
+  // Window Layout & Resizing States (VS Code Parity)
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
+  const [leftSidebarWidth, setLeftSidebarWidth] = useState(240);
+  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(true);
+  const [rightDrawerWidth, setRightDrawerWidth] = useState(300);
+  const [isBottomTerminalOpen, setIsBottomTerminalOpen] = useState(true);
+  const [bottomTerminalHeight, setBottomTerminalHeight] = useState(200);
+  const [isBottomTerminalMaximized, setIsBottomTerminalMaximized] = useState(false);
+
+  // Zen Mode: all 3 panels collapsed for distraction-free full-canvas graph exploration
+  const isZenMode = !isLeftSidebarOpen && !isRightDrawerOpen && !isBottomTerminalOpen;
+  const toggleZenMode = () => {
+    if (isZenMode) {
+      setIsLeftSidebarOpen(true);
+      setIsRightDrawerOpen(true);
+      setIsBottomTerminalOpen(true);
+    } else {
+      setIsLeftSidebarOpen(false);
+      setIsRightDrawerOpen(false);
+      setIsBottomTerminalOpen(false);
+    }
+  };
+
+  // Drag-to-resize handlers
+  const startResizingLeft = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = leftSidebarWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(160, Math.min(480, startWidth + (moveEvent.clientX - startX)));
+      setLeftSidebarWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const startResizingRight = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = rightDrawerWidth;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(220, Math.min(550, startWidth - (moveEvent.clientX - startX)));
+      setRightDrawerWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const startResizingBottom = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = bottomTerminalHeight;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newHeight = Math.max(70, Math.min(600, startHeight - (moveEvent.clientY - startY)));
+      setBottomTerminalHeight(newHeight);
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   // Real-time scan stream hook connecting to FastAPI backend
   const {
@@ -61,6 +163,17 @@ export default function WorkspacePage() {
 
   const riskLevel =
     riskScore >= 70 ? 'CRITICAL' : riskScore >= 40 ? 'HIGH' : riskScore >= 15 ? 'MEDIUM' : 'LOW';
+
+  // Selected finding provenance data source
+  const findingProvenance = selectedFinding
+    ? getFindingProvenance(selectedFinding)
+    : {
+        provider: 'Shodan / crt.sh / HIBP',
+        type: 'Passive OSINT Synthesis',
+        badgeColor: 'border-cyan-500/50 text-cyan-400 bg-cyan-950/40',
+        url: 'https://internetdb.shodan.io',
+        method: 'Zero-Auth Stream Correlation',
+      };
 
   // Dynamic remediation playbook generator based on selected finding
   const getRemediationCommand = (finding: VulnerabilityFinding | null) => {
@@ -108,8 +221,8 @@ export default function WorkspacePage() {
           initialValue={target}
         />
 
-        {/* Right Status: Dynamic Interactive Risk Score Speedometer Gauge */}
-        <div className="flex items-center gap-2">
+        {/* Right Status & Layout Controls: Risk Gauge + VS Code Panel Toggles */}
+        <div className="flex items-center gap-3">
           <RiskGauge
             score={riskScore}
             level={riskLevel}
@@ -118,20 +231,81 @@ export default function WorkspacePage() {
             onInspectFindings={() => {
               setActiveTab('table');
               setBottomTab('problems');
+              setIsBottomTerminalOpen(true);
             }}
           />
+
+          {/* VS Code Window Panel Layout Controls */}
+          <div className="flex items-center bg-vsc-dropdown rounded border border-vsc-borderSubtle p-0.5 gap-0.5">
+            <button
+              type="button"
+              onClick={() => setIsLeftSidebarOpen((prev) => !prev)}
+              title={isLeftSidebarOpen ? 'Hide Primary Side Bar (Ctrl+B)' : 'Show Primary Side Bar (Ctrl+B)'}
+              className={`p-1 rounded transition-colors ${
+                isLeftSidebarOpen
+                  ? 'text-vsc-bright bg-vsc-panel'
+                  : 'text-vsc-muted hover:text-vsc-text'
+              }`}
+            >
+              <PanelLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsBottomTerminalOpen((prev) => !prev)}
+              title={isBottomTerminalOpen ? 'Hide Bottom Panel (Ctrl+J)' : 'Show Bottom Panel (Ctrl+J)'}
+              className={`p-1 rounded transition-colors ${
+                isBottomTerminalOpen
+                  ? 'text-vsc-bright bg-vsc-panel'
+                  : 'text-vsc-muted hover:text-vsc-text'
+              }`}
+            >
+              <PanelBottom className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsRightDrawerOpen((prev) => !prev)}
+              title={isRightDrawerOpen ? 'Hide Secondary Inspector' : 'Show Secondary Inspector'}
+              className={`p-1 rounded transition-colors ${
+                isRightDrawerOpen
+                  ? 'text-vsc-bright bg-vsc-panel'
+                  : 'text-vsc-muted hover:text-vsc-text'
+              }`}
+            >
+              <PanelRight className="w-3.5 h-3.5" />
+            </button>
+            <div className="w-[1px] h-3 bg-vsc-borderSubtle mx-0.5" />
+            <button
+              type="button"
+              onClick={toggleZenMode}
+              title={isZenMode ? 'Exit Zen Mode (Restore Panels)' : 'Zen Mode: Maximize Graph Canvas'}
+              className={`p-1 rounded transition-colors ${
+                isZenMode
+                  ? 'text-vsc-accent-blue bg-vsc-panel font-bold'
+                  : 'text-vsc-muted hover:text-vsc-text'
+              }`}
+            >
+              {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
       </header>
 
       {/* 2. MAIN 3-PANE WORKSPACE */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Activity Bar (Left 48px rail) */}
         <aside className="w-12 bg-vsc-activityBar flex flex-col items-center py-2 border-r border-vsc-border z-10 flex-shrink-0">
           <button
-            title="Graph Canvas"
-            onClick={() => setActiveTab('graph')}
+            title="Toggle Target Explorer & Graph Canvas"
+            onClick={() => {
+              if (activeTab === 'graph') {
+                setIsLeftSidebarOpen((prev) => !prev);
+              } else {
+                setActiveTab('graph');
+                setIsLeftSidebarOpen(true);
+              }
+            }}
             className={`w-10 h-10 flex items-center justify-center mb-1 transition-colors ${
-              activeTab === 'graph'
+              activeTab === 'graph' && isLeftSidebarOpen
                 ? 'text-vsc-bright border-l-2 border-vsc-accent-blue bg-vsc-canvas'
                 : 'text-vsc-muted hover:text-vsc-bright'
             }`}
@@ -143,6 +317,7 @@ export default function WorkspacePage() {
             onClick={() => {
               setActiveTab('table');
               setBottomTab('problems');
+              setIsBottomTerminalOpen(true);
             }}
             className={`w-10 h-10 flex items-center justify-center mb-1 transition-colors ${
               activeTab === 'table'
@@ -153,8 +328,12 @@ export default function WorkspacePage() {
             <ShieldAlert className="w-5 h-5" />
           </button>
           <button
-            title="Remediation Playbooks"
-            onClick={() => setBottomTab('problems')}
+            title="Remediation Playbooks & Problems"
+            onClick={() => {
+              setBottomTab('problems');
+              setIsBottomTerminalOpen(true);
+              setIsRightDrawerOpen(true);
+            }}
             className="w-10 h-10 flex items-center justify-center text-vsc-muted hover:text-vsc-bright mb-1"
           >
             <BookOpen className="w-5 h-5" />
@@ -168,159 +347,184 @@ export default function WorkspacePage() {
           </button>
         </aside>
 
-        {/* Sidebar Explorer (240px) */}
-        <aside className="w-60 bg-vsc-sidebar border-r border-vsc-border flex flex-col text-xs flex-shrink-0">
-          <div className="h-8 px-3 flex items-center justify-between text-[11px] font-bold tracking-wider text-vsc-muted uppercase border-b border-vsc-border">
-            <span>Target Explorer</span>
-            <span className="text-[10px] text-vsc-bright font-mono">{nodes.length} nodes</span>
-          </div>
-
-          {/* Dynamic Tree Structure */}
-          <div className="flex-1 p-2 overflow-y-auto font-mono text-[12px] space-y-1">
-            <div className="flex items-center gap-1.5 text-vsc-bright font-semibold py-1 px-1 rounded hover:bg-vsc-card cursor-pointer">
-              <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-              <Globe className="w-3.5 h-3.5 text-vsc-keyword" />
-              <span className="truncate">{target}</span>
-            </div>
-
-            <div className="pl-4 space-y-1">
-              {/* Subdomains Group */}
-              <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                <span>📁 subdomains ({subdomains.length})</span>
-              </div>
-              <div className="pl-5 space-y-0.5 text-vsc-muted text-[11px]">
-                {subdomains.slice(0, 5).map((s) => (
-                  <div
-                    key={s.id}
-                    onClick={() => startScan(s.value, 'subdomain', true)}
-                    title={`Click to pivot on ${s.value}`}
-                    className="hover:text-sky-300 hover:underline cursor-pointer truncate flex items-center justify-between group"
+        {/* Sidebar Explorer (Resizable & Collapsible) */}
+        {isLeftSidebarOpen && (
+          <>
+            <aside
+              style={{ width: `${leftSidebarWidth}px` }}
+              className="bg-vsc-sidebar border-r border-vsc-border flex flex-col text-xs flex-shrink-0 relative select-none"
+            >
+              <div className="h-8 px-3 flex items-center justify-between text-[11px] font-bold tracking-wider text-vsc-muted uppercase border-b border-vsc-border">
+                <span className="truncate">Target Explorer</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-vsc-bright font-mono">{nodes.length} nodes</span>
+                  <button
+                    onClick={() => setIsLeftSidebarOpen(false)}
+                    title="Collapse Side Bar (Ctrl+B)"
+                    className="p-1 text-vsc-muted hover:text-vsc-bright hover:bg-vsc-dropdown rounded transition-colors"
                   >
-                    <span>├─ {s.value}</span>
-                    <span className="opacity-0 group-hover:opacity-100 text-[9px] text-vsc-accent-blue font-bold">
-                      Pivot ↗
-                    </span>
-                  </div>
-                ))}
-                {subdomains.length > 5 && (
-                  <div className="text-vsc-info text-[10px]">└─ +{subdomains.length - 5} more...</div>
-                )}
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
-              {/* IPs & Infrastructure */}
-              {ips.length > 0 && (
-                <>
+              {/* Dynamic Tree Structure */}
+              <div className="flex-1 p-2 overflow-y-auto font-mono text-[12px] space-y-1 select-text">
+                <div className="flex items-center gap-1.5 text-vsc-bright font-semibold py-1 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                  <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                  <Globe className="w-3.5 h-3.5 text-vsc-keyword" />
+                  <span className="truncate">{target}</span>
+                </div>
+
+                <div className="pl-4 space-y-1">
+                  {/* Subdomains Group */}
                   <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
                     <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                    <span>🌐 origin IPs ({ips.length})</span>
+                    <span>📁 subdomains ({subdomains.length})</span>
                   </div>
-                  <div className="pl-5 space-y-0.5 text-emerald-400 text-[11px]">
-                    {ips.map((ip) => (
+                  <div className="pl-5 space-y-0.5 text-vsc-muted text-[11px]">
+                    {subdomains.slice(0, 5).map((s) => (
                       <div
-                        key={ip.id}
-                        onClick={() => startScan(ip.value, 'ip', true)}
-                        title={`Click to pivot on ${ip.value}`}
-                        className="hover:text-emerald-200 hover:underline cursor-pointer truncate flex items-center justify-between group"
+                        key={s.id}
+                        onClick={() => startScan(s.value, 'subdomain', true)}
+                        title={`Click to pivot on ${s.value}`}
+                        className="hover:text-sky-300 hover:underline cursor-pointer truncate flex items-center justify-between group"
                       >
-                        <span>├─ {ip.value}</span>
-                        <span className="opacity-0 group-hover:opacity-100 text-[9px] text-emerald-400 font-bold">
+                        <span>├─ {s.value}</span>
+                        <span className="opacity-0 group-hover:opacity-100 text-[9px] text-vsc-accent-blue font-bold">
                           Pivot ↗
                         </span>
                       </div>
                     ))}
+                    {subdomains.length > 5 && (
+                      <div className="text-vsc-info text-[10px]">└─ +{subdomains.length - 5} more...</div>
+                    )}
                   </div>
-                </>
-              )}
 
-              {/* Open Ports */}
-              {ports.length > 0 && (
-                <>
-                  <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                    <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                    <span>🔌 open ports ({ports.length})</span>
-                  </div>
-                  <div className="pl-5 space-y-0.5 text-cyan-300 text-[11px]">
-                    {ports.map((p) => (
-                      <div key={p.id} className="hover:text-cyan-200 cursor-pointer truncate">
-                        ├─ {p.label}
+                  {/* IPs & Infrastructure */}
+                  {ips.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                        <span>🌐 origin IPs ({ips.length})</span>
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Breaches & Credentials */}
-              {breaches.length > 0 && (
-                <>
-                  <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                    <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                    <span>🚨 breach exposures ({breaches.length})</span>
-                  </div>
-                  <div className="pl-5 space-y-0.5 text-vsc-critical text-[11px]">
-                    {breaches.map((b) => (
-                      <div key={b.id} className="hover:text-red-400 cursor-pointer truncate">
-                        ├─ {b.value}
+                      <div className="pl-5 space-y-0.5 text-emerald-400 text-[11px]">
+                        {ips.map((ip) => (
+                          <div
+                            key={ip.id}
+                            onClick={() => startScan(ip.value, 'ip', true)}
+                            title={`Click to pivot on ${ip.value}`}
+                            className="hover:text-emerald-200 hover:underline cursor-pointer truncate flex items-center justify-between group"
+                          >
+                            <span>├─ {ip.value}</span>
+                            <span className="opacity-0 group-hover:opacity-100 text-[9px] text-emerald-400 font-bold">
+                              Pivot ↗
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
+                    </>
+                  )}
 
-              {/* Social Profiles */}
-              {profiles.length > 0 && (
-                <>
-                  <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
-                    <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
-                    <span>👤 social profiles ({profiles.length})</span>
-                  </div>
-                  <div className="pl-5 space-y-0.5 text-purple-300 text-[11px]">
-                    {profiles.slice(0, 4).map((prof) => (
-                      <div key={prof.id} className="hover:text-purple-200 cursor-pointer truncate">
-                        ├─ {String(prof.metadata?.platform || prof.value)}
+                  {/* Open Ports */}
+                  {ports.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                        <span>🔌 open ports ({ports.length})</span>
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+                      <div className="pl-5 space-y-0.5 text-cyan-300 text-[11px]">
+                        {ports.map((p) => (
+                          <div key={p.id} className="hover:text-cyan-200 cursor-pointer truncate">
+                            ├─ {p.label}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
 
-          {/* Quick External Pivots */}
-          <div className="p-2 border-t border-vsc-border bg-vsc-panel text-[11px]">
-            <div className="text-vsc-muted uppercase font-bold text-[10px] mb-1.5">
-              1-Click External Pivots
+                  {/* Breaches & Credentials */}
+                  {breaches.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                        <span>🚨 breach exposures ({breaches.length})</span>
+                      </div>
+                      <div className="pl-5 space-y-0.5 text-vsc-critical text-[11px]">
+                        {breaches.map((b) => (
+                          <div key={b.id} className="hover:text-red-400 cursor-pointer truncate">
+                            ├─ {b.value}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Social Profiles */}
+                  {profiles.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-1.5 text-vsc-text py-0.5 px-1 rounded hover:bg-vsc-card cursor-pointer">
+                        <ChevronDown className="w-3.5 h-3.5 text-vsc-muted" />
+                        <span>👤 social profiles ({profiles.length})</span>
+                      </div>
+                      <div className="pl-5 space-y-0.5 text-purple-300 text-[11px]">
+                        {profiles.slice(0, 4).map((prof) => (
+                          <div key={prof.id} className="hover:text-purple-200 cursor-pointer truncate">
+                            ├─ {String(prof.metadata?.platform || prof.value)}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick External Pivots */}
+              <div className="p-2 border-t border-vsc-border bg-vsc-panel text-[11px]">
+                <div className="text-vsc-muted uppercase font-bold text-[10px] mb-1.5">
+                  1-Click External Pivots
+                </div>
+                <div className="space-y-1 font-mono">
+                  <a
+                    href={`https://web.archive.org/web/*/${target}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between text-vsc-text hover:text-vsc-bright hover:underline"
+                  >
+                    <span>Wayback Machine</span>
+                    <ExternalLink className="w-3 h-3 text-vsc-muted" />
+                  </a>
+                  <a
+                    href={`https://www.shodan.io/search?query=${target}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between text-vsc-text hover:text-vsc-bright hover:underline"
+                  >
+                    <span>Shodan Web Search</span>
+                    <ExternalLink className="w-3 h-3 text-vsc-muted" />
+                  </a>
+                </div>
+              </div>
+            </aside>
+
+            {/* Draggable Resizer Handle for Left Sidebar */}
+            <div
+              onMouseDown={startResizingLeft}
+              className="w-1 cursor-col-resize hover:bg-vsc-accent-blue active:bg-vsc-accent-blue bg-transparent transition-all z-20 group relative -mr-1 flex items-center justify-center flex-shrink-0 select-none"
+              title="Drag to resize Target Explorer"
+            >
+              <div className="w-0.5 h-8 bg-vsc-border group-hover:bg-vsc-accent-blue transition-colors rounded-full" />
             </div>
-            <div className="space-y-1 font-mono">
-              <a
-                href={`https://web.archive.org/web/*/${target}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between text-vsc-text hover:text-vsc-bright hover:underline"
-              >
-                <span>Wayback Machine</span>
-                <ExternalLink className="w-3 h-3 text-vsc-muted" />
-              </a>
-              <a
-                href={`https://www.shodan.io/search?query=${target}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between text-vsc-text hover:text-vsc-bright hover:underline"
-              >
-                <span>Shodan Web Search</span>
-                <ExternalLink className="w-3 h-3 text-vsc-muted" />
-              </a>
-            </div>
-          </div>
-        </aside>
+          </>
+        )}
 
         {/* Center Workspace (Tabs, Breadcrumbs, Canvas, and Live Telemetry Terminal) */}
-        <main className="flex-1 flex flex-col bg-vsc-canvas overflow-hidden">
+        <main className="flex-1 flex flex-col bg-vsc-canvas overflow-hidden min-w-0">
           {/* Tabs Bar */}
           <div className="h-9 bg-vsc-sidebar flex items-center border-b border-vsc-border overflow-x-auto flex-shrink-0">
             <button
               onClick={() => setActiveTab('graph')}
-              className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors ${
+              className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors flex-shrink-0 ${
                 activeTab === 'graph'
                   ? 'bg-vsc-canvas text-vsc-bright font-medium border-t-2 border-vsc-accent-blue'
                   : 'bg-vsc-sidebar text-vsc-muted hover:text-vsc-bright'
@@ -331,7 +535,7 @@ export default function WorkspacePage() {
             </button>
             <button
               onClick={() => setActiveTab('table')}
-              className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors ${
+              className={`h-full px-4 flex items-center gap-2 border-r border-vsc-border text-xs transition-colors flex-shrink-0 ${
                 activeTab === 'table'
                   ? 'bg-vsc-canvas text-vsc-bright font-medium border-t-2 border-vsc-accent-blue'
                   : 'bg-vsc-sidebar text-vsc-muted hover:text-vsc-bright'
@@ -341,8 +545,12 @@ export default function WorkspacePage() {
               <span>Structured Intel & Findings ({findings.length})</span>
             </button>
             <div
-              onClick={() => setBottomTab('terminal')}
-              className="h-full bg-vsc-sidebar px-4 flex items-center gap-2 text-xs text-vsc-muted border-r border-vsc-border hover:bg-vsc-canvas/50 cursor-pointer"
+              onClick={() => {
+                setBottomTab('terminal');
+                setIsBottomTerminalOpen(true);
+              }}
+              className="h-full bg-vsc-sidebar px-4 flex items-center gap-2 text-xs text-vsc-muted border-r border-vsc-border hover:bg-vsc-canvas/50 cursor-pointer flex-shrink-0"
+              title="Click to open telemetry stream terminal"
             >
               <FileCode className="w-3.5 h-3.5" />
               <span>telemetry_stream.log ({logs.length})</span>
@@ -393,103 +601,179 @@ export default function WorkspacePage() {
           </div>
 
           {/* Main Workspace Display: Toggle between Graph Canvas and Structured Data View */}
-          {activeTab === 'table' ? (
-            <StructuredDataView
-              nodes={nodes}
-              edges={edges}
+          <div className="flex-1 overflow-hidden relative">
+            {activeTab === 'table' ? (
+              <StructuredDataView
+                nodes={nodes}
+                edges={edges}
+                findings={findings}
+                target={target}
+                targetType={targetType}
+                riskScore={riskScore}
+                riskLevel={riskLevel}
+                isScanning={isScanning}
+                selectedFindingId={selectedFinding?.id}
+                onSelectFinding={selectFinding}
+                onPivot={(pTarget, pType) => startScan(pTarget, pType, true)}
+              />
+            ) : (
+              <GraphCanvas
+                nodes={nodes}
+                edges={edges}
+                findings={findings}
+                target={target}
+                targetType={targetType}
+                isScanning={isScanning}
+                selectedFindingId={selectedFinding?.id}
+                onSelectFinding={selectFinding}
+                onPivot={(pTarget, pType) => startScan(pTarget, pType, true)}
+              />
+            )}
+          </div>
+
+          {/* Integrated Live Telemetry Terminal & Problems Drawer (Resizable & Collapsible) */}
+          {isBottomTerminalOpen && (
+            <TelemetryTerminal
+              logs={logs}
               findings={findings}
-              target={target}
-              targetType={targetType}
-              riskScore={riskScore}
-              riskLevel={riskLevel}
               isScanning={isScanning}
-              selectedFindingId={selectedFinding?.id}
+              activeTab={bottomTab}
+              onTabChange={setBottomTab}
+              onClearLogs={clearLogs}
               onSelectFinding={selectFinding}
-              onPivot={(pTarget, pType) => startScan(pTarget, pType, true)}
-            />
-          ) : (
-            <GraphCanvas
-              nodes={nodes}
-              edges={edges}
-              findings={findings}
-              target={target}
-              targetType={targetType}
-              isScanning={isScanning}
               selectedFindingId={selectedFinding?.id}
-              onSelectFinding={selectFinding}
-              onPivot={(pTarget, pType) => startScan(pTarget, pType, true)}
+              height={bottomTerminalHeight}
+              isMaximized={isBottomTerminalMaximized}
+              onToggleMaximize={() => setIsBottomTerminalMaximized((prev) => !prev)}
+              onClose={() => setIsBottomTerminalOpen(false)}
+              onStartResize={startResizingBottom}
             />
           )}
-
-          {/* Integrated Live Telemetry Terminal & Problems Drawer */}
-          <TelemetryTerminal
-            logs={logs}
-            findings={findings}
-            isScanning={isScanning}
-            activeTab={bottomTab}
-            onTabChange={setBottomTab}
-            onClearLogs={clearLogs}
-            onSelectFinding={selectFinding}
-            selectedFindingId={selectedFinding?.id}
-          />
         </main>
 
-        {/* Right Drawer: Finding Inspector & Remediation Playbook (300px) */}
-        <aside className="w-72 bg-vsc-sidebar border-l border-vsc-border p-4 flex flex-col justify-between text-xs flex-shrink-0">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <Badge
-                variant={selectedFinding ? (selectedFinding.severity.toLowerCase() as any) : 'info'}
-                size="sm"
-                className="font-bold"
+        {/* Draggable Resizer Handle for Right Drawer */}
+        {isRightDrawerOpen && (
+          <div
+            onMouseDown={startResizingRight}
+            className="w-1 cursor-col-resize hover:bg-vsc-accent-blue active:bg-vsc-accent-blue bg-transparent transition-all z-20 group relative -ml-1 flex items-center justify-center flex-shrink-0 select-none"
+            title="Drag to resize Inspector"
+          >
+            <div className="w-0.5 h-8 bg-vsc-border group-hover:bg-vsc-accent-blue transition-colors rounded-full" />
+          </div>
+        )}
+
+        {/* Right Drawer: Finding Inspector & Remediation Playbook (Resizable & Collapsible) */}
+        {isRightDrawerOpen && (
+          <aside
+            style={{ width: `${rightDrawerWidth}px` }}
+            className="bg-vsc-sidebar border-l border-vsc-border p-4 flex flex-col justify-between text-xs flex-shrink-0 select-none overflow-y-auto"
+          >
+            <div>
+              {/* Header with Severity Badge and Close Button */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={selectedFinding ? (selectedFinding.severity.toLowerCase() as any) : 'info'}
+                    size="sm"
+                    className="font-bold"
+                  >
+                    {selectedFinding ? `${selectedFinding.severity.toUpperCase()} SEVERITY` : 'AUDIT READY'}
+                  </Badge>
+                  {(selectedFinding?.cve_id || selectedFinding?.cveId) && (
+                    <span className="text-vsc-muted text-[11px] font-mono">
+                      {selectedFinding.cve_id || selectedFinding.cveId}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setIsRightDrawerOpen(false)}
+                  title="Close Inspector"
+                  className="p-1 text-vsc-muted hover:text-vsc-bright hover:bg-vsc-dropdown rounded transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <h3 className="text-sm font-bold text-vsc-bright mb-1 select-text">
+                {selectedFinding ? selectedFinding.title : 'Incident Remediation Engine'}
+              </h3>
+              <p className="text-vsc-muted text-xs leading-relaxed mb-4 select-text">
+                {selectedFinding
+                  ? selectedFinding.evidence
+                  : 'Select any vulnerability finding from the PROBLEMS drawer or graph nodes to inspect origin data provenance, telemetry signatures, and mitigation playbooks.'}
+              </p>
+
+              {/* Explicit Data Source & Provenance Card */}
+              <div className="mb-4 bg-vsc-panel p-2.5 rounded border border-vsc-border text-xs">
+                <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-vsc-borderSubtle">
+                  <div className="flex items-center gap-1.5 font-bold text-vsc-bright font-mono text-[11px]">
+                    <Database className="w-3.5 h-3.5 text-vsc-keyword" />
+                    <span>Data Source Provenance</span>
+                  </div>
+                  <a
+                    href={findingProvenance.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-vsc-accent-blue hover:text-sky-300 hover:underline flex items-center gap-1 font-mono"
+                    title="Verify upstream OSINT source"
+                  >
+                    <span>Verify</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="space-y-1.5 font-mono text-[11px]">
+                  <div className="flex items-center justify-between text-vsc-muted">
+                    <span>Provider:</span>
+                    <span className="text-vsc-bright font-semibold">{findingProvenance.provider}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-vsc-muted">
+                    <span>Method:</span>
+                    <span className="text-sky-400">{findingProvenance.method}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-vsc-muted">
+                    <span>Pipeline:</span>
+                    <span className="text-emerald-400">Zero-Auth / Passive SSL</span>
+                  </div>
+                  <div className="flex items-center justify-between text-vsc-muted">
+                    <span>Target Ref:</span>
+                    <span className="text-vsc-text truncate max-w-[130px]">{target}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Remediation Playbook (Bash / Firewall) */}
+              <div className="mb-4">
+                <div className="text-[10px] font-bold uppercase text-vsc-muted mb-1.5 font-mono">
+                  Remediation Playbook (Bash / Firewall):
+                </div>
+                <div className="bg-vsc-panel p-2.5 rounded border border-vsc-border font-mono text-[11px] text-vsc-string relative group break-all select-all">
+                  <code>{getRemediationCommand(selectedFinding)}</code>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-vsc-border">
+              <Button
+                variant="primary"
+                onClick={() => handleCopyRemediation(getRemediationCommand(selectedFinding))}
+                className="w-full py-1.5 font-semibold text-xs flex items-center justify-center gap-2"
               >
-                {selectedFinding ? `${selectedFinding.severity.toUpperCase()} SEVERITY` : 'AUDIT READY'}
-              </Badge>
-              {(selectedFinding?.cve_id || selectedFinding?.cveId) && (
-                <span className="text-vsc-muted text-[11px] font-mono">
-                  {selectedFinding.cve_id || selectedFinding.cveId}
-                </span>
-              )}
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? 'Copied to Clipboard!' : 'Copy Remediation Command'}</span>
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => window.print()}
+                className="w-full py-1.5 text-xs flex items-center justify-center gap-2"
+              >
+                <FileCode className="w-3.5 h-3.5" />
+                <span>Export Incident Report</span>
+              </Button>
             </div>
-
-            <h3 className="text-sm font-bold text-vsc-bright mb-1">
-              {selectedFinding ? selectedFinding.title : 'Incident Remediation Engine'}
-            </h3>
-            <p className="text-vsc-muted text-xs leading-relaxed mb-4">
-              {selectedFinding
-                ? selectedFinding.evidence
-                : 'Select any vulnerability finding from the PROBLEMS drawer below to generate actionable terminal remediation commands and mitigation playbooks.'}
-            </p>
-
-            <div className="mb-4">
-              <div className="text-[10px] font-bold uppercase text-vsc-muted mb-1.5 font-mono">
-                Remediation Playbook (Bash / Firewall):
-              </div>
-              <div className="bg-vsc-panel p-2.5 rounded border border-vsc-border font-mono text-[11px] text-vsc-string relative group break-all select-all">
-                <code>{getRemediationCommand(selectedFinding)}</code>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Button
-              variant="primary"
-              onClick={() => handleCopyRemediation(getRemediationCommand(selectedFinding))}
-              className="w-full py-1.5 font-semibold text-xs flex items-center justify-center gap-2"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? 'Copied to Clipboard!' : 'Copy Remediation Command'}</span>
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => window.print()}
-              className="w-full py-1.5 text-xs flex items-center justify-center gap-2"
-            >
-              <FileCode className="w-3.5 h-3.5" />
-              <span>Export Incident Report</span>
-            </Button>
-          </div>
-        </aside>
+          </aside>
+        )}
       </div>
 
       {/* 3. VS CODE STATUS BAR (Bottom 24px) */}
@@ -507,6 +791,20 @@ export default function WorkspacePage() {
           <span>Nodes: {nodes.length}</span>
         </div>
         <div className="flex items-center gap-3">
+          {/* Clickable Terminal Toggle Status Indicator */}
+          <button
+            onClick={() => setIsBottomTerminalOpen((prev) => !prev)}
+            className="flex items-center gap-1 hover:bg-white/10 px-1.5 py-0.5 rounded transition-colors"
+            title={isBottomTerminalOpen ? 'Hide Terminal / Problems' : 'Show Terminal / Problems'}
+          >
+            <FileCode className="w-3.5 h-3.5" />
+            <span>Terminal: {logs.length}</span>
+            <span className="opacity-75">|</span>
+            <span className={findings.length > 0 ? 'text-amber-300 font-bold' : ''}>
+              Problems: {findings.length}
+            </span>
+          </button>
+          <span className="opacity-75">|</span>
           <span>Active Modules: 4/4</span>
           <span className="opacity-75">|</span>
           <span>UTF-8</span>

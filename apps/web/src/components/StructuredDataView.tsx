@@ -10,6 +10,7 @@ import {
 } from '@iseeyou/shared-types';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { getFindingProvenance } from '@/components/TelemetryTerminal';
 import {
   ShieldAlert,
   AlertCircle,
@@ -540,6 +541,7 @@ export function StructuredDataView({
                 const isSelected = selectedFindingId === finding.id;
                 const cve = finding.cve_id || finding.cveId;
                 const sev = finding.severity.toLowerCase();
+                const prov = getFindingProvenance(finding);
 
                 return (
                   <div
@@ -568,6 +570,14 @@ export function StructuredDataView({
                               {cve}
                             </Badge>
                           )}
+                          {/* Data Source Provenance Chip */}
+                          <span
+                            className={`text-[10px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 ${prov.badgeColor}`}
+                            title={`Verified via ${prov.provider} (${prov.type})`}
+                          >
+                            <span className="opacity-75">src:</span>
+                            <span className="font-semibold">{prov.provider}</span>
+                          </span>
                           <span className="text-[10px] text-vsc-muted font-mono">
                             ID: {finding.id.slice(0, 12)}
                           </span>
