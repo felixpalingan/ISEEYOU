@@ -4,7 +4,7 @@ High-performance asynchronous endpoints for scan management, real-time telemetry
 direct-stream CLI access, and operational health monitoring.
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Request
 from sse_starlette.sse import EventSourceResponse
 import uuid
 import re
@@ -23,6 +23,11 @@ from engine.models.entities import (
 from engine.core.event_bus import event_bus
 from engine.core.base_provider import provider_registry
 from engine.services.ai_analyst import ai_analyst_service
+from engine.core.security import (
+    validate_target_security,
+    SecurityValidationError,
+    scan_rate_limiter,
+)
 import engine.providers  # Ensures all provider modules self-register
 
 router = APIRouter()
@@ -144,17 +149,32 @@ async def run_scan_worker(session_id: str, seed: str, entity_type: EntityType):
 
 
 @router.post("/scan", response_model=ScanStatusResponse)
-async def create_scan(request: ScanRequest):
+async def create_scan(request: ScanRequest, req: Request):
     """
     Initializes a new reconnaissance scan session and launches background workers.
+    Enforces Anti-SSRF sanitization, loopback blocking, and sliding-window rate limiting.
     Returns session metadata immediately with unique session_id.
     """
+    client_ip = req.client.host if req.client else "127.0.0.1"
+    allowed, retry_after = scan_rate_limiter.is_allowed(client_ip)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Too many scans requested from {client_ip}. Please retry in {retry_after}s.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    try:
+        clean_target = validate_target_security(request.seed_input)
+    except SecurityValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     session_id = str(uuid.uuid4())
-    seed_type = classify_input(request.seed_input)
+    seed_type = classify_input(clean_target)
 
     session_data = {
         "session_id": session_id,
-        "seed_input": request.seed_input,
+        "seed_input": clean_target,
         "seed_type": seed_type,
         "status": "running",
         "risk_score": 0,
@@ -167,7 +187,7 @@ async def create_scan(request: ScanRequest):
 
     # Launch task with lifecycle tracking in EventBus
     task = asyncio.create_task(
-        run_scan_worker(session_id, request.seed_input, seed_type)
+        run_scan_worker(session_id, clean_target, seed_type)
     )
     event_bus.register_task(session_id, task)
 
@@ -220,18 +240,36 @@ async def stream_scan(session_id: str):
 
 
 @router.get("/scan/stream/direct")
-async def direct_stream_scan(target: str = Query(..., description="Target seed (domain, IP, email, or username)")):
+async def direct_stream_scan(
+    req: Request,
+    target: str = Query(..., description="Target seed (domain, IP, email, or username)"),
+):
     """
     1-Click direct SSE streaming endpoint.
     Creates an ephemeral session and immediately streams live telemetry without a prior POST call.
+    Enforces Anti-SSRF validation, loopback blocking, and IP rate limiting.
     Ideal for CLI tools (curl -N) and fast testing.
     """
+    client_ip = req.client.host if req.client else "127.0.0.1"
+    allowed, retry_after = scan_rate_limiter.is_allowed(client_ip)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Please retry in {retry_after}s.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    try:
+        clean_target = validate_target_security(target)
+    except SecurityValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     session_id = str(uuid.uuid4())
-    seed_type = classify_input(target)
+    seed_type = classify_input(clean_target)
 
     session_data = {
         "session_id": session_id,
-        "seed_input": target,
+        "seed_input": clean_target,
         "seed_type": seed_type,
         "status": "running",
         "risk_score": 0,
@@ -244,7 +282,7 @@ async def direct_stream_scan(target: str = Query(..., description="Target seed (
 
     queue = event_bus.subscribe(session_id)
 
-    task = asyncio.create_task(run_scan_worker(session_id, target, seed_type))
+    task = asyncio.create_task(run_scan_worker(session_id, clean_target, seed_type))
     event_bus.register_task(session_id, task)
 
     async def event_generator():

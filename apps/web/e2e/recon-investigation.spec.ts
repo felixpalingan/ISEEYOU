@@ -75,4 +75,33 @@ test.describe('E2E: Reconnaissance & Visual Graph Investigation', () => {
     await expect(page.getByText('Target Explorer', { exact: false })).toBeVisible();
     await expect(page.getByText('AUDIT READY', { exact: false })).toBeVisible();
   });
+
+  test('should block internal and loopback targets with SSRF warning badge and disable scan', async ({ page }) => {
+    const searchInput = page.getByPlaceholder('Enter target: domain, IP, email, or username...');
+    const scanButton = page.getByRole('button', { name: /^scan$/i });
+
+    // 1. Test Loopback 127.0.0.1
+    await searchInput.fill('127.0.0.1');
+    const blockedBadge = page.getByTestId('ssrf-blocked-badge');
+    await expect(blockedBadge).toBeVisible();
+    await expect(blockedBadge).toContainText('SSRF BLOCKED');
+    await expect(scanButton).toBeDisabled();
+    await expect(page.getByTestId('ssrf-warning-banner')).toBeVisible();
+
+    // 2. Test Localhost
+    await searchInput.fill('localhost');
+    await expect(blockedBadge).toBeVisible();
+    await expect(scanButton).toBeDisabled();
+
+    // 3. Test Cloud Metadata IP 169.254.169.254
+    await searchInput.fill('169.254.169.254');
+    await expect(blockedBadge).toBeVisible();
+    await expect(scanButton).toBeDisabled();
+
+    // 4. Test Legitimate Public Target recovery
+    await searchInput.fill('acme-defense.io');
+    await expect(page.getByTestId('detected-entity-badge')).toBeVisible();
+    await expect(page.getByTestId('detected-entity-badge')).toContainText('DOMAIN');
+    await expect(scanButton).toBeEnabled();
+  });
 });

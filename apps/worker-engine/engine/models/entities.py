@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, Any, Optional, List
 from enum import Enum
 from datetime import datetime
@@ -110,6 +110,15 @@ class ProviderResultSummary(BaseModel):
 class ScanRequest(BaseModel):
     seed_input: str
     force_refresh: bool = False
+
+    @field_validator("seed_input")
+    @classmethod
+    def validate_seed(cls, v: str) -> str:
+        from engine.core.security import validate_target_security, SecurityValidationError
+        try:
+            return validate_target_security(v)
+        except SecurityValidationError as e:
+            raise ValueError(str(e))
 
 
 class ScanStatusResponse(BaseModel):

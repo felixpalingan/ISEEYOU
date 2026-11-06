@@ -9,6 +9,7 @@ import httpx
 import logging
 
 from engine.core.base_provider import BaseOSINTProvider, provider_registry
+from engine.core.security import is_safe_ip
 from engine.models.entities import (
     EntityType,
     SeverityLevel,
@@ -147,6 +148,15 @@ class IPThreatIntelProvider(BaseOSINTProvider):
                     TelemetryLevel.INFO,
                     f"Resolved '{target}' to primary IP: {ip_address}",
                 )
+
+            # Anti-SSRF Defense Gate: Never query internal, loopback, or metadata addresses
+            safe, reason = is_safe_ip(ip_address)
+            if not safe:
+                yield self.create_log(
+                    TelemetryLevel.WARN,
+                    f"SSRF Shield: '{ip_address}' is classified as internal/unsafe ({reason}). Outbound intel queries aborted.",
+                )
+                return
 
             ip_node_id = f"ip:{ip_address}"
 

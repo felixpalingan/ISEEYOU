@@ -11,6 +11,7 @@ import httpx
 import logging
 
 from engine.core.base_provider import BaseOSINTProvider, provider_registry
+from engine.core.security import is_safe_hostname
 from engine.models.entities import (
     EntityType,
     SeverityLevel,
@@ -150,6 +151,16 @@ class SubdomainDNSResolver(BaseOSINTProvider):
         5. Emits normalized Node and Edge graph elements
         """
         target = target.lower().strip()
+
+        # Anti-SSRF Defense Gate: Do not resolve internal hostnames or DNS rebinding domains
+        safe, reason = is_safe_hostname(target)
+        if not safe:
+            yield self.create_log(
+                TelemetryLevel.WARN,
+                f"SSRF Shield: '{target}' is blocked ({reason}). Subdomain reconnaissance aborted.",
+            )
+            return
+
         root_node_id = f"domain:{target}"
 
         # 1. Spawn root domain node on canvas

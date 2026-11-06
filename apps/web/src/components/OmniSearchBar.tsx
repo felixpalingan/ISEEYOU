@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Globe, Network, Mail, User, X, Loader2, ArrowRight } from 'lucide-react';
-import { EntityType } from '@iseeyou/shared-types';
+import { Search, Globe, Network, Mail, User, X, Loader2, ArrowRight, ShieldAlert } from 'lucide-react';
+import { EntityType, sanitizeTargetInput, isBlockedInternalTarget } from '@iseeyou/shared-types';
 import { classifyTarget, ENTITY_BADGE_CONFIGS } from '@/lib/classifier';
 import { Badge, Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,9 @@ export function OmniSearchBar({
   const detectedType = useMemo(() => classifyTarget(value), [value]);
   const badgeConfig = ENTITY_BADGE_CONFIGS[detectedType] || ENTITY_BADGE_CONFIGS.domain;
 
+  // Real-time Anti-SSRF & sanitization security check
+  const ssrfCheck = useMemo(() => isBlockedInternalTarget(value), [value]);
+
   // Render icon corresponding to entity type
   const renderIcon = () => {
     switch (badgeConfig.iconName) {
@@ -52,10 +55,12 @@ export function OmniSearchBar({
   };
 
   const handleTriggerScan = () => {
-    const trimmed = value.trim();
-    if (!trimmed || isScanning) return;
+    const clean = sanitizeTargetInput(value);
+    if (!clean || isScanning) return;
+    const check = isBlockedInternalTarget(clean);
+    if (check.isBlocked) return;
     setIsFocused(false);
-    onScan(trimmed, detectedType);
+    onScan(clean, detectedType);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -111,16 +116,29 @@ export function OmniSearchBar({
           </button>
         )}
 
-        {/* Instant Dynamic Entity Classification Badge */}
-        <Badge
-          variant={detectedType}
-          size="xs"
-          data-testid="detected-entity-badge"
-          className="mr-2 flex-shrink-0 flex items-center font-bold tracking-wider"
-        >
-          {renderIcon()}
-          <span>{badgeConfig.label}</span>
-        </Badge>
+        {/* Dynamic Entity Classification / Anti-SSRF Alert Badge */}
+        {ssrfCheck.isBlocked ? (
+          <Badge
+            variant="critical"
+            size="xs"
+            data-testid="ssrf-blocked-badge"
+            className="mr-2 flex-shrink-0 flex items-center font-bold tracking-wider bg-rose-950/80 text-rose-400 border border-rose-800"
+            title={ssrfCheck.reason}
+          >
+            <ShieldAlert className="w-3 h-3 mr-1 text-rose-400" />
+            <span>SSRF BLOCKED</span>
+          </Badge>
+        ) : (
+          <Badge
+            variant={detectedType}
+            size="xs"
+            data-testid="detected-entity-badge"
+            className="mr-2 flex-shrink-0 flex items-center font-bold tracking-wider"
+          >
+            {renderIcon()}
+            <span>{badgeConfig.label}</span>
+          </Badge>
+        )}
 
         {/* Scan Button */}
         <Button
@@ -128,12 +146,27 @@ export function OmniSearchBar({
           size="xs"
           isLoading={isScanning}
           onClick={handleTriggerScan}
-          disabled={!value.trim()}
+          disabled={!value.trim() || ssrfCheck.isBlocked}
+          title={ssrfCheck.isBlocked ? ssrfCheck.reason : undefined}
           className="font-semibold px-2.5 py-1 tracking-wide flex-shrink-0"
         >
           {isScanning ? 'Scanning' : 'Scan'}
         </Button>
       </div>
+
+      {/* Anti-SSRF Warning Banner */}
+      {ssrfCheck.isBlocked && value.trim().length > 0 && (
+        <div
+          data-testid="ssrf-warning-banner"
+          className="absolute top-full left-0 right-0 mt-1 p-2 bg-rose-950/95 border border-rose-800/80 rounded shadow-2xl z-50 text-[11px] text-rose-300 font-mono flex items-start gap-2 backdrop-blur-sm animate-in fade-in-50"
+        >
+          <ShieldAlert className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <strong className="block text-rose-200 font-bold">Anti-SSRF Policy Active:</strong>
+            <span className="text-[10px] leading-tight block text-rose-300/90">{ssrfCheck.reason}</span>
+          </div>
+        </div>
+      )}
 
       {/* Quick Suggestions & Seed Presets Dropdown */}
       {isFocused && (
