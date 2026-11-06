@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { getFindingProvenance, getNodeProvenance } from '@/lib/provenance';
+import { RemediationPlaybookCard } from '@/components/RemediationPlaybookCard';
 import {
   ShieldAlert,
   AlertCircle,
@@ -633,6 +634,17 @@ export function StructuredDataView({
                         </button>
                       </div>
                     </div>
+
+                    {/* Expandable 1-Click Multi-Platform Remediation Generator (Task 4.2) */}
+                    {isSelected && (
+                      <div className="mt-3 pt-3 border-t border-vsc-borderSubtle">
+                        <div className="text-[10px] font-bold uppercase text-vsc-keyword mb-2 font-mono flex items-center gap-1.5">
+                          <ShieldAlert className="w-3.5 h-3.5 text-vsc-keyword" />
+                          <span>1-Click Remediation Playbook (UFW • Nginx • Apache • Cloudflare • Host):</span>
+                        </div>
+                        <RemediationPlaybookCard finding={finding} target={target} isCompact />
+                      </div>
+                    )}
                   </div>
                 );
               })}

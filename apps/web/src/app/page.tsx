@@ -39,6 +39,7 @@ import { StructuredDataView } from '@/components/StructuredDataView';
 import { GraphCanvas } from '@/components/GraphCanvas';
 import { RiskGauge } from '@/components/RiskGauge';
 import { AIAnalystCard } from '@/components/AIAnalystCard';
+import { RemediationPlaybookCard } from '@/components/RemediationPlaybookCard';
 import { Badge, Button, Card, StatusIndicator } from '@/components/ui';
 import { useScanStream } from '@/hooks/useScanStream';
 import { useAIAnalyst } from '@/hooks/useAIAnalyst';
@@ -900,26 +901,17 @@ export default function WorkspacePage() {
                 </div>
               </div>
 
-              {/* Remediation Playbook (Bash / Firewall) */}
+              {/* 1-Click Multi-Platform Remediation Generator (Task 4.2) */}
               <div className="mb-4">
-                <div className="text-[10px] font-bold uppercase text-vsc-muted mb-1.5 font-mono">
-                  Remediation Playbook (Bash / Firewall):
+                <div className="text-[10px] font-bold uppercase text-vsc-muted mb-1.5 font-mono flex items-center justify-between">
+                  <span>1-Click Remediation Playbook:</span>
+                  <span className="text-[9px] text-sky-400 font-mono">5 Platforms</span>
                 </div>
-                <div className="bg-vsc-panel p-2.5 rounded border border-vsc-border font-mono text-[11px] text-vsc-string relative group break-all select-all">
-                  <code>{getRemediationCommand(selectedFinding)}</code>
-                </div>
+                <RemediationPlaybookCard finding={selectedFinding} target={target} />
               </div>
             </div>
 
             <div className="space-y-2 pt-2 border-t border-vsc-border">
-              <Button
-                variant="primary"
-                onClick={() => handleCopyRemediation(getRemediationCommand(selectedFinding))}
-                className="w-full py-1.5 font-semibold text-xs flex items-center justify-center gap-2"
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied to Clipboard!' : 'Copy Remediation Command'}</span>
-              </Button>
               <Button
                 variant="secondary"
                 onClick={() => window.print()}
