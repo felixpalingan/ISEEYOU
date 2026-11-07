@@ -24,13 +24,21 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.scanner.can_handle(EntityType.DOMAIN))
         self.assertFalse(self.scanner.can_handle(EntityType.IP))
 
+    def test_catalog_scale_and_categories(self):
+        self.assertGreaterEqual(len(SOCIAL_PLATFORMS), 60)
+        categories = {p["category"] for p in SOCIAL_PLATFORMS}
+        self.assertIn("Developer", categories)
+        self.assertIn("Social", categories)
+        self.assertIn("Security", categories)
+        self.assertIn("Gaming", categories)
+
     def test_extract_username(self):
         self.assertEqual(
             self.scanner._extract_username("john.doe@example.com", EntityType.EMAIL),
             "john.doe",
         )
         self.assertEqual(
-            self.scanner._extract_username("HackerNinja123", EntityType.USERNAME),
+            self.scanner._extract_username("@HackerNinja123", EntityType.USERNAME),
             "hackerninja123",
         )
 
@@ -44,6 +52,7 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
 
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.text = '{"login": "octocat"}'
 
         mock_client = AsyncMock()
         mock_client.get.return_value = mock_response
@@ -63,6 +72,7 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
 
         mock_response = MagicMock()
         mock_response.status_code = 404
+        mock_response.text = "Not Found"
 
         mock_client = AsyncMock()
         mock_client.get.return_value = mock_response
@@ -89,17 +99,112 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
         result = await self.scanner._check_platform(platform, "ghost_user", mock_client)
         self.assertIsNone(result)
 
+    async def test_url_probe_separation_and_metadata_extraction(self):
+        platform = {
+            "id": "github",
+            "name": "GitHub",
+            "category": "Developer",
+            "url_template": "https://github.com/{username}",
+            "url_probe": "https://api.github.com/users/{username}",
+            "profile_url_template": "https://github.com/{username}",
+            "check_type": "status_code",
+            "presence_strings": ['"login":'],
+            "extract": {
+                "avatar_url": r'"avatar_url":\s*"([^"]+)"',
+                "full_name": r'"name":\s*"([^"]+)"',
+                "bio": r'"bio":\s*"([^"]+)"',
+                "secondary_link": r'"blog":\s*"(https?://[^"]+)"',
+            },
+        }
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = (
+            '{"login": "torvalds", "name": "Linus Torvalds", '
+            '"avatar_url": "https://avatars.githubusercontent.com/u/1024025", '
+            '"bio": "Creator of Linux and Git", "blog": "https://kernel.org"}'
+        )
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        result = await self.scanner._check_platform(platform, "torvalds", mock_client)
+        self.assertIsNotNone(result)
+        # Verify probe URL was requested, but public URL is returned
+        called_url = mock_client.get.call_args[0][0]
+        self.assertEqual(called_url, "https://api.github.com/users/torvalds")
+        self.assertEqual(result["url"], "https://github.com/torvalds")
+        self.assertEqual(result["full_name"], "Linus Torvalds")
+        self.assertEqual(result["bio"], "Creator of Linux and Git")
+        self.assertEqual(result["avatar_url"], "https://avatars.githubusercontent.com/u/1024025")
+        self.assertEqual(result["secondary_link"], "https://kernel.org")
+
+    async def test_regex_check_pre_flight_skip(self):
+        platform = {
+            "id": "telegram",
+            "name": "Telegram",
+            "category": "Messaging",
+            "url_template": "https://t.me/{username}",
+            "regex_check": r"^[a-zA-Z0-9_]{3,32}[^_]$",
+            "check_type": "status_code",
+        }
+        mock_client = AsyncMock()
+        # Username with invalid trailing underscore or too short should skip HTTP request
+        result = await self.scanner._check_platform(platform, "ab", mock_client)
+        self.assertIsNone(result)
+        mock_client.get.assert_not_called()
+
+    async def test_anti_waf_bot_challenge_rejection(self):
+        platform = {
+            "id": "patreon",
+            "name": "Patreon",
+            "category": "Creator",
+            "url_template": "https://www.patreon.com/{username}",
+            "check_type": "status_code",
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = "<html><head><title>Just a moment...</title></head><body>Checking your browser</body></html>"
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        result = await self.scanner._check_platform(platform, "some_creator", mock_client)
+        self.assertIsNone(result)
+
+    async def test_presence_strings_verification(self):
+        platform = {
+            "id": "bluesky",
+            "name": "Bluesky",
+            "category": "Social",
+            "url_template": "https://bsky.app/profile/{username}.bsky.social",
+            "check_type": "message",
+            "presence_strings": ['"did":'],
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = '{"status": "ok", "empty": true}'
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        # Missing '"did":' -> should return None
+        result = await self.scanner._check_platform(platform, "ghost", mock_client)
+        self.assertIsNone(result)
+
     async def test_execute_recon_username_flow(self):
         with patch.object(
             self.scanner, "_check_platform", new_callable=AsyncMock
         ) as mock_check:
-            # Simulate 4 positive matches out of 25
             async def fake_check(platform, username, client):
                 if platform["id"] in ("github", "reddit", "dockerhub", "devto"):
                     return {
+                        "id": platform["id"],
                         "platform": platform["name"],
                         "category": platform["category"],
                         "url": platform["url_template"].format(username=username),
+                        "full_name": "Dev Master",
+                        "avatar_url": "https://example.com/avatar.png",
                     }
                 return None
 
@@ -127,6 +232,8 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
                 e["data"] for e in events if e["type"] == "node" and "profile:" in e["data"]["id"]
             ]
             self.assertEqual(len(profile_nodes), 4)
+            self.assertEqual(profile_nodes[0]["metadata"]["full_name"], "Dev Master")
+            self.assertEqual(profile_nodes[0]["metadata"]["engine"], "deep_footprint_v2")
 
             # Check correlation edges
             edges = [e["data"] for e in events if e["type"] == "edge"]
@@ -147,4 +254,3 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
