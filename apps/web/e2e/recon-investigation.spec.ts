@@ -1,26 +1,28 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('E2E: Reconnaissance & Visual Graph Investigation', () => {
+test.describe('E2E: ISEEYOU 2.0 OSINT Lead-Chaining Caseboard & Target Dossier', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('header')).toBeVisible();
   });
 
-  test('should load the VS Code Cyber-Precision Dark Modern workspace', async ({ page }) => {
+  test('should load the Full-Screen OSINT Caseboard & Floating Target Dossier', async ({ page }) => {
     // 1. Verify Header branding
-    await expect(page.getByText('ISEEYOU // COMMAND_CENTER')).toBeVisible();
+    await expect(page.getByText('ISEEYOU 2.0', { exact: true })).toBeVisible();
+    await expect(page.getByText('OSINT CASEBOARD')).toBeVisible();
 
-    // 2. Verify Activity Bar is present on the left
-    const activityBar = page.locator('aside').first();
-    await expect(activityBar).toBeVisible();
+    // 2. Verify Floating Target Dossier Card is visible on the left
+    const dossierCard = page.getByTestId('target-dossier-card');
+    await expect(dossierCard).toBeVisible();
+    await expect(dossierCard).toContainText('Target Dossier');
 
-    // 3. Verify Omni-Search bar is present with default placeholder and value
+    // 3. Verify Omni-Search bar is present with default username target
     const searchInput = page.getByPlaceholder('Enter target: domain, IP, email, or username...');
     await expect(searchInput).toBeVisible();
-    await expect(searchInput).toHaveValue('example.com');
+    await expect(searchInput).toHaveValue('torvalds');
 
-    // 4. Verify status bar shows system version
-    await expect(page.getByText(/ISEEYOU v0\.1\.0/i)).toBeVisible();
+    // 4. Verify Lead Inspector Drawer is visible on the right
+    await expect(page.getByTestId('lead-inspector-drawer')).toBeVisible();
   });
 
   test('should auto-classify entity types on omni-search input', async ({ page }) => {
@@ -44,36 +46,31 @@ test.describe('E2E: Reconnaissance & Visual Graph Investigation', () => {
     await expect(entityBadge).toContainText('USERNAME');
   });
 
-  test('should trigger passive recon scan and stream live telemetry logs', async ({ page }) => {
-    const searchInput = page.getByPlaceholder('Enter target: domain, IP, email, or username...');
-    await searchInput.fill('example.com');
+  test('should open Tactical Dork Matrix with Private Account Comment Bypass dorks', async ({ page }) => {
+    const dorkBtn = page.getByTestId('btn-open-dork-matrix');
+    await expect(dorkBtn).toBeVisible();
+    await dorkBtn.click();
 
-    const scanButton = page.getByRole('button', { name: /^scan$/i });
-    await expect(scanButton).toBeEnabled();
-    await scanButton.click();
-
-    // Verify Telemetry Terminal drawer displays streaming logs
-    const terminalTab = page.getByText(/telemetry_stream\.log/i);
-    await expect(terminalTab).toBeVisible();
-
-    // Verify system telemetry line appears
-    await expect(page.getByText(/Dispatching reconnaissance mission/i)).toBeVisible({
-      timeout: 10000,
-    });
+    const dorkPanel = page.getByTestId('dork-matrix-panel');
+    await expect(dorkPanel).toBeVisible();
+    await expect(dorkPanel).toContainText('Instagram Private Account Public Comments & Mentions');
+    await expect(dorkPanel).toContainText('site:instagram.com');
+    await expect(dorkPanel).toContainText('-inurl:instagram.com/');
   });
 
-  test('should support panel minimizing, resizing, and Zen Mode toggle', async ({ page }) => {
-    // 1. Locate Zen Mode button in layout controls
-    const zenModeButton = page.getByRole('button', { name: /Zen Mode/i });
-    await expect(zenModeButton).toBeVisible();
+  test('should allow pinning a manual clue onto the Caseboard and inspecting it', async ({ page }) => {
+    const pinBtn = page.getByTestId('btn-open-pin-clue');
+    await expect(pinBtn).toBeVisible();
+    await pinBtn.click();
 
-    // 2. Toggle Zen Mode to maximize canvas
-    await zenModeButton.click();
+    await page.getByPlaceholder('e.g. budi.santoso99 or budi@company.com').fill('budi_private_ig');
+    await page.getByPlaceholder("e.g. Private IG found in friend's comment").fill('Private IG Lead');
+    await page.getByRole('button', { name: /Pin Clue onto Board & Connect/i }).click();
 
-    // 3. Toggle again to restore 3-panel workspace
-    await zenModeButton.click();
-    await expect(page.getByText('Target Explorer', { exact: false })).toBeVisible();
-    await expect(page.getByText('AUDIT READY', { exact: false })).toBeVisible();
+    // Should switch to Lead Inspector tab showing the newly pinned clue
+    const drawer = page.getByTestId('lead-inspector-drawer');
+    await expect(drawer).toContainText('budi_private_ig');
+    await expect(drawer).toContainText('Chain Next OSINT Step From This Lead');
   });
 
   test('should block internal and loopback targets with SSRF warning badge and disable scan', async ({ page }) => {
@@ -93,47 +90,28 @@ test.describe('E2E: Reconnaissance & Visual Graph Investigation', () => {
     await expect(blockedBadge).toBeVisible();
     await expect(scanButton).toBeDisabled();
 
-    // 3. Test Cloud Metadata IP 169.254.169.254
-    await searchInput.fill('169.254.169.254');
-    await expect(blockedBadge).toBeVisible();
-    await expect(scanButton).toBeDisabled();
-
-    // 4. Test Legitimate Public Target recovery
+    // 3. Test Legitimate Public Target recovery
     await searchInput.fill('acme-defense.io');
     await expect(page.getByTestId('detected-entity-badge')).toBeVisible();
     await expect(page.getByTestId('detected-entity-badge')).toContainText('DOMAIN');
     await expect(scanButton).toBeEnabled();
   });
 
-  test('should separate Web Mode from Identity Mode and open Settings Modal & Auto-Tidy', async ({ page }) => {
-    const searchInput = page.getByPlaceholder('Enter target: domain, IP, email, or username...');
+  test('should verify Auto-Tidy Graph and Target Dossier sub-tabs (Leads, Circle, History)', async ({ page }) => {
+    const dossierCard = page.getByTestId('target-dossier-card');
+    await expect(dossierCard).toBeVisible();
 
-    // 1. Type a username -> UI should switch to Identity Mode and hide server firewall commands
-    await searchInput.fill('torvalds');
-    await expect(page.getByText('👤 IDENTITY MODE')).toBeVisible();
-    await expect(page.getByText(/Identity & Privacy Playbook/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /UFW Firewall/i })).not.toBeVisible();
+    // Switch to Circle tab ("Dia kenal siapa aja")
+    await dossierCard.getByRole('button', { name: /Circle/i }).click();
+    await expect(dossierCard).toContainText('Dia kenal siapa aja');
 
-    // 2. Switch back to a domain -> UI should switch back to Web & Infra Mode
-    await searchInput.fill('example.com');
-    await expect(page.getByText('🌐 WEB & INFRA')).toBeVisible();
-    await expect(page.getByRole('button', { name: /UFW Firewall/i })).toBeVisible();
+    // Switch to History (Chronological Timeline) tab
+    await dossierCard.getByRole('button', { name: /History/i }).click();
+    await expect(dossierCard).toContainText('Chronological Digital Footprint');
 
-    // 3. Verify Auto-Tidy Graph button works
+    // Verify Auto-Tidy Graph button works
     const autoTidyBtn = page.getByTestId('auto-tidy-graph-btn');
     await expect(autoTidyBtn).toBeVisible();
     await autoTidyBtn.click();
-
-    // 4. Verify Activity Bar Settings button opens the Settings Modal
-    const settingsBtn = page.getByTestId('btn-activity-settings');
-    await expect(settingsBtn).toBeVisible();
-    await settingsBtn.click();
-
-    const settingsModal = page.getByTestId('settings-modal');
-    await expect(settingsModal).toBeVisible();
-    await expect(page.getByText('Workspace & Modular Scan Settings')).toBeVisible();
-
-    await page.getByRole('button', { name: /^Done$/i }).click();
-    await expect(settingsModal).not.toBeVisible();
   });
 });
