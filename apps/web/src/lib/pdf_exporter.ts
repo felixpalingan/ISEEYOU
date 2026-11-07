@@ -429,15 +429,17 @@ export function generateAuditReportPDF(options: PDFExportOptions): jsPDF {
     doc.text('4. DISCOVERED ASSET INVENTORY & PROVENANCE ATTRIBUTION', marginX, currentY);
     currentY += 2;
 
-    const assetRows = nodes.slice(0, 30).map((n, idx) => {
+    const assetRows = nodes.slice(0, 35).map((n, idx) => {
       const prov = getNodeProvenance(n);
+      const confidenceTag = n.confidence ? ` [${n.confidence.toUpperCase()}]` : '';
+      const noteSuffix = n.investigatorNotes ? ` — Note: ${n.investigatorNotes}` : '';
       return [
         `#${idx + 1}`,
-        n.value || n.label,
+        `${n.value || n.label}${confidenceTag}`,
         n.type.toUpperCase(),
         n.severity.toUpperCase(),
         prov.provider,
-        prov.method,
+        `${prov.method}${noteSuffix}`,
       ];
     });
 
@@ -631,4 +633,96 @@ export function downloadAuditReportPDF(options: PDFExportOptions, customFilename
   const dateStr = new Date().toISOString().slice(0, 10);
   const filename = customFilename || `ISEEYOU_Audit_Report_${safeTarget}_${dateStr}.pdf`;
   doc.save(filename);
+}
+
+/**
+ * Generates and downloads a structured Markdown (.md) OSINT Target Dossier Report
+ */
+export function downloadTargetDossierMarkdown(options: PDFExportOptions): void {
+  const {
+    target,
+    targetType = 'username',
+    riskScore,
+    findings,
+    nodes,
+    aiReport,
+    organizationName = 'OSINT Investigation Unit',
+    auditorName = 'ISEEYOU 2.0 Detective Caseboard',
+    tlpLevel = 'TLP:AMBER',
+    maskSensitiveData = true,
+  } = options;
+
+  const dateStr = new Date().toISOString();
+  const emails = nodes.filter((n) => n.type === 'email').map((n) => n.value);
+  const associates = nodes.filter((n) => n.type === 'associate');
+  const profiles = nodes.filter((n) => n.type === 'username');
+  const annotatedNodes = nodes.filter((n) => n.confidence || n.investigatorNotes);
+
+  const lines: string[] = [
+    `# ISEEYOU 2.0 — OSINT Target Dossier Report`,
+    ``,
+    `- **Classification:** \`${tlpLevel}\``,
+    `- **Primary Target:** \`${target}\` (${targetType.toUpperCase()})`,
+    `- **Organization / Case Unit:** ${organizationName}`,
+    `- **Lead Investigator:** ${auditorName}`,
+    `- **Exposure Index:** ${riskScore}/100`,
+    `- **Generated At:** ${dateStr}`,
+    ``,
+    `---`,
+    ``,
+    `## 1. Executive AI Detective Synthesis`,
+    ``,
+    aiReport?.executiveSummary
+      ? maskSensitiveData
+        ? maskSensitiveCredentials(aiReport.executiveSummary)
+        : aiReport.executiveSummary
+      : `Passive OSINT investigation on **${target}** uncovered **${nodes.length}** connected intelligence nodes and **${findings.length}** security/privacy exposures.`,
+    ``,
+    `## 2. Extracted Identity & Email Leads (${emails.length})`,
+    ``,
+    ...(emails.length > 0
+      ? emails.map((e) => `- \`${e}\``)
+      : [`- _No direct email addresses extracted._`]),
+    ``,
+    `## 3. Confirmed Social & Developer Profiles (${profiles.length})`,
+    ``,
+    ...(profiles.length > 0
+      ? profiles.map(
+          (p) =>
+            `- **${p.label}** (\`${p.value}\`)${
+              p.confidence ? ` — **[${p.confidence.toUpperCase()}]**` : ''
+            }${p.investigatorNotes ? ` — _Note: ${p.investigatorNotes}_` : ''}`
+        )
+      : [`- _No social profiles enumerated._`]),
+    ``,
+    `## 4. Mutual Circle & Associates ("Dia Kenal Siapa Aja") (${associates.length})`,
+    ``,
+    ...(associates.length > 0
+      ? associates.map(
+          (a) =>
+            `- **@${a.value}** (${String(a.metadata?.relationship || 'Mutual Connection')})`
+        )
+      : [`- _No mutual connections mapped._`]),
+    ``,
+    `## 5. Investigator Annotations & Verified Leads (${annotatedNodes.length})`,
+    ``,
+    ...(annotatedNodes.length > 0
+      ? annotatedNodes.map(
+          (n) =>
+            `- **${n.label}** (\`${n.type}\`): Confidence = \`${n.confidence || 'unverified'}\` | Notes: ${
+              n.investigatorNotes || 'None'
+            }`
+        )
+      : [`- _No custom investigator sticky notes recorded._`]),
+    ``,
+  ];
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeTarget = (target || 'target').replace(/[^a-zA-Z0-9.-]/g, '_');
+  a.href = url;
+  a.download = `ISEEYOU_OSINT_Dossier_${safeTarget}_${dateStr.slice(0, 10)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
 }

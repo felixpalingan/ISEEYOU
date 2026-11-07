@@ -137,7 +137,7 @@ export function LeadInspectorDrawer({
       {
         id: 'ig-bypass',
         category: 'Private Account Comment & Tag Bypass',
-        title: 'Instagram Private Account — Third-Party Mentions Only',
+        title: 'Instagram Private Account Public Comments & Mentions',
         query: `site:instagram.com "${h}" -inurl:instagram.com/${h}`,
         desc: 'Excludes the target profile URL so results are 100% public posts/comments from friends mentioning or replying to the private IG handle.',
       },

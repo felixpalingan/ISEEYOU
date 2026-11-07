@@ -9,7 +9,6 @@ import {
   Lock,
   Layers,
   Sparkles,
-  Server,
   FileText,
   Printer,
   Download,
@@ -17,7 +16,11 @@ import {
 } from 'lucide-react';
 import { EntityNode, VulnerabilityFinding, AIAnalysisReport } from '@iseeyou/shared-types';
 import { Button } from './ui';
-import { downloadAuditReportPDF, TLPLevel } from '@/lib/pdf_exporter';
+import {
+  downloadAuditReportPDF,
+  downloadTargetDossierMarkdown,
+  TLPLevel,
+} from '@/lib/pdf_exporter';
 
 interface ExportReportModalProps {
   isOpen: boolean;
@@ -41,9 +44,9 @@ export function ExportReportModal({
   aiReport,
 }: ExportReportModalProps) {
   const [organization, setOrganization] = useState(
-    target ? `${target.toUpperCase()} Security Operations` : 'Target Organization'
+    target ? `${target.toUpperCase()} OSINT Investigation` : 'Target Organization'
   );
-  const [auditor, setAuditor] = useState('ISEEYOU Automated Recon Mesh');
+  const [auditor, setAuditor] = useState('ISEEYOU 2.0 OSINT Caseboard');
   const [tlpLevel, setTlpLevel] = useState<TLPLevel>('TLP:AMBER');
   const [maskSensitiveData, setMaskSensitiveData] = useState(true);
   const [includeAiNarrative, setIncludeAiNarrative] = useState(true);
@@ -87,85 +90,100 @@ export function ExportReportModal({
     }
   };
 
+  const handleDownloadMarkdown = () => {
+    downloadTargetDossierMarkdown({
+      target,
+      targetType,
+      riskScore,
+      findings,
+      nodes,
+      aiReport,
+      organizationName: organization,
+      auditorName: auditor,
+      tlpLevel,
+      maskSensitiveData,
+    });
+  };
+
   const getTlpBadgeColor = (tlp: TLPLevel) => {
     switch (tlp) {
       case 'TLP:RED':
-        return 'text-red-400 border-red-500/50 bg-red-950/40';
+        return 'text-rose-300 border-rose-500/40 bg-rose-500/15';
       case 'TLP:AMBER':
-        return 'text-amber-400 border-amber-500/50 bg-amber-950/40';
+        return 'text-amber-300 border-amber-500/40 bg-amber-500/15';
       case 'TLP:GREEN':
-        return 'text-emerald-400 border-emerald-500/50 bg-emerald-950/40';
+        return 'text-emerald-300 border-emerald-500/40 bg-emerald-500/15';
       case 'TLP:CLEAR':
       default:
-        return 'text-slate-300 border-slate-600 bg-slate-800/50';
+        return 'text-slate-300 border-white/[0.12] bg-white/[0.05]';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
       <div
         data-testid="export-pdf-modal"
-        className="relative w-full max-w-2xl bg-[#1E1E1E] border border-vsc-border rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-2xl bg-[#0F1219] border border-white/[0.09] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-vsc-border bg-[#252526]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07] bg-[#131720]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded bg-sky-950/80 border border-sky-500/40 flex items-center justify-center text-sky-400">
+            <div className="w-8 h-8 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
               <FileDown className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-vsc-foreground tracking-wide">
+                <h2 className="text-sm font-semibold text-slate-100 tracking-wide">
                   Export Professional Security Audit Report
                 </h2>
-                <span className="px-1.5 py-0.5 text-[10px] font-mono bg-sky-950/60 text-sky-300 border border-sky-800/40 rounded">
-                  PDF / A4 Vector
+                <span className="px-1.5 py-0.5 text-[10px] font-mono bg-sky-500/15 text-sky-300 border border-sky-500/30 rounded">
+                  PDF & Markdown Dossier
                 </span>
               </div>
-              <p className="text-xs text-vsc-muted">
-                Industry-standard pentest & attack surface audit report with cryptographic integrity
+              <p className="text-xs text-slate-400">
+                OSINT Target Dossier, Lead-Chaining Register & Attack Surface Report
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-vsc-muted hover:text-vsc-foreground p-1 rounded hover:bg-vsc-hover transition-colors"
+            className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/[0.06] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs text-vsc-foreground">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs text-slate-200">
           {/* Target & KPI Summary Banner */}
-          <div className="grid grid-cols-4 gap-2.5 p-3 rounded bg-[#252526]/80 border border-vsc-border">
-            <div className="border-r border-vsc-border/60 pr-2">
-              <span className="text-[10px] text-vsc-muted block mb-0.5">Target Scope</span>
-              <span className="font-mono font-medium text-sky-300 truncate block" title={target}>
+          <div className="grid grid-cols-4 gap-2.5 p-3 rounded-xl bg-[#131720] border border-white/[0.07] tabular-nums">
+            <div className="border-r border-white/[0.06] pr-2">
+              <span className="text-[10px] text-slate-400 block mb-0.5">Target Scope</span>
+              <span className="font-mono font-semibold text-sky-300 truncate block" title={target}>
                 {target || 'N/A'}
               </span>
             </div>
-            <div className="border-r border-vsc-border/60 pr-2">
-              <span className="text-[10px] text-vsc-muted block mb-0.5">Risk Posture</span>
+            <div className="border-r border-white/[0.06] pr-2">
+              <span className="text-[10px] text-slate-400 block mb-0.5">Exposure Index</span>
               <span
                 className={`font-semibold ${
                   riskScore >= 70
-                    ? 'text-red-400'
+                    ? 'text-rose-400'
                     : riskScore >= 40
                     ? 'text-amber-400'
                     : 'text-emerald-400'
                 }`}
               >
-                {riskScore}/100 {riskScore >= 70 ? '(Critical)' : riskScore >= 40 ? '(High)' : '(Moderate)'}
+                {riskScore}/100 {riskScore >= 70 ? '(Critical)' : riskScore >= 40 ? '(High)' : '(Low)'}
               </span>
             </div>
-            <div className="border-r border-vsc-border/60 pr-2">
-              <span className="text-[10px] text-vsc-muted block mb-0.5">Discovered Assets</span>
-              <span className="font-mono text-vsc-foreground">{nodes.length} Nodes</span>
+            <div className="border-r border-white/[0.06] pr-2">
+              <span className="text-[10px] text-slate-400 block mb-0.5">Discovered Leads</span>
+              <span className="font-mono text-slate-100">{nodes.length} Nodes</span>
             </div>
             <div>
-              <span className="text-[10px] text-vsc-muted block mb-0.5">Exposures</span>
-              <span className="font-mono text-amber-400">
+              <span className="text-[10px] text-slate-400 block mb-0.5">Exposures</span>
+              <span className="font-mono text-amber-300">
                 {findings.length} ({criticalCount} Crit / {highCount} High)
               </span>
             </div>
@@ -174,27 +192,27 @@ export function ExportReportModal({
           {/* Form Options Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-medium text-vsc-muted mb-1">
-                Organization / Client Name
+              <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                Investigation / Case Name
               </label>
               <input
                 type="text"
                 value={organization}
                 onChange={(e) => setOrganization(e.target.value)}
                 placeholder="Target Organization"
-                className="w-full bg-[#2D2D2D] border border-vsc-border rounded px-2.5 py-1.5 text-xs text-vsc-foreground focus:outline-none focus:border-sky-500"
+                className="w-full bg-[#090B10] border border-white/[0.1] rounded-md px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-sky-400/60"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-medium text-vsc-muted mb-1">
-                Lead Auditor / SecOps Team
+              <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                Lead Investigator / SecOps Team
               </label>
               <input
                 type="text"
                 value={auditor}
                 onChange={(e) => setAuditor(e.target.value)}
                 placeholder="Security Operations Team"
-                className="w-full bg-[#2D2D2D] border border-vsc-border rounded px-2.5 py-1.5 text-xs text-vsc-foreground focus:outline-none focus:border-sky-500"
+                className="w-full bg-[#090B10] border border-white/[0.1] rounded-md px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-sky-400/60"
               />
             </div>
           </div>
@@ -202,11 +220,13 @@ export function ExportReportModal({
           {/* TLP Security Classification Selector */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[11px] font-medium text-vsc-muted flex items-center gap-1.5">
+              <label className="text-[11px] font-medium text-slate-400 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
                 <span>Traffic Light Protocol (TLP) Security Marking</span>
               </label>
-              <span className={`text-[10px] px-2 py-0.5 rounded border font-mono ${getTlpBadgeColor(tlpLevel)}`}>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded border font-mono ${getTlpBadgeColor(tlpLevel)}`}
+              >
                 {tlpLevel} Selected
               </span>
             </div>
@@ -216,10 +236,10 @@ export function ExportReportModal({
                   key={level}
                   type="button"
                   onClick={() => setTlpLevel(level)}
-                  className={`px-2.5 py-1.5 rounded text-[11px] font-mono border transition-all text-center ${
+                  className={`px-2.5 py-1.5 rounded-md text-[11px] font-mono border transition-all text-center ${
                     tlpLevel === level
-                      ? getTlpBadgeColor(level) + ' ring-1 ring-offset-1 ring-offset-[#1E1E1E]'
-                      : 'border-vsc-border/60 bg-[#252526] text-vsc-muted hover:border-vsc-border'
+                      ? getTlpBadgeColor(level)
+                      : 'border-white/[0.07] bg-[#131720] text-slate-400 hover:border-white/[0.15]'
                   }`}
                 >
                   {level}
@@ -230,77 +250,77 @@ export function ExportReportModal({
 
           {/* Report Sections Customizer Checklist */}
           <div className="space-y-2 pt-1">
-            <span className="text-[11px] font-medium text-vsc-muted block mb-1">
-              Report Sections & Confidentiality Settings
+            <span className="text-[11px] font-medium text-slate-400 block mb-1">
+              Dossier Sections & Confidentiality Settings
             </span>
             <div className="grid grid-cols-2 gap-2.5">
-              <label className="flex items-start gap-2.5 p-2 rounded bg-[#252526] border border-vsc-border/60 cursor-pointer hover:border-vsc-border">
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#131720] border border-white/[0.07] cursor-pointer hover:border-white/[0.14]">
                 <input
                   type="checkbox"
                   checked={includeAiNarrative}
                   onChange={(e) => setIncludeAiNarrative(e.target.checked)}
-                  className="mt-0.5 rounded border-vsc-border accent-sky-500"
+                  className="mt-0.5 rounded border-white/20 accent-sky-500"
                 />
                 <div>
-                  <div className="flex items-center gap-1.5 font-medium text-vsc-foreground text-[11px]">
+                  <div className="flex items-center gap-1.5 font-medium text-slate-100 text-[11px]">
                     <Sparkles className="w-3 h-3 text-sky-400" />
-                    <span>AI Threat Synthesis</span>
+                    <span>AI Detective Dossier Synthesis</span>
                   </div>
-                  <span className="text-[10px] text-vsc-muted block">
-                    Executive summary, forecast & MITRE ATT&CK chain
+                  <span className="text-[10px] text-slate-400 block">
+                    Identity correlation, predicted handles & hypothesis
                   </span>
                 </div>
               </label>
 
-              <label className="flex items-start gap-2.5 p-2 rounded bg-[#252526] border border-vsc-border/60 cursor-pointer hover:border-vsc-border">
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#131720] border border-white/[0.07] cursor-pointer hover:border-white/[0.14]">
                 <input
                   type="checkbox"
                   checked={includeAssetInventory}
                   onChange={(e) => setIncludeAssetInventory(e.target.checked)}
-                  className="mt-0.5 rounded border-vsc-border accent-sky-500"
+                  className="mt-0.5 rounded border-white/20 accent-sky-500"
                 />
                 <div>
-                  <div className="flex items-center gap-1.5 font-medium text-vsc-foreground text-[11px]">
+                  <div className="flex items-center gap-1.5 font-medium text-slate-100 text-[11px]">
                     <Layers className="w-3 h-3 text-emerald-400" />
-                    <span>Asset Inventory & Provenance</span>
+                    <span>Lead Register & Detective Notes</span>
                   </div>
-                  <span className="text-[10px] text-vsc-muted block">
-                    All subdomains, IPs, open ports & data sources
+                  <span className="text-[10px] text-slate-400 block">
+                    All profiles, emails, mutuals, confidence & sticky notes
                   </span>
                 </div>
               </label>
 
-              <label className="flex items-start gap-2.5 p-2 rounded bg-[#252526] border border-vsc-border/60 cursor-pointer hover:border-vsc-border">
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#131720] border border-white/[0.07] cursor-pointer hover:border-white/[0.14]">
                 <input
                   type="checkbox"
                   checked={includeRemediationPlaybook}
                   onChange={(e) => setIncludeRemediationPlaybook(e.target.checked)}
-                  className="mt-0.5 rounded border-vsc-border accent-sky-500"
+                  className="mt-0.5 rounded border-white/20 accent-sky-500"
                 />
                 <div>
-                  <div className="flex items-center gap-1.5 font-medium text-vsc-foreground text-[11px]">
+                  <div className="flex items-center gap-1.5 font-medium text-slate-100 text-[11px]">
                     <Terminal className="w-3 h-3 text-amber-400" />
-                    <span>Remediation Playbooks</span>
+                    <span>Statutory & Takedown Playbooks</span>
                   </div>
-                  <span className="text-[10px] text-vsc-muted block">
-                    1-Click UFW, Nginx, WAF & UU PDP/GDPR actions
+                  <span className="text-[10px] text-slate-400 block">
+                    UU PDP No. 27/2022, GDPR Art. 17 & hardening steps
                   </span>
                 </div>
               </label>
 
-              <label className="flex items-start gap-2.5 p-2 rounded bg-[#252526] border border-vsc-border/60 cursor-pointer hover:border-vsc-border">
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#131720] border border-white/[0.07] cursor-pointer hover:border-white/[0.14]">
                 <input
                   type="checkbox"
                   checked={maskSensitiveData}
                   onChange={(e) => setMaskSensitiveData(e.target.checked)}
-                  className="mt-0.5 rounded border-vsc-border accent-emerald-500"
+                  className="mt-0.5 rounded border-white/20 accent-emerald-500"
                 />
                 <div>
                   <div className="flex items-center gap-1.5 font-medium text-emerald-300 text-[11px]">
                     <ShieldAlert className="w-3 h-3 text-emerald-400" />
                     <span>Mandatory Credential Masking</span>
                   </div>
-                  <span className="text-[10px] text-vsc-muted block">
+                  <span className="text-[10px] text-slate-400 block">
                     Redacts passwords and secrets (e.g. pa****ord123)
                   </span>
                 </div>
@@ -309,29 +329,39 @@ export function ExportReportModal({
           </div>
 
           {/* Format & Specification Note */}
-          <div className="p-3 rounded bg-sky-950/20 border border-sky-800/40 text-[11px] text-sky-200/90 space-y-1">
-            <div className="flex items-center gap-1.5 font-medium text-sky-300">
+          <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] text-[11px] text-slate-300 space-y-1">
+            <div className="flex items-center gap-1.5 font-medium text-sky-400">
               <FileText className="w-3.5 h-3.5" />
               <span>Report Deliverable Specifications</span>
             </div>
-            <p className="text-[10.5px] text-sky-200/75 leading-relaxed">
-              Generates a crisp, vectorized A4 PDF document incorporating ISO timestamps, cryptographic SHA-256
-              audit trail verification, multi-page table formatting, and regulatory compliance references (UU PDP No.
-              27/2022 & GDPR Art. 17).
+            <p className="text-[10.5px] text-slate-400 leading-relaxed">
+              Generates a vectorized A4 PDF or Markdown Target Dossier incorporating ISO timestamps,
+              cryptographic SHA-256 audit trail verification, node confidence tags, investigator
+              sticky notes, and statutory references (UU PDP No. 27/2022 & GDPR Art. 17).
             </p>
           </div>
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-t border-vsc-border bg-[#252526]">
-          <Button
-            variant="ghost"
-            onClick={() => window.print()}
-            className="text-xs text-vsc-muted hover:text-vsc-foreground flex items-center gap-1.5"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Browser Print View</span>
-          </Button>
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/[0.07] bg-[#131720]">
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              onClick={() => window.print()}
+              className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print</span>
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleDownloadMarkdown}
+              className="text-xs flex items-center gap-1.5"
+            >
+              <FileText className="w-3.5 h-3.5 text-sky-400" />
+              <span>Export Markdown (.md)</span>
+            </Button>
+          </div>
 
           <div className="flex items-center gap-2">
             <Button variant="secondary" onClick={onClose} className="text-xs py-1.5">
@@ -341,16 +371,16 @@ export function ExportReportModal({
               variant="primary"
               onClick={handleDownload}
               disabled={isExporting}
-              className="text-xs py-1.5 flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-medium shadow-sm"
+              className="text-xs py-1.5 flex items-center gap-2"
             >
               {isExporting ? (
                 <>
-                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
                   <span>Generating Vector PDF...</span>
                 </>
               ) : isSuccess ? (
                 <>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Report Downloaded!</span>
                 </>
               ) : (
@@ -366,4 +396,3 @@ export function ExportReportModal({
     </div>
   );
 }
-
