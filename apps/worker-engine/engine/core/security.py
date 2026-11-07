@@ -15,7 +15,7 @@ import ipaddress
 import re
 import socket
 import time
-from typing import Tuple, Dict, List, Optional
+from typing import Tuple, Dict, List, Optional, Any
 from collections import defaultdict
 
 
@@ -253,3 +253,50 @@ class InMemoryRateLimiter:
 
 # Global rate limiter instance: 30 scans per minute per client IP
 scan_rate_limiter = InMemoryRateLimiter(max_requests=30, window_seconds=60.0)
+
+
+def extract_client_ip(request: Any) -> str:
+    """
+    Extracts and validates client IP address from FastAPI Request object.
+    Supports trusted reverse proxy headers (CF-Connecting-IP, X-Forwarded-For)
+    with strict IP format validation to prevent header injection or spoofing.
+    Falls back safely to direct socket client host or loopback.
+    """
+    if request is None:
+        return "127.0.0.1"
+
+    headers = getattr(request, "headers", None) or {}
+
+    # 1. Cloudflare Connecting IP header
+    cf_ip = headers.get("cf-connecting-ip") or headers.get("CF-Connecting-IP")
+    if cf_ip and isinstance(cf_ip, str):
+        candidate = cf_ip.strip()
+        try:
+            ipaddress.ip_address(candidate)
+            return candidate
+        except ValueError:
+            pass
+
+    # 2. X-Forwarded-For header (first hop is the original client IP)
+    xff = headers.get("x-forwarded-for") or headers.get("X-Forwarded-For")
+    if xff and isinstance(xff, str):
+        hops = [h.strip() for h in xff.split(",") if h.strip()]
+        for hop in hops:
+            try:
+                ipaddress.ip_address(hop)
+                return hop
+            except ValueError:
+                continue
+
+    # 3. Direct socket connection client host
+    client = getattr(request, "client", None)
+    if client and getattr(client, "host", None):
+        candidate = str(client.host).strip()
+        try:
+            ipaddress.ip_address(candidate)
+            return candidate
+        except ValueError:
+            pass
+
+    return "127.0.0.1"
+

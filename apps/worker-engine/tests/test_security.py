@@ -218,6 +218,36 @@ class TestAPIEndpointSecurity(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("loopback", response.text.lower())
 
+    def test_extract_client_ip_variants(self):
+        from engine.core.security import extract_client_ip
+
+        class MockReq:
+            def __init__(self, headers=None, host="127.0.0.1"):
+                self.headers = headers or {}
+                self.client = type("Client", (), {"host": host})()
+
+        # Direct client host
+        self.assertEqual(extract_client_ip(MockReq(host="203.0.113.195")), "203.0.113.195")
+
+        # Cloudflare connecting IP
+        cf_req = MockReq(headers={"cf-connecting-ip": "198.51.100.42"}, host="127.0.0.1")
+        self.assertEqual(extract_client_ip(cf_req), "198.51.100.42")
+
+        # X-Forwarded-For multi-hop
+        xff_req = MockReq(
+            headers={"x-forwarded-for": "198.51.100.99, 10.0.0.1, 127.0.0.1"},
+            host="127.0.0.1",
+        )
+        self.assertEqual(extract_client_ip(xff_req), "198.51.100.99")
+
+        # Malicious non-IP header falls back to client host
+        malicious_req = MockReq(
+            headers={"x-forwarded-for": "<script>alert(1)</script>"},
+            host="203.0.113.5",
+        )
+        self.assertEqual(extract_client_ip(malicious_req), "203.0.113.5")
+
+
 
 if __name__ == "__main__":
     unittest.main()

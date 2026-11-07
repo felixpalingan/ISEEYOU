@@ -117,6 +117,47 @@ class TestAPIRoutes(unittest.TestCase):
         self.assertEqual(data["seed_type"], "domain")
         self.client.post(f"/api/v1/scan/{data['session_id']}/cancel")
 
+    def test_session_store_lru_and_ttl_eviction(self):
+        from engine.api.routes import SessionStore
+        from datetime import datetime, timedelta
+
+        store = SessionStore(max_capacity=3, default_ttl_seconds=10)
+
+        # Add 3 sessions
+        store["s1"] = {"status": "completed", "completed_at": datetime.utcnow().isoformat()}
+        store["s2"] = {"status": "completed", "completed_at": datetime.utcnow().isoformat()}
+        store["s3"] = {"status": "running", "started_at": datetime.utcnow().isoformat()}
+        self.assertEqual(len(store), 3)
+
+        # Adding 4th should prune oldest completed session (s1)
+        store["s4"] = {"status": "running", "started_at": datetime.utcnow().isoformat()}
+        self.assertEqual(len(store), 3)
+        self.assertNotIn("s1", store)
+        self.assertIn("s4", store)
+
+        # Test TTL expiration
+        store["s5_expired"] = {
+            "status": "completed",
+            "completed_at": (datetime.utcnow() - timedelta(seconds=15)).isoformat(),
+        }
+        store.evict_expired()
+        self.assertNotIn("s5_expired", store)
+
+    def test_event_bus_prune_stale_history(self):
+        from engine.core.event_bus import EventBus
+        from datetime import datetime, timedelta
+
+        bus = EventBus()
+        old_time = (datetime.utcnow() - timedelta(seconds=10000)).isoformat()
+        bus._history["old_sess"] = [{"event": "log", "data": "old", "timestamp": old_time}]
+        bus._history["fresh_sess"] = [{"event": "log", "data": "new", "timestamp": datetime.utcnow().isoformat()}]
+
+        pruned = bus.prune_stale_history(max_age_seconds=7200)
+        self.assertEqual(pruned, 1)
+        self.assertNotIn("old_sess", bus._history)
+        self.assertIn("fresh_sess", bus._history)
+
+
 
 if __name__ == "__main__":
     unittest.main()

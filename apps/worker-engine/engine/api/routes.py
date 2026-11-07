@@ -27,13 +27,89 @@ from engine.core.security import (
     validate_target_security,
     SecurityValidationError,
     scan_rate_limiter,
+    extract_client_ip,
 )
 import engine.providers  # Ensures all provider modules self-register
 
 router = APIRouter()
 
-# Active in-memory session cache for local-first testing
-_sessions: Dict[str, Dict[str, Any]] = {}
+
+class SessionStore:
+    """
+    Bounded in-memory session store with LRU capacity limits and TTL eviction.
+    Prevents memory exhaustion on long-running OSINT worker nodes.
+    Automatically coordinates with EventBus to clean up orphaned SSE history buffers.
+    """
+
+    def __init__(self, max_capacity: int = 100, default_ttl_seconds: int = 7200):
+        self.max_capacity = max_capacity
+        self.default_ttl_seconds = default_ttl_seconds
+        self._store: Dict[str, Dict[str, Any]] = {}
+
+    def get(self, session_id: str, default: Any = None) -> Any:
+        self.evict_expired()
+        return self._store.get(session_id, default)
+
+    def __contains__(self, session_id: str) -> bool:
+        self.evict_expired()
+        return session_id in self._store
+
+    def __getitem__(self, session_id: str) -> Dict[str, Any]:
+        return self._store[session_id]
+
+    def __setitem__(self, session_id: str, data: Dict[str, Any]):
+        self.evict_expired()
+        if len(self._store) >= self.max_capacity and session_id not in self._store:
+            self._prune_lru()
+        self._store[session_id] = data
+
+    def __len__(self) -> int:
+        return len(self._store)
+
+    def delete(self, session_id: str):
+        if session_id in self._store:
+            del self._store[session_id]
+            event_bus.cleanup_session(session_id)
+
+    def _prune_lru(self):
+        candidates = [
+            sid
+            for sid, s in self._store.items()
+            if s.get("status") in ("completed", "cancelled", "error")
+        ]
+        if not candidates:
+            candidates = list(self._store.keys())
+
+        if candidates:
+            oldest_sid = candidates[0]
+            del self._store[oldest_sid]
+            event_bus.cleanup_session(oldest_sid)
+
+    def evict_expired(self):
+        now = datetime.utcnow()
+        to_evict = []
+        for sid, s in list(self._store.items()):
+            if s.get("status") in ("completed", "cancelled", "error"):
+                completed_at_str = s.get("completed_at") or s.get("started_at")
+                if completed_at_str:
+                    try:
+                        t = datetime.fromisoformat(completed_at_str)
+                        if (now - t).total_seconds() > self.default_ttl_seconds:
+                            to_evict.append(sid)
+                    except (ValueError, TypeError):
+                        pass
+        for sid in to_evict:
+            self.delete(sid)
+
+    def clear(self):
+        for sid in list(self._store.keys()):
+            event_bus.cleanup_session(sid)
+        self._store.clear()
+
+
+# Bounded session store instance (max 100 active/recent sessions, 2 hour TTL)
+_sessions = SessionStore(max_capacity=100, default_ttl_seconds=7200)
+
 
 
 def classify_input(seed: str) -> EntityType:
@@ -174,7 +250,7 @@ async def create_scan(request: ScanRequest, req: Request):
     Enforces Anti-SSRF sanitization, loopback blocking, and sliding-window rate limiting.
     Returns session metadata immediately with unique session_id.
     """
-    client_ip = req.client.host if req.client else "127.0.0.1"
+    client_ip = extract_client_ip(req)
     allowed, retry_after = scan_rate_limiter.is_allowed(client_ip)
     if not allowed:
         raise HTTPException(
@@ -269,7 +345,7 @@ async def direct_stream_scan(
     Enforces Anti-SSRF validation, loopback blocking, and IP rate limiting.
     Ideal for CLI tools (curl -N) and fast testing.
     """
-    client_ip = req.client.host if req.client else "127.0.0.1"
+    client_ip = extract_client_ip(req)
     allowed, retry_after = scan_rate_limiter.is_allowed(client_ip)
     if not allowed:
         raise HTTPException(

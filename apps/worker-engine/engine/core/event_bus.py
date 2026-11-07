@@ -102,13 +102,54 @@ class EventBus:
         return self._history.get(session_id, [])
 
     def cleanup_session(self, session_id: str):
-        """Removes all subscriber queues and histories for a session"""
+        """Removes all subscriber queues, histories, and cancels running tasks for a session"""
+        self.cancel_task(session_id)
         self._subscribers.pop(session_id, None)
         self._history.pop(session_id, None)
         self._active_tasks.pop(session_id, None)
+        logger.debug(f"Evicted and cleaned up EventBus session {session_id}")
+
+    def prune_stale_history(self, max_age_seconds: int = 7200) -> int:
+        """
+        Prunes inactive sessions whose events are older than max_age_seconds
+        and have no active subscribers or running tasks.
+        Returns the count of pruned sessions.
+        """
+        now = datetime.utcnow()
+        pruned_count = 0
+        all_sessions = list(self._history.keys())
+
+        for session_id in all_sessions:
+            events = self._history.get(session_id, [])
+            if not events:
+                self.cleanup_session(session_id)
+                pruned_count += 1
+                continue
+
+            # Check timestamp of latest event
+            last_event = events[-1]
+            ts_str = last_event.get("timestamp")
+            if ts_str:
+                try:
+                    last_time = datetime.fromisoformat(ts_str)
+                    age_seconds = (now - last_time).total_seconds()
+                    if age_seconds > max_age_seconds:
+                        # Only prune if no active subscribers and task is done or nonexistent
+                        has_subscribers = bool(self._subscribers.get(session_id))
+                        task = self._active_tasks.get(session_id)
+                        is_running = task and not task.done()
+                        if not has_subscribers and not is_running:
+                            self.cleanup_session(session_id)
+                            pruned_count += 1
+                except (ValueError, TypeError):
+                    pass
+
+        return pruned_count
 
     def clear_all(self):
         """Resets the entire event bus (primarily for testing)"""
+        for session_id in list(self._active_tasks.keys()):
+            self.cancel_task(session_id)
         self._subscribers.clear()
         self._history.clear()
         self._active_tasks.clear()
