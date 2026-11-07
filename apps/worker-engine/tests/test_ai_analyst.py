@@ -179,6 +179,118 @@ class TestAIReconAnalyst(unittest.IsolatedAsyncioTestCase):
         self.assertIn("threat_level", data)
         self.assertIn("attack_chain", data)
         self.assertIn("recommendations", data)
+        self.assertIn("predicted_leads", data)
+        self.assertIn("suggested_dorks", data)
+
+    async def test_byok_groq_provider_mock(self):
+        """Tests BYOK multi-provider routing with Groq (OpenAI-compatible JSON mode)"""
+        mock_ai_json = {
+            "executive_summary": "Groq Llama-3.3 OSINT synthesis for target.",
+            "threat_level": "HIGH",
+            "key_exposures": ["Commit email leaked"],
+            "predicted_leads": [
+                {
+                    "lead_type": "username",
+                    "value": "budisantoso",
+                    "reason": "Full name concatenation",
+                    "confidence": 0.88,
+                }
+            ],
+            "suggested_dorks": [
+                {
+                    "title": "IG Private Comment Bypass",
+                    "query": 'site:instagram.com "budi_sec" -inurl:instagram.com/budi_sec',
+                    "category": "Private Account Bypass",
+                    "description": "Finds public comments by private IG account",
+                }
+            ],
+            "attack_chain": [],
+            "mitre_techniques": ["T1593"],
+            "recommendations": ["Use git noreply email"],
+        }
+
+        mock_openai_resp = {
+            "choices": [
+                {"message": {"content": json_dumps(mock_ai_json)}}
+            ]
+        }
+
+        req = AIAnalysisRequest(
+            target="budi_sec",
+            target_type="username",
+            ai_provider="groq",
+            api_key="gsk_test_byok_key",
+            nodes=[],
+            findings=[],
+        )
+
+        with patch("httpx.AsyncClient.post") as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = mock_openai_resp
+            mock_post.return_value = mock_resp
+
+            report = await self.service.analyze(req)
+            self.assertEqual(report.status, "success")
+            self.assertEqual(report.model, "llama-3.3-70b-versatile")
+            self.assertEqual(len(report.predicted_leads), 1)
+            self.assertEqual(report.predicted_leads[0].value, "budisantoso")
+            self.assertIn("site:instagram.com", report.suggested_dorks[0].query)
+
+    async def test_osint_detective_leads_and_dorks_generation(self):
+        """Verifies deterministic lead prediction and private account comment bypass dorks"""
+        req = AIAnalysisRequest(
+            target="budi_sec",
+            target_type="username",
+            nodes=[
+                {
+                    "id": "profile:github:budi_sec",
+                    "type": "username",
+                    "value": "https://github.com/budi_sec",
+                    "metadata": {
+                        "handle": "budi_sec",
+                        "full_name": "Budi Santoso",
+                        "company": "CyberCorp",
+                    },
+                }
+            ],
+        )
+        report = await self.service.analyze(req)
+        self.assertTrue(len(report.predicted_leads) >= 2)
+        self.assertTrue(any(l.value == "budisantoso" for l in report.predicted_leads))
+        self.assertTrue(any("site:instagram.com" in d.query and "-inurl:" in d.query for d in report.suggested_dorks))
+        self.assertTrue(any("site:linkedin.com/in/" in d.query and "Budi Santoso" in d.query for d in report.suggested_dorks))
+
+    async def test_mcp_server_tools_and_dorks(self):
+        """Verifies MCP server tool listing and direct dork generation tool execution"""
+        from engine.mcp_server import list_mcp_tools, handle_jsonrpc_message
+
+        tools = list_mcp_tools()
+        tool_names = {t["name"] for t in tools}
+        self.assertIn("osint_deep_profile_hunt", tool_names)
+        self.assertIn("osint_map_mutual_connections", tool_names)
+        self.assertIn("osint_correlate_email", tool_names)
+        self.assertIn("osint_generate_tactical_dorks", tool_names)
+
+        rpc_resp = await handle_jsonrpc_message(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "osint_generate_tactical_dorks",
+                    "arguments": {
+                        "target": "budi_sec",
+                        "full_name": "Budi Santoso",
+                        "organization": "CyberCorp",
+                    },
+                },
+            }
+        )
+        self.assertIn("result", rpc_resp)
+        content_text = rpc_resp["result"]["content"][0]["text"]
+        self.assertIn("site:instagram.com", content_text)
+        self.assertIn("budisantoso", content_text)
 
 
 def json_dumps(obj):
