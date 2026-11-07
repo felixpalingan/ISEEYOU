@@ -34,6 +34,7 @@ import { EntityNode, EntityType } from '@iseeyou/shared-types';
 export default function WorkspacePage() {
   const [activeView, setActiveView] = useState<'caseboard' | 'table' | 'ai'>('caseboard');
   const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(true);
+  const [isDossierCollapsed, setIsDossierCollapsed] = useState(false);
   const [inspectorTab, setInspectorTab] = useState<InspectorDrawerTab>('dorks');
   const [isCaseModalOpen, setIsCaseModalOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
@@ -121,15 +122,41 @@ export default function WorkspacePage() {
     isScanning,
   });
 
+  const openInspectorTab = (tab: InspectorDrawerTab) => {
+    setInspectorTab(tab);
+    setIsRightDrawerOpen(true);
+    // Responsive Ergonomics: Auto-collapse left dossier on viewports < 1440px to preserve canvas workspace
+    if (typeof window !== 'undefined' && window.innerWidth < 1440) {
+      setIsDossierCollapsed(true);
+    }
+  };
+
+  // Global Escape key listener: closes open drawers/logs effortlessly
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isActivityLogOpen) {
+          setIsActivityLogOpen(false);
+        } else if (isRightDrawerOpen) {
+          setIsRightDrawerOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActivityLogOpen, isRightDrawerOpen]);
+
   const handleInspectNode = (node: EntityNode) => {
     selectNode(node);
-    setInspectorTab('node');
-    setIsRightDrawerOpen(true);
+    openInspectorTab('node');
   };
 
   const handleInspectFinding = (finding: any) => {
     selectFinding(finding);
     setIsRightDrawerOpen(true);
+    if (typeof window !== 'undefined' && window.innerWidth < 1440) {
+      setIsDossierCollapsed(true);
+    }
   };
 
   const handleRunModuleOnNode = (node: EntityNode | null, moduleIds: string[]) => {
@@ -224,11 +251,8 @@ export default function WorkspacePage() {
           <button
             type="button"
             data-testid="btn-open-pin-clue"
-            onClick={() => {
-              setInspectorTab('pin');
-              setIsRightDrawerOpen(true);
-            }}
-            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all ${
+            onClick={() => openInspectorTab('pin')}
+            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
               isRightDrawerOpen && inspectorTab === 'pin'
                 ? 'bg-white/[0.09] border-sky-400/50 text-white'
                 : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-200'
@@ -242,11 +266,8 @@ export default function WorkspacePage() {
           <button
             type="button"
             data-testid="btn-open-dork-matrix"
-            onClick={() => {
-              setInspectorTab('dorks');
-              setIsRightDrawerOpen(true);
-            }}
-            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all ${
+            onClick={() => openInspectorTab('dorks')}
+            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
               isRightDrawerOpen && inspectorTab === 'dorks'
                 ? 'bg-white/[0.09] border-sky-400/50 text-white'
                 : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-200'
@@ -261,13 +282,12 @@ export default function WorkspacePage() {
             type="button"
             data-testid="btn-activity-ai"
             onClick={() => {
-              setInspectorTab('ai');
-              setIsRightDrawerOpen(true);
+              openInspectorTab('ai');
               if (!aiReport && !isAIAnalyzing) {
                 runAIAnalysis();
               }
             }}
-            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all ${
+            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
               isRightDrawerOpen && inspectorTab === 'ai'
                 ? 'bg-white/[0.09] border-sky-400/50 text-white'
                 : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-200'
@@ -282,7 +302,7 @@ export default function WorkspacePage() {
             type="button"
             data-testid="btn-open-case-manager"
             onClick={() => setIsCaseModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-medium flex items-center gap-1.5 transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-medium flex items-center gap-1.5 transition-colors focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none"
             title="Save, Load, or Export Investigation (.case.json)"
           >
             <FolderOpen className="w-3.5 h-3.5 text-sky-400" />
@@ -294,7 +314,7 @@ export default function WorkspacePage() {
             <button
               type="button"
               onClick={() => setActiveView('caseboard')}
-              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-all ${
+              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-all focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
                 activeView === 'caseboard'
                   ? 'bg-white/[0.09] text-white font-semibold border border-white/[0.08]'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -308,7 +328,7 @@ export default function WorkspacePage() {
               type="button"
               data-testid="btn-activity-table"
               onClick={() => setActiveView('table')}
-              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-all ${
+              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-all focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
                 activeView === 'table'
                   ? 'bg-white/[0.09] text-white font-semibold border border-white/[0.08]'
                   : 'text-slate-400 hover:text-slate-200 border border-transparent'
@@ -324,7 +344,7 @@ export default function WorkspacePage() {
             type="button"
             data-testid="btn-activity-export-pdf"
             onClick={() => setIsExportModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-medium flex items-center gap-1.5 transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-medium flex items-center gap-1.5 transition-colors focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none"
             title="Export Target Dossier Report (PDF / JSON / Markdown)"
           >
             <FileDown className="w-3.5 h-3.5 text-sky-400" />
@@ -335,7 +355,7 @@ export default function WorkspacePage() {
             type="button"
             data-testid="btn-activity-legal"
             onClick={() => setIsLegalModalOpen(true)}
-            className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-400 hover:text-slate-100 transition-colors"
+            className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-400 hover:text-slate-100 transition-colors focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none"
             title="Privacy & Legal Takedown Generator (UU PDP & GDPR)"
           >
             <Scale className="w-4 h-4" />
@@ -374,10 +394,9 @@ export default function WorkspacePage() {
                 riskScore={riskScore}
                 isScanning={isScanning}
                 onPivotLead={(val, type, mods) => handlePivotLead(val, type, mods)}
-                onOpenDorkMatrix={() => {
-                  setInspectorTab('dorks');
-                  setIsRightDrawerOpen(true);
-                }}
+                onOpenDorkMatrix={() => openInspectorTab('dorks')}
+                isCollapsedControlled={isDossierCollapsed}
+                onToggleCollapse={() => setIsDossierCollapsed((prev) => !prev)}
               />
             </div>
 

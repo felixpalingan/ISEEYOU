@@ -618,7 +618,7 @@ export function LeadInspectorDrawer({
                       })
                     }
                     placeholder="Write investigator sticky notes for this lead (e.g. 'Confirmed same person via IG bio link')..."
-                    className="w-full rounded-lg bg-[#090B10] border border-white/[0.08] focus:border-sky-400/60 outline-none p-2 text-[11px] text-slate-200 font-mono placeholder:text-slate-600"
+                    className="w-full rounded-lg bg-[#090B10] border border-white/[0.08] focus:border-sky-400/60 outline-none p-2 text-[11px] text-slate-200 font-mono placeholder:text-slate-500"
                   />
                 </div>
 
@@ -635,7 +635,7 @@ export function LeadInspectorDrawer({
                           className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#090B10] border border-white/[0.06]"
                         >
                           <div className="min-w-0">
-                            <div className="text-[9px] font-mono text-slate-500 uppercase">
+                            <div className="text-[9px] font-mono text-slate-400 uppercase">
                               {item.label}
                             </div>
                             <div className="text-[11px] font-mono font-medium text-slate-100 truncate">

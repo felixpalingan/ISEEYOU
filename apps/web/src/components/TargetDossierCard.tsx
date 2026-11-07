@@ -32,6 +32,8 @@ interface TargetDossierCardProps {
   isScanning: boolean;
   onPivotLead: (value: string, type: EntityType, modules?: string[]) => void;
   onOpenDorkMatrix: () => void;
+  isCollapsedControlled?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function TargetDossierCard({
@@ -41,8 +43,21 @@ export function TargetDossierCard({
   isScanning,
   onPivotLead,
   onOpenDorkMatrix,
+  isCollapsedControlled,
+  onToggleCollapse,
 }: TargetDossierCardProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const isCollapsed =
+    isCollapsedControlled !== undefined ? isCollapsedControlled : internalCollapsed;
+
+  const toggleCollapse = () => {
+    if (onToggleCollapse) {
+      onToggleCollapse();
+    } else {
+      setInternalCollapsed((prev) => !prev);
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<'dossier' | 'circle' | 'timeline'>('dossier');
   const [selectedAvatarIdx, setSelectedAvatarIdx] = useState(0);
   const [customPhotoUrl, setCustomPhotoUrl] = useState('');
@@ -109,7 +124,7 @@ export function TargetDossierCard({
           </button>
           <button
             type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
+            onClick={toggleCollapse}
             className="p-1 rounded-md hover:bg-white/[0.06] text-slate-400 hover:text-white transition-colors"
             title={isCollapsed ? 'Expand Dossier' : 'Minimize Dossier'}
           >
@@ -145,7 +160,7 @@ export function TargetDossierCard({
                   <button
                     type="button"
                     onClick={() => handleCopyText('primary-name', primaryName)}
-                    className="p-0.5 text-slate-500 hover:text-slate-200 transition-colors flex-shrink-0"
+                    className="p-0.5 text-slate-400 hover:text-slate-200 transition-colors flex-shrink-0"
                     title="Copy target name/handle"
                   >
                     {copiedItem === 'primary-name' ? (
@@ -193,7 +208,7 @@ export function TargetDossierCard({
             {/* Multi-Avatar Switcher (if multiple avatars discovered across platforms) */}
             {dossier.avatars.length > 1 && !customPhotoUrl && (
               <div className="mt-2.5 flex items-center gap-1.5">
-                <span className="text-[9px] font-mono text-slate-500">Avatars:</span>
+                <span className="text-[9px] font-mono text-slate-400">Avatars:</span>
                 {dossier.avatars.slice(0, 5).map((av, idx) => (
                   <button
                     key={av}
@@ -344,7 +359,7 @@ export function TargetDossierCard({
                         className="p-2.5 rounded-lg bg-[#131720] border border-white/[0.06] text-[11px] text-slate-300 leading-relaxed"
                       >
                         &ldquo;{b.text}&rdquo;
-                        <span className="block text-[9px] text-slate-500 font-mono mt-1">
+                        <span className="block text-[9px] text-slate-400 font-mono mt-1">
                           via {b.platform}
                         </span>
                       </div>
@@ -450,7 +465,7 @@ export function TargetDossierCard({
                     <span>Confirmed Accounts ({dossier.socialProfiles.length})</span>
                   </div>
                   {dossier.socialProfiles.length === 0 ? (
-                    <div className="text-[11px] text-slate-500 bg-[#131720]/50 rounded-lg p-2.5 border border-white/[0.05]">
+                    <div className="text-[11px] text-slate-400 bg-[#131720]/50 rounded-lg p-2.5 border border-white/[0.05]">
                       Run a scan to enumerate social & developer profiles.
                     </div>
                   ) : (
@@ -471,7 +486,7 @@ export function TargetDossierCard({
                               @{prof.handle}
                             </div>
                           </div>
-                          <ExternalLink className="w-3 h-3 text-slate-500 group-hover:text-sky-400 flex-shrink-0" />
+                          <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-sky-400 flex-shrink-0" />
                         </a>
                       ))}
                     </div>
@@ -498,7 +513,7 @@ export function TargetDossierCard({
                 </div>
                 {dossier.associates.length === 0 ? (
                   <div className="p-3.5 rounded-lg bg-[#131720]/70 border border-white/[0.06] text-center space-y-2">
-                    <Users className="w-5 h-5 text-slate-500 mx-auto" />
+                    <Users className="w-5 h-5 text-slate-400 mx-auto" />
                     <div className="text-[11px] text-slate-400">
                       No mutual connections mapped yet.
                     </div>
@@ -575,7 +590,7 @@ export function TargetDossierCard({
                         <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-sky-400 border-2 border-[#0F1219]" />
                         <div className="flex items-center justify-between text-[10px] font-mono text-sky-400 font-semibold tabular-nums">
                           <span>{item.year}</span>
-                          {item.date && <span className="text-slate-500">{item.date}</span>}
+                          {item.date && <span className="text-slate-400">{item.date}</span>}
                         </div>
                         <div className="text-[11px] text-slate-200 mt-0.5">{item.event}</div>
                       </div>
