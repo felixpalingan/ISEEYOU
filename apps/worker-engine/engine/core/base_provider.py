@@ -36,7 +36,7 @@ RE_IPV4 = re.compile(
 RE_EMAIL = re.compile(
     r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$"
 )
-RE_USERNAME = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
+RE_USERNAME = re.compile(r"^@?[a-zA-Z0-9_.\-\s',()]{1,100}$")
 
 
 class BaseOSINTProvider(ABC):
