@@ -30,6 +30,9 @@ const variantStyles: Record<string, string> = {
   breach: 'bg-red-950/80 border-vsc-critical text-vsc-critical font-mono font-bold',
   secret: 'bg-rose-950/80 border-rose-500 text-rose-300 font-mono font-bold',
   document: 'bg-vsc-dropdown border-vsc-border text-vsc-text font-mono',
+  associate: 'bg-emerald-950/70 border-emerald-600/50 text-emerald-300 font-mono font-semibold',
+  organization: 'bg-amber-950/70 border-amber-600/50 text-amber-300 font-mono font-semibold',
+  location: 'bg-rose-950/70 border-rose-600/50 text-rose-300 font-mono font-semibold',
 
   default: 'bg-vsc-dropdown border-vsc-border text-vsc-muted',
 };

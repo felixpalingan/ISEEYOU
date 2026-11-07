@@ -90,5 +90,23 @@ export const ENTITY_BADGE_CONFIGS: Record<EntityType, EntityBadgeConfig> = {
     colorClass: 'text-vsc-text border-vsc-border bg-vsc-dropdown',
     iconName: 'Globe',
   },
+  associate: {
+    type: 'associate',
+    label: 'ASSOCIATE',
+    colorClass: 'text-emerald-300 border-emerald-700/50 bg-emerald-950/60',
+    iconName: 'User',
+  },
+  organization: {
+    type: 'organization',
+    label: 'ORG / CAMPUS',
+    colorClass: 'text-amber-300 border-amber-700/50 bg-amber-950/60',
+    iconName: 'Globe',
+  },
+  location: {
+    type: 'location',
+    label: 'LOCATION',
+    colorClass: 'text-rose-300 border-rose-700/50 bg-rose-950/60',
+    iconName: 'Globe',
+  },
 };
 

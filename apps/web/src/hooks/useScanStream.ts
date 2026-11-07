@@ -1,7 +1,16 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { EntityType, EntityNode, EntityEdge, VulnerabilityFinding } from '@iseeyou/shared-types';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import {
+  EntityType,
+  EntityNode,
+  EntityEdge,
+  VulnerabilityFinding,
+  NodeConfidence,
+  TargetDossier,
+  TimelineEvent,
+  CaseFile,
+} from '@iseeyou/shared-types';
 
 export interface TelemetryLogLine {
   id: string;
@@ -26,9 +35,12 @@ export interface ScanStreamState {
   selectedNode: EntityNode | null;
   pivotHistory: { target: string; type: EntityType; timestamp: string }[];
   lastEnabledModules: string[] | null;
+  activeCaseName: string;
+  caseNotes: string;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+const CASES_STORAGE_KEY = 'iseeyou_osint_cases_v2';
 
 /**
  * Normalizes a pivot or search target so social URLs are never turned into
@@ -38,17 +50,29 @@ export function normalizeTargetForType(rawInput: string, type: EntityType): stri
   const trimmed = rawInput.trim();
   if (!trimmed) return trimmed;
 
-  if (type === 'username' && /^https?:\/\//i.test(trimmed)) {
+  if ((type === 'username' || type === 'associate') && /^https?:\/\//i.test(trimmed)) {
     try {
       const parsed = new URL(trimmed);
-      // Check query param id (e.g. HackerNews user?id=xxx)
       const idParam = parsed.searchParams.get('id');
       if (idParam) return idParam.trim();
 
       const segments = parsed.pathname
         .split('/')
         .map((s) => s.trim())
-        .filter((s) => s.length > 0 && s !== 'about.json' && s !== 'user' && s !== 'users' && s !== 'u' && s !== 'id' && s !== 'by' && s !== 'member' && s !== 'player' && s !== 'pub' && s !== 'v2');
+        .filter(
+          (s) =>
+            s.length > 0 &&
+            s !== 'about.json' &&
+            s !== 'user' &&
+            s !== 'users' &&
+            s !== 'u' &&
+            s !== 'id' &&
+            s !== 'by' &&
+            s !== 'member' &&
+            s !== 'player' &&
+            s !== 'pub' &&
+            s !== 'v2'
+        );
 
       if (segments.length > 0) {
         const last = segments[segments.length - 1].replace(/^@/, '').replace(/\.json$/i, '');
@@ -59,15 +83,259 @@ export function normalizeTargetForType(rawInput: string, type: EntityType): stri
     }
   }
 
+  if (type === 'username' || type === 'associate') {
+    return trimmed.replace(/^@/, '');
+  }
+
   return trimmed;
+}
+
+/**
+ * Real-Time Target Dossier & Chronological Digital Footprint Aggregator.
+ * Synthesizes all discovered nodes (excluding false_positive nodes) into a single Dossier object.
+ */
+export function buildTargetDossier(
+  target: string,
+  targetType: EntityType,
+  nodes: EntityNode[],
+  findings: VulnerabilityFinding[]
+): TargetDossier {
+  const activeNodes = nodes.filter((n) => n.confidence !== 'false_positive');
+
+  const fullNames = new Set<string>();
+  const handles = new Set<string>();
+  const emails = new Set<string>();
+  const avatars = new Set<string>();
+  const locations = new Set<string>();
+  const organizations = new Set<string>();
+  const domains = new Set<string>();
+  const bios: Array<{ platform: string; text: string }> = [];
+  const seenBios = new Set<string>();
+  const socialProfiles: TargetDossier['socialProfiles'] = [];
+  const seenProfileUrls = new Set<string>();
+  const associates: TargetDossier['associates'] = [];
+  const seenAssociates = new Set<string>();
+  const timelineMap = new Map<string, TimelineEvent>();
+
+  if (targetType === 'username') handles.add(target.replace(/^@/, ''));
+  if (targetType === 'email' && target.includes('@')) {
+    emails.add(target.toLowerCase());
+    handles.add(target.split('@')[0]);
+  }
+  if (targetType === 'domain') domains.add(target.toLowerCase());
+
+  let breachesCount = findings.filter((f) =>
+    f.title.toLowerCase().includes('breach') || f.title.toLowerCase().includes('pwned')
+  ).length;
+
+  for (const node of activeNodes) {
+    const meta = (node.metadata || {}) as Record<string, any>;
+
+    if (node.type === 'breach') {
+      breachesCount += 1;
+    }
+
+    // Full Names
+    if (typeof meta.full_name === 'string' && meta.full_name.trim()) {
+      fullNames.add(meta.full_name.trim());
+    }
+    if (Array.isArray(meta.full_names)) {
+      for (const fn of meta.full_names) {
+        if (typeof fn === 'string' && fn.trim()) fullNames.add(fn.trim());
+      }
+    }
+
+    // Handles
+    if (typeof meta.handle === 'string' && meta.handle.trim()) {
+      handles.add(meta.handle.trim().replace(/^@/, ''));
+    }
+    if (Array.isArray(meta.handles)) {
+      for (const h of meta.handles) {
+        if (typeof h === 'string' && h.trim()) handles.add(h.trim().replace(/^@/, ''));
+      }
+    }
+    if (node.type === 'username' && !node.value.startsWith('http') && !node.value.includes(' ')) {
+      handles.add(node.value.replace(/^@/, ''));
+    }
+
+    // Emails
+    if (node.type === 'email' && node.value.includes('@')) {
+      emails.add(node.value.trim().toLowerCase());
+    }
+    if (Array.isArray(meta.commit_emails)) {
+      for (const em of meta.commit_emails) {
+        if (typeof em === 'string' && em.includes('@')) emails.add(em.trim().toLowerCase());
+      }
+    }
+    if (Array.isArray(meta.emails)) {
+      for (const em of meta.emails) {
+        if (typeof em === 'string' && em.includes('@')) emails.add(em.trim().toLowerCase());
+      }
+    }
+
+    // Avatars
+    if (typeof meta.avatar_url === 'string' && meta.avatar_url.startsWith('http')) {
+      avatars.add(meta.avatar_url);
+    }
+    if (Array.isArray(meta.avatars)) {
+      for (const av of meta.avatars) {
+        if (typeof av === 'string' && av.startsWith('http')) avatars.add(av);
+      }
+    }
+
+    // Locations
+    if (node.type === 'location' && node.value.trim()) {
+      locations.add(node.value.trim());
+    }
+    if (typeof meta.location === 'string' && meta.location.trim()) {
+      locations.add(meta.location.trim());
+    }
+    if (Array.isArray(meta.locations)) {
+      for (const loc of meta.locations) {
+        if (typeof loc === 'string' && loc.trim()) locations.add(loc.trim());
+      }
+    }
+
+    // Organizations / Companies / Campuses
+    if (node.type === 'organization' && node.value.trim()) {
+      organizations.add(node.value.trim());
+    }
+    if (typeof meta.company === 'string' && meta.company.trim()) {
+      organizations.add(meta.company.trim());
+    }
+    if (typeof meta.organization === 'string' && meta.organization.trim()) {
+      organizations.add(meta.organization.trim());
+    }
+    if (Array.isArray(meta.organizations)) {
+      for (const org of meta.organizations) {
+        if (typeof org === 'string' && org.trim()) organizations.add(org.trim());
+      }
+    }
+
+    // Domains
+    if (node.type === 'domain' && node.value.includes('.')) {
+      domains.add(node.value.trim().toLowerCase());
+    }
+    if (Array.isArray(meta.domains)) {
+      for (const dom of meta.domains) {
+        if (typeof dom === 'string' && dom.includes('.')) domains.add(dom.trim().toLowerCase());
+      }
+    }
+
+    // Bios
+    if (typeof meta.bio === 'string' && meta.bio.trim()) {
+      const plat = String(meta.platform || 'Profile');
+      const bioKey = `${plat}:${meta.bio.trim()}`;
+      if (!seenBios.has(bioKey)) {
+        seenBios.add(bioKey);
+        bios.push({ platform: plat, text: meta.bio.trim() });
+      }
+    }
+    if (Array.isArray(meta.bios)) {
+      for (const b of meta.bios) {
+        if (b && typeof b.text === 'string' && b.text.trim()) {
+          const plat = String(b.platform || 'Profile');
+          const bioKey = `${plat}:${b.text.trim()}`;
+          if (!seenBios.has(bioKey)) {
+            seenBios.add(bioKey);
+            bios.push({ platform: plat, text: b.text.trim() });
+          }
+        }
+      }
+    }
+
+    // Social Profiles
+    if (node.type === 'username' && (meta.platform || meta.profile_url || node.value.startsWith('http'))) {
+      const url = String(meta.profile_url || (node.value.startsWith('http') ? node.value : ''));
+      const plat = String(meta.platform || node.label.split(' ')[0] || 'Account');
+      const hdl = String(meta.handle || node.value);
+      const key = url || `${plat}:${hdl}`;
+      if (!seenProfileUrls.has(key)) {
+        seenProfileUrls.add(key);
+        socialProfiles.push({
+          platform: plat,
+          handle: hdl,
+          url: url || `https://google.com/search?q=${encodeURIComponent(hdl)}`,
+          category: typeof meta.category === 'string' ? meta.category : undefined,
+          nodeId: node.id,
+        });
+      }
+    }
+
+    // Associates / Mutual Connections
+    if (node.type === 'associate') {
+      const hdl = String(meta.handle || node.value).replace(/^@/, '');
+      if (hdl && !seenAssociates.has(hdl.toLowerCase())) {
+        seenAssociates.add(hdl.toLowerCase());
+        associates.push({
+          handle: hdl,
+          relationship: String(meta.relationship || 'Connected Associate'),
+          avatarUrl: typeof meta.avatar_url === 'string' ? meta.avatar_url : undefined,
+          profileUrl: typeof meta.profile_url === 'string' ? meta.profile_url : undefined,
+          nodeId: node.id,
+        });
+      }
+    }
+
+    // Chronological Timeline Events
+    if (typeof meta.created_year === 'string' && meta.created_year.trim()) {
+      const plat = String(meta.platform || node.label);
+      const tKey = `${meta.created_year}:${plat}`;
+      if (!timelineMap.has(tKey)) {
+        timelineMap.set(tKey, {
+          year: meta.created_year.trim(),
+          date: typeof meta.created_at === 'string' ? meta.created_at.slice(0, 10) : undefined,
+          event: `Active on ${plat} (${meta.handle || node.value})`,
+          platform: plat,
+          nodeId: node.id,
+        });
+      }
+    }
+    if (Array.isArray(meta.timeline)) {
+      for (const ev of meta.timeline) {
+        if (ev && typeof ev.year === 'string' && typeof ev.event === 'string') {
+          const tKey = `${ev.year}:${ev.platform || ev.event}`;
+          if (!timelineMap.has(tKey)) {
+            timelineMap.set(tKey, {
+              year: ev.year,
+              date: ev.date,
+              event: ev.event,
+              platform: String(ev.platform || 'OSINT'),
+              nodeId: node.id,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  const timeline = Array.from(timelineMap.values()).sort((a, b) =>
+    a.year.localeCompare(b.year)
+  );
+
+  return {
+    primaryTarget: target,
+    fullNames: Array.from(fullNames),
+    handles: Array.from(handles),
+    emails: Array.from(emails),
+    avatars: Array.from(avatars),
+    locations: Array.from(locations),
+    organizations: Array.from(organizations),
+    domains: Array.from(domains),
+    bios,
+    socialProfiles,
+    associates,
+    breachesCount,
+    timeline,
+  };
 }
 
 export function useScanStream() {
   const [state, setState] = useState<ScanStreamState>({
     sessionId: null,
     status: 'idle',
-    target: 'example.com',
-    targetType: 'domain',
+    target: 'torvalds',
+    targetType: 'username',
     riskScore: 0,
     logs: [
       {
@@ -75,7 +343,7 @@ export function useScanStream() {
         timestamp: '00:00:00',
         module: 'system',
         level: 'info',
-        message: 'ISEEYOU Reconnaissance Command Center Initialized. Select mode & modules to begin.',
+        message: 'ISEEYOU 2.0 OSINT Lead-Chaining Caseboard Ready. Enter a Username, Email, or Domain to begin hunting.',
       },
     ],
     nodes: [],
@@ -86,11 +354,27 @@ export function useScanStream() {
     selectedNode: null,
     pivotHistory: [],
     lastEnabledModules: null,
+    activeCaseName: 'Untitled Investigation',
+    caseNotes: '',
   });
 
+  const [savedCases, setSavedCases] = useState<CaseFile[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Terminate active EventSource connection
+  // Load saved cases from localStorage on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(CASES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setSavedCases(parsed);
+      }
+    } catch {
+      // ignore storage parse errors
+    }
+  }, []);
+
   const closeEventSource = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
@@ -98,7 +382,6 @@ export function useScanStream() {
     }
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       closeEventSource();
@@ -108,13 +391,23 @@ export function useScanStream() {
   const startScan = useCallback(
     async (
       rawTarget: string,
-      type: EntityType,
+      rawType: EntityType,
       isPivot: boolean = false,
       enabledModules?: string[],
       parentNodeId?: string
     ) => {
-      // Guard against non-scannable entity types (e.g., port numbers or breach titles)
-      if (type === 'port' || type === 'breach' || type === 'secret' || type === 'document') {
+      // Map 'associate' to 'username' so pivoting onto an associate hunts their username!
+      const type: EntityType = rawType === 'associate' ? 'username' : rawType;
+
+      // Guard against non-scannable endpoint attribute types
+      if (
+        type === 'port' ||
+        type === 'breach' ||
+        type === 'secret' ||
+        type === 'document' ||
+        type === 'organization' ||
+        type === 'location'
+      ) {
         setState((prev) => ({
           ...prev,
           logs: [
@@ -124,7 +417,7 @@ export function useScanStream() {
               timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
               module: 'orchestrator',
               level: 'warn',
-              message: `Entity type [${type.toUpperCase()}] (${rawTarget}) is an endpoint attribute — open the Node Inspector to view details or remediate.`,
+              message: `Entity [${type.toUpperCase()}] (${rawTarget}) is a contextual lead — open the Tactical Dork Matrix to search documents/profiles for this lead.`,
             },
           ],
         }));
@@ -136,7 +429,6 @@ export function useScanStream() {
 
       closeEventSource();
 
-      // Configure state for scan (retain graph if pivoting or running incremental module)
       setState((prev) => {
         if (isPivot) {
           const isSameTargetModuleRun = prev.target.toLowerCase() === target.toLowerCase();
@@ -188,14 +480,13 @@ export function useScanStream() {
                 module: 'orchestrator',
                 level: 'info',
                 message: enabledModules?.length
-                  ? `[STEP-SCAN] Running module(s) [${enabledModules.join(', ')}] on [${type.toUpperCase()}] ${target}`
-                  : `[PIVOT] Recursively pivoting recon investigation onto: [${type.toUpperCase()}] ${target}`,
+                  ? `[LEAD-CHAIN] Running [${enabledModules.join(', ')}] on [${type.toUpperCase()}] ${target}`
+                  : `[PIVOT] Chaining investigation onto lead: [${type.toUpperCase()}] ${target}`,
               },
             ],
           };
         }
 
-        // Full fresh scan session
         return {
           ...prev,
           status: 'running',
@@ -210,14 +501,15 @@ export function useScanStream() {
           selectedNode: null,
           pivotHistory: [],
           lastEnabledModules: enabledModules ?? null,
+          activeCaseName: `Case: ${target}`,
           logs: [
             {
               id: `start-${Date.now()}`,
               timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
               module: 'orchestrator',
               level: 'info',
-              message: `Dispatching reconnaissance mission for [${type.toUpperCase()}]: ${target}${
-                enabledModules ? ` (Active modules: ${enabledModules.join(', ')})` : ''
+              message: `Launching OSINT investigation for [${type.toUpperCase()}]: ${target}${
+                enabledModules ? ` (Modules: ${enabledModules.join(', ')})` : ''
               }`,
             },
           ],
@@ -225,7 +517,6 @@ export function useScanStream() {
       });
 
       try {
-        // 1. Initialize scan session via POST
         const requestBody: {
           seed_input: string;
           force_refresh: boolean;
@@ -260,7 +551,6 @@ export function useScanStream() {
 
         setState((prev) => ({ ...prev, sessionId }));
 
-        // 2. Connect to Server-Sent Events (SSE) Stream
         const sseUrl = `${API_BASE_URL}/api/v1/scan/${sessionId}/stream`;
         const es = new EventSource(sseUrl);
         eventSourceRef.current = es;
@@ -285,26 +575,33 @@ export function useScanStream() {
         es.addEventListener('node', (e: MessageEvent) => {
           try {
             const rawNode: EntityNode = JSON.parse(e.data);
-            // Attach parentNodeId if this was a targeted node scan
             const node: EntityNode =
               parentNodeId && !rawNode.parentId && !rawNode.parent_id
                 ? { ...rawNode, parentId: parentNodeId, parent_id: parentNodeId }
                 : rawNode;
 
             setState((prev) => {
-              // Skip if node matches the current root target seed itself
+              // If the backend sends an enriched root seed node with dossier metadata,
+              // merge its metadata into a hidden or existing seed carrier if needed, or keep its fields
               if (
                 node.value.toLowerCase() === prev.target.toLowerCase() &&
                 (node.metadata?.role === 'seed' || node.metadata?.role === 'identity_seed')
               ) {
-                return prev;
+                // Check if any existing profile node can absorb timeline/dossier fields, or store as seed metadata carrier
+                const hasRichMeta =
+                  Array.isArray(node.metadata?.full_names) ||
+                  Array.isArray(node.metadata?.timeline) ||
+                  Array.isArray(node.metadata?.avatars);
+                if (!hasRichMeta) {
+                  return prev;
+                }
               }
 
-              // Deduplicate nodes by ID OR by (type + normalized value)
               const existingIdx = prev.nodes.findIndex(
                 (n) =>
                   n.id === node.id ||
-                  (n.type === node.type && n.value.trim().toLowerCase() === node.value.trim().toLowerCase())
+                  (n.type === node.type &&
+                    n.value.trim().toLowerCase() === node.value.trim().toLowerCase())
               );
 
               if (existingIdx !== -1) {
@@ -319,10 +616,14 @@ export function useScanStream() {
                 };
                 const nextNodes = [...prev.nodes];
                 nextNodes[existingIdx] = updatedNode;
-                return { ...prev, nodes: nextNodes };
+                return {
+                  ...prev,
+                  nodes: nextNodes,
+                  selectedNode:
+                    prev.selectedNode?.id === updatedNode.id ? updatedNode : prev.selectedNode,
+                };
               }
 
-              // If parentNodeId was specified, also create a direct edge from parentNodeId to this node
               const nextEdges = [...prev.edges];
               if (parentNodeId && parentNodeId !== node.id) {
                 const edgeId = `edge-step-${parentNodeId}-${node.id}`;
@@ -352,7 +653,9 @@ export function useScanStream() {
                 prev.edges.some(
                   (ed) =>
                     ed.id === edge.id ||
-                    (ed.source === edge.source && ed.target === edge.target && ed.relation === edge.relation)
+                    (ed.source === edge.source &&
+                      ed.target === edge.target &&
+                      ed.relation === edge.relation)
                 )
               ) {
                 return prev;
@@ -472,6 +775,248 @@ export function useScanStream() {
     [closeEventSource]
   );
 
+  /**
+   * Manually pins a discovered clue onto the Caseboard (e.g., from a Google Dork or IG comment).
+   */
+  const addManualLead = useCallback(
+    (
+      type: EntityType,
+      rawValue: string,
+      customLabel?: string,
+      parentNodeId?: string,
+      notes?: string
+    ) => {
+      const value = rawValue.trim();
+      if (!value) return null;
+
+      const nodeId = `manual:${type}:${value.toLowerCase().replace(/\s+/g, '_')}`;
+      const newNode: EntityNode = {
+        id: nodeId,
+        type,
+        value,
+        label: customLabel?.trim() || value,
+        severity: 'info',
+        parentId: parentNodeId,
+        parent_id: parentNodeId,
+        discoveredAt: new Date().toISOString(),
+        confidence: 'verified',
+        investigatorNotes: notes || 'Manually pinned investigator lead',
+        isManual: true,
+        metadata: {
+          source: 'Investigator Manual Pin',
+          handle: type === 'username' || type === 'associate' ? value.replace(/^@/, '') : undefined,
+          location: type === 'location' ? value : undefined,
+          organization: type === 'organization' ? value : undefined,
+        },
+      };
+
+      setState((prev) => {
+        const exists = prev.nodes.some((n) => n.id === nodeId);
+        const nextNodes = exists
+          ? prev.nodes.map((n) => (n.id === nodeId ? { ...n, ...newNode } : n))
+          : [...prev.nodes, newNode];
+
+        const sourceId = parentNodeId || `root-${prev.target}`;
+        const edgeId = `edge-manual-${sourceId}->${nodeId}`;
+        const nextEdges = prev.edges.some((e) => e.id === edgeId)
+          ? prev.edges
+          : [
+              ...prev.edges,
+              {
+                id: edgeId,
+                source: sourceId,
+                target: nodeId,
+                relation: 'PINNED_CLUE',
+                confidence: 1.0,
+              },
+            ];
+
+        return {
+          ...prev,
+          nodes: nextNodes,
+          edges: nextEdges,
+          selectedNode: newNode,
+          logs: [
+            ...prev.logs,
+            {
+              id: `pin-${Date.now()}`,
+              timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+              module: 'caseboard',
+              level: 'success',
+              message: `[PINNED CLUE] Added manual [${type.toUpperCase()}] lead '${value}' to Caseboard.`,
+            },
+          ],
+        };
+      });
+
+      return newNode;
+    },
+    []
+  );
+
+  /**
+   * Updates investigator sticky notes or confidence status on a node.
+   */
+  const updateNodeAnnotation = useCallback(
+    (
+      nodeId: string,
+      updates: { confidence?: NodeConfidence; investigatorNotes?: string }
+    ) => {
+      setState((prev) => {
+        const nextNodes = prev.nodes.map((n) =>
+          n.id === nodeId
+            ? {
+                ...n,
+                confidence: updates.confidence !== undefined ? updates.confidence : n.confidence,
+                investigatorNotes:
+                  updates.investigatorNotes !== undefined
+                    ? updates.investigatorNotes
+                    : n.investigatorNotes,
+              }
+            : n
+        );
+        const updatedSelected =
+          prev.selectedNode?.id === nodeId
+            ? nextNodes.find((n) => n.id === nodeId) || prev.selectedNode
+            : prev.selectedNode;
+
+        return {
+          ...prev,
+          nodes: nextNodes,
+          selectedNode: updatedSelected,
+        };
+      });
+    },
+    []
+  );
+
+  const setCaseNotes = useCallback((notes: string) => {
+    setState((prev) => ({ ...prev, caseNotes: notes }));
+  }, []);
+
+  /**
+   * Saves the current investigation into localStorage & returns the CaseFile object.
+   */
+  const saveCase = useCallback(
+    (customName?: string) => {
+      const name = (customName || state.activeCaseName || `Case: ${state.target}`).trim();
+      const now = new Date().toISOString();
+      const caseFile: CaseFile = {
+        id: `case-${state.target.toLowerCase().replace(/[^a-z0-9]/g, '_')}-${Date.now()}`,
+        name,
+        createdAt: now,
+        updatedAt: now,
+        seedInput: state.target,
+        riskScore: state.riskScore,
+        nodes: state.nodes,
+        edges: state.edges,
+        findings: state.findings,
+        caseNotes: state.caseNotes,
+      };
+
+      setSavedCases((prev) => {
+        const filtered = prev.filter((c) => c.name.toLowerCase() !== name.toLowerCase());
+        const next = [caseFile, ...filtered].slice(0, 25);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(CASES_STORAGE_KEY, JSON.stringify(next));
+        }
+        return next;
+      });
+
+      setState((prev) => ({
+        ...prev,
+        activeCaseName: name,
+        logs: [
+          ...prev.logs,
+          {
+            id: `save-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+            module: 'caseboard',
+            level: 'success',
+            message: `[CASE SAVED] Saved investigation '${name}' (${state.nodes.length} nodes).`,
+          },
+        ],
+      }));
+
+      return caseFile;
+    },
+    [state.activeCaseName, state.target, state.riskScore, state.nodes, state.edges, state.findings, state.caseNotes]
+  );
+
+  const loadCase = useCallback(
+    (caseFile: CaseFile) => {
+      closeEventSource();
+      const inferredType: EntityType = caseFile.seedInput.includes('@')
+        ? 'email'
+        : caseFile.seedInput.includes('.')
+        ? 'domain'
+        : 'username';
+
+      setState((prev) => ({
+        ...prev,
+        sessionId: null,
+        status: 'completed',
+        isScanning: false,
+        target: caseFile.seedInput,
+        targetType: inferredType,
+        riskScore: caseFile.riskScore || 0,
+        nodes: caseFile.nodes || [],
+        edges: caseFile.edges || [],
+        findings: caseFile.findings || [],
+        selectedNode: null,
+        selectedFinding: null,
+        activeCaseName: caseFile.name,
+        caseNotes: caseFile.caseNotes || '',
+        logs: [
+          ...prev.logs,
+          {
+            id: `load-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
+            module: 'caseboard',
+            level: 'info',
+            message: `[CASE LOADED] Restored case '${caseFile.name}' (${(caseFile.nodes || []).length} nodes).`,
+          },
+        ],
+      }));
+    },
+    [closeEventSource]
+  );
+
+  const deleteCase = useCallback((caseId: string) => {
+    setSavedCases((prev) => {
+      const next = prev.filter((c) => c.id !== caseId);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(CASES_STORAGE_KEY, JSON.stringify(next));
+      }
+      return next;
+    });
+  }, []);
+
+  const exportCaseJson = useCallback(() => {
+    const now = new Date().toISOString();
+    const payload: CaseFile = {
+      id: `case-${Date.now()}`,
+      name: state.activeCaseName || `Case: ${state.target}`,
+      createdAt: now,
+      updatedAt: now,
+      seedInput: state.target,
+      riskScore: state.riskScore,
+      nodes: state.nodes,
+      edges: state.edges,
+      findings: state.findings,
+      caseNotes: state.caseNotes,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${state.target.replace(/[^a-zA-Z0-9_-]/g, '_')}.case.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [state]);
+
   const cancelScan = useCallback(async () => {
     if (state.sessionId) {
       try {
@@ -517,8 +1062,8 @@ export function useScanStream() {
     setState({
       sessionId: null,
       status: 'idle',
-      target: 'example.com',
-      targetType: 'domain',
+      target: 'torvalds',
+      targetType: 'username',
       riskScore: 0,
       logs: [
         {
@@ -526,7 +1071,7 @@ export function useScanStream() {
           timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
           module: 'system',
           level: 'info',
-          message: 'Workspace cleared. Ready for new reconnaissance target.',
+          message: 'Caseboard cleared. Ready for new investigation.',
         },
       ],
       nodes: [],
@@ -537,6 +1082,8 @@ export function useScanStream() {
       selectedNode: null,
       pivotHistory: [],
       lastEnabledModules: null,
+      activeCaseName: 'Untitled Investigation',
+      caseNotes: '',
     });
   }, [closeEventSource]);
 
@@ -564,8 +1111,37 @@ export function useScanStream() {
     });
   }, []);
 
+  // Real-time aggregated Target Dossier
+  const dossier = useMemo(
+    () =>
+      buildTargetDossier(
+        state.target,
+        state.targetType,
+        state.nodes,
+        state.findings
+      ),
+    [state.target, state.targetType, state.nodes, state.findings]
+  );
+
+  // Visible nodes for the graph (exclude internal seed metadata carrier nodes so root isn't duplicated)
+  const visibleNodes = useMemo(
+    () =>
+      state.nodes.filter(
+        (n) =>
+          !(
+            n.value.toLowerCase() === state.target.toLowerCase() &&
+            (n.metadata?.role === 'seed' || n.metadata?.role === 'identity_seed')
+          )
+      ),
+    [state.nodes, state.target]
+  );
+
   return {
     ...state,
+    nodes: visibleNodes,
+    allRawNodes: state.nodes,
+    dossier,
+    savedCases,
     startScan,
     cancelScan,
     clearLogs,
@@ -573,5 +1149,12 @@ export function useScanStream() {
     selectNode,
     resetWorkspace,
     revertPivot,
+    addManualLead,
+    updateNodeAnnotation,
+    setCaseNotes,
+    saveCase,
+    loadCase,
+    deleteCase,
+    exportCaseJson,
   };
 }
