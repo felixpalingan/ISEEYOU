@@ -14,6 +14,9 @@ class EntityType(str, Enum):
     PORT = "port"
     SECRET = "secret"
     DOCUMENT = "document"
+    ASSOCIATE = "associate"
+    ORGANIZATION = "organization"
+    LOCATION = "location"
 
 
 class SeverityLevel(str, Enum):
@@ -143,6 +146,20 @@ class AttackChainStep(BaseModel):
     impact: str
 
 
+class PredictedLead(BaseModel):
+    lead_type: str = "username"
+    value: str
+    reason: str
+    confidence: float = 0.75
+
+
+class SuggestedDork(BaseModel):
+    title: str
+    query: str
+    category: str = "Cross-Platform Pivot"
+    description: str = ""
+
+
 class AIAnalysisRequest(BaseModel):
     target: str
     target_type: str
@@ -150,6 +167,9 @@ class AIAnalysisRequest(BaseModel):
     edges: List[Dict[str, Any]] = Field(default_factory=list)
     findings: List[Dict[str, Any]] = Field(default_factory=list)
     risk_score: float = 0.0
+    ai_provider: Optional[str] = "gemini"
+    api_key: Optional[str] = None
+    model_override: Optional[str] = None
 
 
 class AIAnalysisResponse(BaseModel):
@@ -163,5 +183,8 @@ class AIAnalysisResponse(BaseModel):
     attack_chain: List[AttackChainStep] = Field(default_factory=list)
     mitre_techniques: List[str] = Field(default_factory=list)
     recommendations: List[str] = Field(default_factory=list)
+    predicted_leads: List[PredictedLead] = Field(default_factory=list)
+    suggested_dorks: List[SuggestedDork] = Field(default_factory=list)
     generated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
 
