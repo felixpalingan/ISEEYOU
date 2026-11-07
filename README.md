@@ -58,7 +58,7 @@ flowchart LR
     Deep["1. Deep Profile & Commit Email Extractor"]
     Mutual["2. Mutual Circle & Collaborators Mapper"]
     EmailCorr["3. Email, Gravatar MD5 & OpenPGP Correlator"]
-    Socials["4. 16+ Platform Social Presence Scanner"]
+    Socials["4. 66+ Platform Deep Social Footprint Engine"]
     Breach["5. HIBP k-Anonymity Breach & SPF/DMARC Hunter"]
     WebInfra["6. CT Log Subdomains, DoH DNS & Shodan InternetDB"]
     AIDetect["Multi-Provider BYOK AI Detective & MCP Server"]
@@ -92,7 +92,7 @@ flowchart LR
 | **Design System** | **Tailwind CSS**, Carbon Obsidian Tokens, Lucide Icons | High-contrast, low-noise tactical interface with `tabular-nums` alignment and keyboard-first navigation (`/`). |
 | **OSINT Worker Engine** | **Python 3.11+**, **FastAPI**, **Asyncio**, **HTTPX** | High-concurrency asynchronous I/O for non-blocking multi-source OSINT extraction and SSE streaming. |
 | **AI Detective & MCP** | **Gemini**, **Groq**, **OpenAI/OpenRouter**, **Ollama**, **MCP** | Bring-Your-Own-Key (BYOK) multi-provider LLM routing plus a standard JSON-RPC 2.0 stdio MCP server. |
-| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 79 Python unit tests and 12 Playwright E2E browser tests. |
+| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 87 Python unit tests and 12 Playwright E2E browser tests. |
 
 ---
 
@@ -102,7 +102,7 @@ flowchart LR
 - **Deep Profile & Commit Email Extractor (`deep_profile_extractor.py`):** Queries GitHub (`/users/{u}` and `/users/{u}/events/public`), Reddit (`about.json`), Keybase (`user/lookup.json`), GitLab, HackerNews, and Dev.to to extract real names, avatars, bios, locations, organizations, account creation dates, cryptographic proofs, and hidden personal email addresses embedded in public Git commit payloads.
 - **Inner Circle & Mutual Connections Mapper (`connection_mapper.py`):** Computes the intersection of `followers ∩ following` alongside repository co-authors and public organization memberships to map a target's verified mutual associates.
 - **Email-to-Identity Correlator (`email_correlator.py`):** Computes MD5 hashes for Gravatar profile/avatar extraction, queries the Ubuntu OpenPGP HKP keyserver for registered full names and UIDs, searches GitHub commits by author email, and isolates custom organization domains.
-- **16+ Platform Concurrent Social Scanner (`social_scanner.py`):** Probes username presence across major developer, creative, and community platforms with false-positive status verification.
+- **66+ Platform Deep Social Footprint Engine (`social_scanner.py` & `sites_catalog.py`):** Concurrent username reconnaissance across 66+ Developer, Security/CTF, Social, Community, Identity, Creative, Gaming, and Creator platforms using lightweight `url_probe` separation, pre-flight `regex_check` validation, `response_url` redirect trap detection, dual `presence_strings` / `absence_strings` verification, Anti-WAF false-positive filtering (Cloudflare, PerimeterX, Vercel, DDoS-Guard), and in-flight regex profile metadata extraction (`avatar_url`, `full_name`, `bio`, `location`, `secondary_link`).
 - **Infrastructure & Breach Intelligence:** Combines Certificate Transparency (`crt.sh` / CertSpotter), Cloudflare DNS-over-HTTPS (DoH), Shodan InternetDB open port/CVE lookups, and HaveIBeenPwned k-Anonymity breach checks.
 
 ### 2. Tactical Google Dork Matrix (Private Account Comment & Tag Bypass)
