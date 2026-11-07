@@ -72,7 +72,12 @@ interface GraphCanvasProps {
   defaultLayoutMode?: GraphLayoutMode;
   onSelectNode?: (node: SharedEntityNode) => void;
   onSelectFinding?: (finding: VulnerabilityFinding) => void;
-  onPivot?: (target: string, type: EntityType) => void;
+  onPivot?: (
+    target: string,
+    type: EntityType,
+    customModules?: string[],
+    parentNodeId?: string
+  ) => void;
 }
 
 // -------------------------------------------------------------
@@ -122,7 +127,9 @@ function CustomEntityNode({ data }: NodeProps) {
   const type = (data.type as EntityType) || 'domain';
   const severity = (data.severity as SeverityLevel) || 'info';
   const isSelected = Boolean(data.isSelected);
-  const onPivot = data.onPivot as ((target: string, type: EntityType) => void) | undefined;
+  const onPivot = data.onPivot as
+    | ((target: string, type: EntityType, customModules?: string[], parentNodeId?: string) => void)
+    | undefined;
   const onInspect = data.onInspect as ((node: SharedEntityNode) => void) | undefined;
 
   const [copied, setCopied] = useState(false);
@@ -203,10 +210,11 @@ function CustomEntityNode({ data }: NodeProps) {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handlePivot = (e: React.MouseEvent) => {
+  const handlePivot = (e: React.MouseEvent, customModules?: string[]) => {
     e.stopPropagation();
     if (onPivot && isPivotable) {
-      onPivot(pivotValue, type);
+      const nextType: EntityType = type === 'associate' ? 'username' : type;
+      onPivot(pivotValue, nextType, customModules, node?.id);
     }
   };
 
@@ -364,75 +372,127 @@ function CustomEntityNode({ data }: NodeProps) {
         );
       })()}
 
-      {/* Quick Action Bar */}
-      <div className="mt-2 pt-1.5 border-t border-vsc-border/60 flex items-center justify-between gap-1">
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="text-[10px] font-mono text-vsc-muted hover:text-vsc-bright flex items-center gap-1 hover:bg-vsc-panel px-1.5 py-0.5 rounded transition-colors"
-          title="Copy value to clipboard"
-        >
-          {copied ? (
-            <Check className="w-3 h-3 text-vsc-success" />
-          ) : (
-            <Copy className="w-3 h-3" />
-          )}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
-        </button>
+      {/* Quick Action Bar & 1-Click Lead-Chaining Shortcuts */}
+      <div className="mt-2 pt-1.5 border-t border-white/[0.06] space-y-1.5">
+        {/* Direct 1-Click OSINT Lead-Chaining Row */}
+        {onPivot && (type === 'username' || type === 'associate' || type === 'email' || avatarUrl) && (
+          <div className="flex flex-wrap items-center gap-1">
+            {(type === 'username' || type === 'associate') && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => handlePivot(e, ['deep_profile_extractor'])}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-300 transition-colors"
+                  title="1-Click Deep Profile & Commit Email Extractor"
+                >
+                  Deep Extract
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => handlePivot(e, ['connection_mapper'])}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 text-emerald-300 transition-colors"
+                  title="1-Click Mutual Connections & Collaborators Mapper"
+                >
+                  Mutuals
+                </button>
+              </>
+            )}
 
-        <div className="flex items-center gap-1">
-          {/* If node has a real external URL (e.g. GitHub/Reddit profile), show Open ↗ button */}
-          {profileUrl && (
-            <a
-              href={profileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="text-[10px] font-mono text-emerald-300 hover:text-white bg-emerald-950/50 hover:bg-emerald-600 border border-emerald-700/50 flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors"
-              title={`Open ${profileUrl} in a new browser tab`}
-            >
-              <span>Open</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </a>
-          )}
+            {type === 'email' && (
+              <button
+                type="button"
+                onClick={(e) => handlePivot(e, ['email_correlator', 'breach_credential_hunter'])}
+                className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 text-amber-300 transition-colors"
+                title="1-Click Gravatar, OpenPGP & Breach Lookup"
+              >
+                Gravatar/PGP
+              </button>
+            )}
 
-          {/* For Port / Breach nodes (or any node), allow opening the Node Inspector */}
-          {!isPivotable && node && onInspect && (
-            <button
-              type="button"
-              onClick={handleInspect}
-              className="text-[10px] font-mono text-sky-300 hover:text-white flex items-center gap-1 hover:bg-vsc-panel px-1.5 py-0.5 rounded transition-colors"
-              title="Inspect details & remediation"
-            >
-              <Eye className="w-3 h-3" />
-              <span>Inspect</span>
-            </button>
-          )}
+            {avatarUrl && (
+              <a
+                href={`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(avatarUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.09] border border-white/[0.08] text-slate-300 hover:text-white transition-colors"
+                title="1-Click Reverse Image Search via Google Lens"
+              >
+                Reverse Img ↗
+              </a>
+            )}
+          </div>
+        )}
 
-          {/* Only show Pivot on pivotable entity types */}
-          {onPivot && isPivotable && !profileUrl && (
-            <button
-              type="button"
-              onClick={handlePivot}
-              className="text-[10px] font-mono text-vsc-accent-blue hover:text-sky-300 flex items-center gap-1 hover:bg-vsc-panel px-1.5 py-0.5 rounded transition-colors"
-              title={`Step-scan / Pivot on ${pivotValue}`}
-            >
-              <span>Pivot</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </button>
-          )}
+        <div className="flex items-center justify-between gap-1">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="text-[10px] font-mono text-slate-400 hover:text-white flex items-center gap-1 hover:bg-white/[0.05] px-1.5 py-0.5 rounded transition-colors"
+            title="Copy value to clipboard"
+          >
+            {copied ? (
+              <Check className="w-3 h-3 text-emerald-400" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
+          </button>
 
-          {/* On social profile cards, also offer an Inspect button beside Open */}
-          {profileUrl && node && onInspect && (
-            <button
-              type="button"
-              onClick={handleInspect}
-              className="text-[10px] font-mono text-vsc-accent-blue hover:text-sky-300 flex items-center gap-1 hover:bg-vsc-panel px-1.5 py-0.5 rounded transition-colors"
-              title="Open step-by-step Node Inspector"
-            >
-              <span>More</span>
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {/* If node has a real external URL (e.g. GitHub/Reddit profile), show Open ↗ button */}
+            {profileUrl && (
+              <a
+                href={profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[10px] font-mono text-sky-300 hover:text-white bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors"
+                title={`Open ${profileUrl} in a new browser tab`}
+              >
+                <span>Open</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            )}
+
+            {/* For Port / Breach nodes (or any node), allow opening the Node Inspector */}
+            {!isPivotable && node && onInspect && (
+              <button
+                type="button"
+                onClick={handleInspect}
+                className="text-[10px] font-mono text-sky-300 hover:text-white flex items-center gap-1 hover:bg-white/[0.05] px-1.5 py-0.5 rounded transition-colors"
+                title="Inspect details & remediation"
+              >
+                <Eye className="w-3 h-3" />
+                <span>Inspect</span>
+              </button>
+            )}
+
+            {/* Only show Pivot on pivotable entity types */}
+            {onPivot && isPivotable && !profileUrl && (
+              <button
+                type="button"
+                onClick={(e) => handlePivot(e)}
+                className="text-[10px] font-mono text-sky-400 hover:text-sky-300 flex items-center gap-1 hover:bg-white/[0.05] px-1.5 py-0.5 rounded transition-colors"
+                title={`Step-scan / Pivot on ${pivotValue}`}
+              >
+                <span>Pivot</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </button>
+            )}
+
+            {/* On social profile cards, also offer an Inspect button beside Open */}
+            {profileUrl && node && onInspect && (
+              <button
+                type="button"
+                onClick={handleInspect}
+                className="text-[10px] font-mono text-slate-300 hover:text-white flex items-center gap-1 hover:bg-white/[0.05] px-1.5 py-0.5 rounded transition-colors"
+                title="Open step-by-step Node Inspector"
+              >
+                <span>More</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -672,7 +732,12 @@ function layoutGraphElements(
   clusterThreshold: number,
   categoryFilter: string,
   selectedNodeId?: string,
-  onPivot?: (target: string, type: EntityType) => void,
+  onPivot?: (
+    target: string,
+    type: EntityType,
+    customModules?: string[],
+    parentNodeId?: string
+  ) => void,
   onInspectNode?: (node: SharedEntityNode) => void
 ): { flowNodes: Node[]; flowEdges: Edge[] } {
   const flowNodes: Node[] = [];

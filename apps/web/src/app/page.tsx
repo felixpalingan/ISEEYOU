@@ -361,7 +361,9 @@ export default function WorkspacePage() {
               defaultLayoutMode={defaultLayoutMode}
               onSelectNode={handleInspectNode}
               onSelectFinding={handleInspectFinding}
-              onPivot={(pivotTarget, pivotType) => handlePivotLead(pivotTarget, pivotType)}
+              onPivot={(pivotTarget, pivotType, customMods, parentId) =>
+                handlePivotLead(pivotTarget, pivotType, customMods, parentId)
+              }
             />
 
             {/* Floating Left Panel: Live Target Dossier, Reverse Image Search & Chronological Timeline */}
