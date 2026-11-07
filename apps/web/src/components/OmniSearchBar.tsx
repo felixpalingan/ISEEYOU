@@ -30,6 +30,41 @@ export interface ModuleConfigItem {
 
 export const AVAILABLE_OSINT_MODULES: ModuleConfigItem[] = [
   {
+    id: 'deep_profile_extractor',
+    label: 'Deep Profile & Commit Emails',
+    shortLabel: '🧬 Deep Profile',
+    description: 'Extracts Real Name, Avatar, Bio, Company, Location & hidden GitHub Commit Emails',
+    modes: ['identity'],
+  },
+  {
+    id: 'connection_mapper',
+    label: 'Mutual Circle & Collaborators',
+    shortLabel: '👥 Mutuals',
+    description: 'Maps 2-way mutual connections (followers ∩ following), repo co-authors & orgs',
+    modes: ['identity'],
+  },
+  {
+    id: 'email_correlator',
+    label: 'Email, Gravatar & PGP Lookup',
+    shortLabel: '🪪 Gravatar/PGP',
+    description: 'Pivots from Email to Gravatar profile/avatar, OpenPGP UID & GitHub commits',
+    modes: ['identity'],
+  },
+  {
+    id: 'social_presence_scanner',
+    label: 'Social Accounts (16+ Sites)',
+    shortLabel: '🌐 16+ Socials',
+    description: 'Concurrent username reconnaissance across GitHub, Reddit, Keybase, Steam, etc.',
+    modes: ['identity'],
+  },
+  {
+    id: 'breach_credential_hunter',
+    label: 'Breaches & Email Security',
+    shortLabel: '🚨 Breaches',
+    description: 'Identity Mode: HIBP k-anonymity leaks | Web Mode: SPF & DMARC anti-spoofing',
+    modes: ['web', 'identity'],
+  },
+  {
     id: 'subdomain_dns_resolver',
     label: 'Subdomains & DNS',
     shortLabel: 'DNS / Subdomains',
@@ -42,20 +77,6 @@ export const AVAILABLE_OSINT_MODULES: ModuleConfigItem[] = [
     shortLabel: 'IP & Ports',
     description: 'GeoIP ASN lookup + Shodan InternetDB open ports & CVEs',
     modes: ['web'],
-  },
-  {
-    id: 'breach_credential_hunter',
-    label: 'Email Security / Breaches',
-    shortLabel: 'SPF / Breaches',
-    description: 'Web Mode: SPF & DMARC anti-spoofing | Identity Mode: HIBP k-anonymity leaks',
-    modes: ['web', 'identity'],
-  },
-  {
-    id: 'social_presence_scanner',
-    label: 'Social Accounts (25 Sites)',
-    shortLabel: '25 Socials',
-    description: 'Concurrent username reconnaissance across GitHub, Reddit, X, Steam, etc.',
-    modes: ['identity'],
   },
 ];
 
@@ -92,12 +113,15 @@ export function OmniSearchBar({
 }: OmniSearchBarProps) {
   const [value, setValue] = useState(initialValue);
   const [isFocused, setIsFocused] = useState(false);
-  const [internalMode, setInternalMode] = useState<ReconOperatingMode>('web');
+  const [internalMode, setInternalMode] = useState<ReconOperatingMode>('identity');
   const [internalModules, setInternalModules] = useState<string[]>([
+    'deep_profile_extractor',
+    'connection_mapper',
+    'email_correlator',
+    'social_presence_scanner',
+    'breach_credential_hunter',
     'subdomain_dns_resolver',
     'ip_threat_intel',
-    'breach_credential_hunter',
-    'social_presence_scanner',
   ]);
   const containerRef = useRef<HTMLDivElement>(null);
 

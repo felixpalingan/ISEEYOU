@@ -49,6 +49,12 @@ import {
   GitBranch,
   Compass,
   Eye,
+  Users,
+  Building2,
+  MapPin,
+  Mail,
+  CheckCircle2,
+  StickyNote,
 } from 'lucide-react';
 
 export type GraphLayoutMode = 'tree' | 'radial';
@@ -128,11 +134,17 @@ function CustomEntityNode({ data }: NodeProps) {
       ? value
       : null;
 
+  const avatarUrl =
+    typeof node?.metadata?.avatar_url === 'string' && node.metadata.avatar_url.startsWith('http')
+      ? node.metadata.avatar_url
+      : null;
+
   const isPivotable =
     type === 'domain' ||
     type === 'subdomain' ||
     type === 'ip' ||
     type === 'username' ||
+    type === 'associate' ||
     type === 'email';
 
   const pivotValue =
@@ -152,8 +164,15 @@ function CustomEntityNode({ data }: NodeProps) {
       case 'breach':
       case 'secret':
         return <Key className="w-3.5 h-3.5 text-amber-400" />;
-      case 'username':
       case 'email':
+        return <Mail className="w-3.5 h-3.5 text-amber-400" />;
+      case 'associate':
+        return <Users className="w-3.5 h-3.5 text-emerald-400" />;
+      case 'organization':
+        return <Building2 className="w-3.5 h-3.5 text-amber-400" />;
+      case 'location':
+        return <MapPin className="w-3.5 h-3.5 text-rose-400" />;
+      case 'username':
         return <User className="w-3.5 h-3.5 text-purple-400" />;
       default:
         return <Globe className="w-3.5 h-3.5 text-vsc-keyword" />;
@@ -161,14 +180,22 @@ function CustomEntityNode({ data }: NodeProps) {
   };
 
   const getBorderColor = () => {
+    if (node?.confidence === 'false_positive') {
+      return 'border-slate-700/50 bg-slate-950/40 opacity-50 line-through';
+    }
     if (isSelected) {
       return 'border-sky-400 bg-sky-950/30 ring-2 ring-sky-400/50';
+    }
+    if (node?.confidence === 'verified') {
+      return 'border-emerald-400 bg-emerald-950/25 ring-1 ring-emerald-400/40';
     }
     if (severity === 'critical')
       return 'border-vsc-critical bg-red-950/30 ring-1 ring-vsc-critical/40';
     if (severity === 'high')
       return 'border-orange-500 bg-orange-950/30 ring-1 ring-orange-500/30';
     if (severity === 'medium') return 'border-yellow-500/80 bg-yellow-950/20';
+    if (type === 'associate') return 'border-emerald-500/70 hover:border-emerald-400';
+    if (type === 'email') return 'border-amber-500/70 hover:border-amber-400';
     if (type === 'ip') return 'border-emerald-500/70 hover:border-emerald-400';
     if (type === 'subdomain') return 'border-sky-500/70 hover:border-sky-400';
     if (type === 'username') return 'border-purple-500/70 hover:border-purple-400';
@@ -235,12 +262,29 @@ function CustomEntityNode({ data }: NodeProps) {
         </div>
       </div>
 
-      {/* Node Primary Value / Label */}
-      <div
-        className="font-mono text-xs font-semibold text-vsc-bright truncate"
-        title={value}
-      >
-        {type === 'port' ? `Port :${value}` : displayLabel}
+      {/* Node Primary Value / Label with optional Avatar Thumbnail */}
+      <div className="flex items-center gap-2">
+        {avatarUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={displayLabel}
+            className="w-7 h-7 rounded-full object-cover border border-indigo-500/50 flex-shrink-0"
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <div
+            className="font-mono text-xs font-semibold text-vsc-bright truncate"
+            title={value}
+          >
+            {type === 'port' ? `Port :${value}` : displayLabel}
+          </div>
+          {typeof node?.metadata?.full_name === 'string' && node.metadata.full_name && (
+            <div className="text-[10px] font-sans text-indigo-300 font-medium truncate">
+              {node.metadata.full_name}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Metadata Detail */}
@@ -259,7 +303,19 @@ function CustomEntityNode({ data }: NodeProps) {
           {type === 'port' && `Service: ${String(node.metadata.service || 'TCP')}`}
           {type === 'username' && (
             <span className="text-purple-300/90" title={value}>
-              {value}
+              {typeof node.metadata.bio === 'string' && node.metadata.bio
+                ? node.metadata.bio
+                : value}
+            </span>
+          )}
+          {type === 'associate' && (
+            <span className="text-emerald-300/90">
+              {String(node.metadata.relationship || 'Mutual Connection')}
+            </span>
+          )}
+          {type === 'email' && (
+            <span className="text-amber-300/90">
+              {String(node.metadata.source || 'Extracted Email Lead')}
             </span>
           )}
           {type === 'breach' &&
@@ -269,6 +325,32 @@ function CustomEntityNode({ data }: NodeProps) {
                 node.metadata.source ||
                 'Security Audit'
             )}
+        </div>
+      )}
+
+      {/* Confidence Badge & Sticky Note Preview */}
+      {(node?.confidence || node?.investigatorNotes) && (
+        <div className="mt-1 flex items-center gap-1 text-[9px] font-mono">
+          {node?.confidence === 'verified' && (
+            <span className="px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-600/50 flex items-center gap-0.5 font-bold">
+              <CheckCircle2 className="w-2.5 h-2.5" />
+              Verified
+            </span>
+          )}
+          {node?.confidence === 'suspected' && (
+            <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-600/50 font-bold">
+              ? Suspect
+            </span>
+          )}
+          {node?.investigatorNotes && (
+            <span
+              className="text-amber-200/90 truncate flex items-center gap-0.5"
+              title={node.investigatorNotes}
+            >
+              <StickyNote className="w-2.5 h-2.5 flex-shrink-0 text-amber-400" />
+              <span className="truncate">{node.investigatorNotes}</span>
+            </span>
+          )}
         </div>
       )}
 
@@ -613,7 +695,15 @@ function layoutGraphElements(
     }
     if (categoryFilter !== 'all' && categoryFilter !== 'findings') {
       if (categoryFilter === 'username') {
-        if (n.type !== 'username' && n.type !== 'email') return false;
+        if (
+          n.type !== 'username' &&
+          n.type !== 'email' &&
+          n.type !== 'organization' &&
+          n.type !== 'location'
+        )
+          return false;
+      } else if (categoryFilter === 'associate') {
+        if (n.type !== 'associate') return false;
       } else if (categoryFilter === 'breach') {
         if (n.type !== 'breach' && n.type !== 'secret') return false;
       } else if (n.type !== categoryFilter) {
@@ -636,22 +726,28 @@ function layoutGraphElements(
 
   // Group items by category
   const groups: Record<string, SharedEntityNode[]> = {
+    username: nodes.filter((n) => n.type === 'username'),
+    email: nodes.filter((n) => n.type === 'email'),
+    associate: nodes.filter((n) => n.type === 'associate'),
+    context: nodes.filter((n) => n.type === 'organization' || n.type === 'location'),
     subdomain: nodes.filter((n) => n.type === 'subdomain' || n.type === 'domain'),
     ip: nodes.filter((n) => n.type === 'ip'),
     port: nodes.filter((n) => n.type === 'port'),
-    username: nodes.filter((n) => n.type === 'username' || n.type === 'email'),
-    breach: nodes.filter((n) => n.type === 'breach' || n.type === 'secret'),
+    breach: nodes.filter((n) => n.type === 'breach' || n.type !== 'secret' ? false : true),
   };
+  groups.breach = nodes.filter((n) => n.type === 'breach' || n.type === 'secret');
 
   const getColorForType = (t: string) =>
-    t === 'ip'
+    t === 'ip' || t === 'associate'
       ? '#10B981'
-      : t === 'subdomain'
+      : t === 'subdomain' || t === 'domain'
       ? '#38BDF8'
       : t === 'port'
       ? '#22D3EE'
-      : t === 'breach'
+      : t === 'breach' || t === 'email' || t === 'organization'
       ? '#F59E0B'
+      : t === 'location'
+      ? '#F43F5E'
       : '#A855F7';
 
   if (layoutMode === 'tree') {
@@ -1116,6 +1212,9 @@ function FlowCanvasInner({
         'cluster-port',
         'cluster-breach',
         'cluster-username',
+        'cluster-email',
+        'cluster-associate',
+        'cluster-context',
       ])
     );
   }, []);
@@ -1290,14 +1389,21 @@ function FlowCanvasInner({
     [onSelectFinding, onSelectNode, target, targetType]
   );
 
-  // Category counts for top filter pills
+  // Category counts for filter pills
   const counts = useMemo(
     () => ({
       all: sharedNodes.length + findings.length,
+      username: sharedNodes.filter(
+        (n) =>
+          n.type === 'username' ||
+          n.type === 'email' ||
+          n.type === 'organization' ||
+          n.type === 'location'
+      ).length,
+      associate: sharedNodes.filter((n) => n.type === 'associate').length,
       subdomain: sharedNodes.filter((n) => n.type === 'subdomain' || n.type === 'domain').length,
       ip: sharedNodes.filter((n) => n.type === 'ip').length,
       port: sharedNodes.filter((n) => n.type === 'port').length,
-      username: sharedNodes.filter((n) => n.type === 'username' || n.type === 'email').length,
       findings: findings.length,
     }),
     [sharedNodes, findings]
@@ -1319,43 +1425,46 @@ function FlowCanvasInner({
         minZoom={0.15}
         maxZoom={2.5}
         attributionPosition="bottom-left"
-        className="bg-[#1E1E1E]"
+        className="bg-[#0B0D12]"
       >
         <Background
-          color="#333333"
+          color="#262B38"
           gap={22}
           size={1}
           variant={BackgroundVariant.Dots}
-          className="bg-[#1E1E1E]"
+          className="bg-[#0B0D12]"
         />
 
         <Controls
           position="bottom-left"
           showInteractive={false}
-          className="!mb-8 !ml-3"
+          className="!mb-4 !ml-3"
         />
 
         <MiniMap
           position="bottom-right"
-          className="!mb-8 !mr-3"
+          className="!mb-4 !mr-3"
           nodeColor={(n) => (n.data?.color as string) || '#007ACC'}
-          maskColor="rgba(24, 24, 24, 0.75)"
+          maskColor="rgba(11, 13, 18, 0.78)"
         />
 
-        {/* Top-Left Layer Filter Pills */}
-        <Panel position="top-left" className="!mt-3 !ml-3 flex flex-wrap items-center gap-1.5">
+        {/* Bottom-Center Layer Filter Pills */}
+        <Panel position="bottom-center" className="!mb-4 flex flex-wrap items-center gap-1.5 z-10">
           {[
-            { id: 'all', label: 'All Nodes', count: counts.all },
+            { id: 'all', label: 'All Evidence', count: counts.all },
+            ...(counts.username > 0
+              ? [{ id: 'username', label: 'Profiles & Leads', count: counts.username }]
+              : []),
+            ...(counts.associate > 0
+              ? [{ id: 'associate', label: 'Mutual Circle', count: counts.associate }]
+              : []),
             ...(counts.subdomain > 0
-              ? [{ id: 'subdomain', label: 'Subdomains', count: counts.subdomain }]
+              ? [{ id: 'subdomain', label: 'Domains', count: counts.subdomain }]
               : []),
             ...(counts.ip > 0 ? [{ id: 'ip', label: 'IPs', count: counts.ip }] : []),
             ...(counts.port > 0 ? [{ id: 'port', label: 'Ports', count: counts.port }] : []),
-            ...(counts.username > 0
-              ? [{ id: 'username', label: 'Socials', count: counts.username }]
-              : []),
             ...(counts.findings > 0
-              ? [{ id: 'findings', label: 'Findings', count: counts.findings }]
+              ? [{ id: 'findings', label: 'Alerts', count: counts.findings }]
               : []),
           ].map((pill) => (
             <button
@@ -1380,8 +1489,8 @@ function FlowCanvasInner({
           ))}
         </Panel>
 
-        {/* Top-Right Layout, Auto-Tidy & Cluster Controls */}
-        <Panel position="top-right" className="!mt-3 !mr-3 flex items-center gap-2">
+        {/* Top-Center Layout, Auto-Tidy & Cluster Controls */}
+        <Panel position="top-center" className="!mt-3 flex items-center gap-2 z-10">
           {isScanning && (
             <div className="bg-vsc-card/90 backdrop-blur border border-vsc-accent-blue px-2.5 py-1 rounded text-[11px] font-mono text-vsc-accent-blue flex items-center gap-1.5 shadow-lg shadow-blue-950/20">
               <span className="w-2 h-2 rounded-full bg-vsc-accent-blue animate-ping" />
