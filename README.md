@@ -92,29 +92,26 @@ flowchart LR
 | **Design System** | **Tailwind CSS**, Carbon Obsidian Tokens, Lucide Icons | High-contrast, low-noise tactical interface with `tabular-nums` alignment and keyboard-first navigation (`/`). |
 | **OSINT Worker Engine** | **Python 3.11+**, **FastAPI**, **Asyncio**, **HTTPX** | High-concurrency asynchronous I/O for non-blocking multi-source OSINT extraction and SSE streaming. |
 | **AI Detective & MCP** | **Gemini**, **Groq**, **OpenAI/OpenRouter**, **Ollama**, **MCP** | Bring-Your-Own-Key (BYOK) multi-provider LLM routing plus a standard JSON-RPC 2.0 stdio MCP server. |
-| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 87 Python unit tests and 12 Playwright E2E browser tests. |
+| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 88 Python unit tests and 12 Playwright E2E browser tests. |
 
 ---
 
 ## ⚡ System Features & Capabilities
 
 ### 1. Step-by-Step OSINT Lead-Chaining Extractors
-- **Deep Profile & Commit Email Extractor (`deep_profile_extractor.py`):** Queries GitHub (`/users/{u}` and `/users/{u}/events/public`), Reddit (`about.json`), Keybase (`user/lookup.json`), GitLab, HackerNews, and Dev.to to extract real names, avatars, bios, locations, organizations, account creation dates, cryptographic proofs, and hidden personal email addresses embedded in public Git commit payloads.
-- **Inner Circle & Mutual Connections Mapper (`connection_mapper.py`):** Computes the intersection of `followers ∩ following` alongside repository co-authors and public organization memberships to map a target's verified mutual associates.
+- **Deep Profile, Full-Name & Academic/Career Extractor (`deep_profile_extractor.py` & `name_intelligence.py`):** Queries GitHub (`/users/{u}`, `/search/users`, and `/users/{u}/events/public`), Keybase, Reddit, HackerNews, **OpenAlex (250M+ Academic & University Records)**, **CrossRef**, and **Wikidata**. Supports both single-token handles and **Full Real Names** — extracting commit emails, university/company affiliations, published theses/papers, family clan surnames, and smart consonant-abbreviated candidate handles.
+- **Inner Circle, Family Surname Relatives & Co-Author Mapper (`connection_mapper.py`):** Maps a target's social and family graph across 2-way mutual follows (`followers ∩ following`), repository co-authors, stargazers, direct followers, **Same-Surname Family Clan Relatives** (OpenAlex/CrossRef/GitHub surname matching), and academic thesis co-authors/supervisors.
 - **Email-to-Identity Correlator (`email_correlator.py`):** Computes MD5 hashes for Gravatar profile/avatar extraction, queries the Ubuntu OpenPGP HKP keyserver for registered full names and UIDs, searches GitHub commits by author email, and isolates custom organization domains.
 - **66+ Platform Deep Social Footprint Engine (`social_scanner.py` & `sites_catalog.py`):** Concurrent username reconnaissance across 66+ Developer, Security/CTF, Social, Community, Identity, Creative, Gaming, and Creator platforms using lightweight `url_probe` separation, pre-flight `regex_check` validation, `response_url` redirect trap detection, dual `presence_strings` / `absence_strings` verification, Anti-WAF false-positive filtering (Cloudflare, PerimeterX, Vercel, DDoS-Guard), and in-flight regex profile metadata extraction (`avatar_url`, `full_name`, `bio`, `location`, `secondary_link`).
 - **Infrastructure & Breach Intelligence:** Combines Certificate Transparency (`crt.sh` / CertSpotter), Cloudflare DNS-over-HTTPS (DoH), Shodan InternetDB open port/CVE lookups, and HaveIBeenPwned k-Anonymity breach checks.
 
-### 2. Tactical Google Dork Matrix (Private Account Comment & Tag Bypass)
-Even when a target's Instagram, TikTok, or X account is locked or private, public comments and friend tags on third-party posts remain indexed by search engines. The built-in Dork Matrix automatically crafts 8 targeted queries using discovered handles, real names, emails, and organizations:
-- `site:instagram.com "{handle}" -inurl:instagram.com/{handle}` — Third-party Instagram mentions and comment threads excluding the target's own profile URL.
-- `site:instagram.com/p/ "{handle}" OR site:instagram.com/reel/ "{handle}"` — Public Instagram photo posts and Reels where the target commented or was tagged.
-- `site:tiktok.com "{handle}" -inurl:"@{handle}"` — Public TikTok video replies, duets, and caption mentions.
-- `(site:x.com OR site:twitter.com) "{handle}" -inurl:{handle}/status` — Public replies and thread mentions addressing a protected X/Twitter account.
-- `site:linkedin.com/posts/ "{realName}" OR "{handle}"` — Public LinkedIn post activity and colleague tags.
-- `site:linkedin.com/in/ "{realName}" "{organization}"` — Professional career and university identity matching.
-- `("{realName}" OR "{handle}" OR "{email}") (filetype:pdf OR filetype:xlsx OR filetype:docx)` — Indexed university rosters, event attendance sheets, CVs, and organizational directories.
-- `(site:linktr.ee OR site:carrd.co OR site:pastebin.com OR site:t.me OR site:reddit.com) "{handle}"` — Bio-link aggregators, public Telegram channels, and paste archives.
+### 2. 14-Formula Tactical Google Dork Matrix (Family Clan, Jabatan, PDDIKTI & Private Social Bypass)
+The built-in Dork Matrix automatically parses Full Names, Family Surnames/Clans, Short Name Variations, Handles, Emails, and Organizations to craft 14 targeted queries across 5 investigation pillars:
+- **Family, Surname & Clan Lineage (`"{surname}" -"{firstName}"`):** Hunts parents, siblings, and relatives sharing the same family surname across LinkedIn, social media, university domains, graduation books (`bin / binti / anak dari / wisuda`), and public PDFs.
+- **Career, Jabatan & Executive Roles:** Pinpoints structural job titles (`Direktur`, `Komisaris`, `Manager`, `Ketua`, `Divisi`, `Pengurus`), LinkedIn career profiles, and colleague post tags.
+- **Academic, University (`.ac.id`) & PDDIKTI Records:** Searches university repositories, PDDIKTI student/lecturer records, student IDs (`NIM` / `NPM`), theses (`Skripsi` / `Tesis`), Google Scholar, SINTA, and Garuda.
+- **Official Decrees (`.go.id`), Rosters & Leaked CVs:** Hunts ministerial decrees (`Surat Keputusan`), civil service rosters, and indexed `PDF`/`XLSX`/`DOCX` resumes or phone numbers.
+- **Private Account Comment & Tag Bypass (IG, TikTok, X):** Surfaces public third-party comments, photo tags, Reels mentions, and replies addressing locked or protected social accounts.
 
 ### 3. Live Target Dossier, Visual Reverse Image Search & Timeline
 - **1-Click Avatar Reverse Image Search:** Launch visual identity lookups across **Google Lens**, **Yandex Images**, **Bing Visual Search**, and **TinEye** from any discovered avatar or paste a custom target photo URL directly into the Dossier card.

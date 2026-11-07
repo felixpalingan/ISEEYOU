@@ -117,7 +117,13 @@ export function buildTargetDossier(
   const seenAssociates = new Set<string>();
   const timelineMap = new Map<string, TimelineEvent>();
 
-  if (targetType === 'username') handles.add(target.replace(/^@/, ''));
+  if (targetType === 'username') {
+    if (target.trim().includes(' ')) {
+      fullNames.add(target.trim());
+    } else {
+      handles.add(target.replace(/^@/, ''));
+    }
+  }
   if (targetType === 'email' && target.includes('@')) {
     emails.add(target.toLowerCase());
     handles.add(target.split('@')[0]);
@@ -136,6 +142,13 @@ export function buildTargetDossier(
     }
 
     // Full Names
+    if (
+      (node.type === 'username' || node.type === 'associate') &&
+      !node.value.startsWith('http') &&
+      node.value.trim().includes(' ')
+    ) {
+      fullNames.add(node.value.trim());
+    }
     if (typeof meta.full_name === 'string' && meta.full_name.trim()) {
       fullNames.add(meta.full_name.trim());
     }
@@ -406,17 +419,20 @@ export function useScanStream() {
       enabledModules?: string[],
       parentNodeId?: string
     ) => {
-      // Map 'associate' to 'username' so pivoting onto an associate hunts their username!
-      const type: EntityType = rawType === 'associate' ? 'username' : rawType;
+      // Map 'associate', 'organization', and 'location' to 'username' so pivoting onto any identity/clan/org lead runs full OSINT recon!
+      const type: EntityType =
+        rawType === 'associate' ||
+        rawType === 'organization' ||
+        rawType === 'location'
+          ? 'username'
+          : rawType;
 
       // Guard against non-scannable endpoint attribute types
       if (
         type === 'port' ||
         type === 'breach' ||
         type === 'secret' ||
-        type === 'document' ||
-        type === 'organization' ||
-        type === 'location'
+        type === 'document'
       ) {
         setState((prev) => ({
           ...prev,

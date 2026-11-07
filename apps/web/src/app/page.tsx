@@ -177,7 +177,7 @@ export default function WorkspacePage() {
     parentNodeId?: string
   ) => {
     const nextMode: ReconOperatingMode =
-      type === 'username' || type === 'email' || type === 'associate' ? 'identity' : 'web';
+      type === 'domain' || type === 'subdomain' || type === 'ip' ? 'web' : 'identity';
     setManualMode(nextMode);
 
     const validModsForMode = AVAILABLE_OSINT_MODULES.filter((m) =>

@@ -367,6 +367,81 @@ export function TargetDossierCard({
                   </div>
                 )}
 
+                {/* Real Full Names & Family / Campus Affiliations (With 1-Click Chain Button) */}
+                {(dossier.fullNames.length > 0 || dossier.organizations.length > 0) && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        <User className="w-3 h-3 text-sky-400" />
+                        Names, Family Clan & Affiliations (
+                        {dossier.fullNames.length + dossier.organizations.length})
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {dossier.fullNames.map((fn) => (
+                        <div
+                          key={`fn-${fn}`}
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#131720] border border-white/[0.08]"
+                        >
+                          <div className="min-w-0">
+                            <span className="block font-mono text-[11px] text-sky-200 font-medium truncate">
+                              {fn}
+                            </span>
+                            <span className="block text-[9px] font-mono text-slate-400">
+                              Real Name Lead (Family / Academic / Career Pivot)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onPivotLead(fn, 'username', [
+                                'deep_profile_extractor',
+                                'connection_mapper',
+                                'social_presence_scanner',
+                              ])
+                            }
+                            className="px-2 py-0.5 rounded bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-200 text-[10px] font-mono font-medium flex items-center gap-1 flex-shrink-0 transition-colors"
+                            title="Run Deep Full-Name OSINT (Family Clan, Academic, Career & Derived Handles)"
+                          >
+                            <span>Chain</span>
+                            <ArrowRight className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {dossier.organizations.map((org) => (
+                        <div
+                          key={`org-${org}`}
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#131720] border border-white/[0.08]"
+                        >
+                          <div className="min-w-0">
+                            <span className="block font-mono text-[11px] text-emerald-200 font-medium truncate">
+                              {org}
+                            </span>
+                            <span className="block text-[9px] font-mono text-slate-400">
+                              Organization / Campus / Clan Lead
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onPivotLead(
+                                org.replace(/^Family Surname:\s*/i, ''),
+                                'organization',
+                                ['deep_profile_extractor', 'connection_mapper']
+                              )
+                            }
+                            className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-200 text-[10px] font-mono font-medium flex items-center gap-1 flex-shrink-0 transition-colors"
+                            title="Investigate this Organization / Family Clan"
+                          >
+                            <span>Chain</span>
+                            <ArrowRight className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Extracted Emails (With 1-Click Trace / Pivot Button) */}
                 <div>
                   <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold mb-1.5">

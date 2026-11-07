@@ -114,26 +114,136 @@ export function LeadInspectorDrawer({
   }, [customDorkHandle, selectedNode, dossier.handles, target]);
 
   const activeFullName = useMemo(() => {
-    if (selectedNode && typeof selectedNode.metadata?.full_name === 'string') {
-      return selectedNode.metadata.full_name;
+    if (selectedNode) {
+      if (typeof selectedNode.metadata?.full_name === 'string' && selectedNode.metadata.full_name.trim()) {
+        return selectedNode.metadata.full_name.trim();
+      }
+      if (
+        (selectedNode.type === 'username' || selectedNode.type === 'associate') &&
+        selectedNode.value.trim().includes(' ') &&
+        !selectedNode.value.startsWith('http')
+      ) {
+        return selectedNode.value.trim();
+      }
     }
-    return dossier.fullNames[0] || '';
-  }, [selectedNode, dossier.fullNames]);
+    if (dossier.fullNames[0]) return dossier.fullNames[0];
+    if (target.trim().includes(' ') && !target.includes('@')) return target.trim();
+    return '';
+  }, [selectedNode, dossier.fullNames, target]);
+
+  const activeNameTokens = useMemo(() => {
+    const raw = activeFullName.trim();
+    if (!raw) return { firstName: '', surname: '', shortName: '' };
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) {
+      return { firstName: parts[0], surname: parts[0], shortName: parts[0] };
+    }
+    const firstName = parts[0];
+    const surname =
+      (selectedNode && typeof selectedNode.metadata?.surname === 'string' && selectedNode.metadata.surname) ||
+      parts[parts.length - 1];
+    const shortName =
+      parts.length >= 3 ? `${parts[parts.length - 2]} ${surname}` : `${firstName} ${surname}`;
+    return { firstName, surname, shortName };
+  }, [activeFullName, selectedNode]);
 
   const activeOrg = useMemo(() => {
-    if (selectedNode && typeof selectedNode.metadata?.company === 'string') {
-      return selectedNode.metadata.company;
+    if (selectedNode) {
+      if (typeof selectedNode.metadata?.company === 'string' && selectedNode.metadata.company.trim()) {
+        return selectedNode.metadata.company.trim();
+      }
+      if (selectedNode.type === 'organization' && selectedNode.value.trim()) {
+        return selectedNode.value.trim();
+      }
     }
     return dossier.organizations[0] || '';
   }, [selectedNode, dossier.organizations]);
 
-  // Built-in Tactical Google Dorks (All 8 Private Account Comment/Tag Bypass + Pivots)
+  // Built-in Tactical Google Dorks (14 Formulas: Family/Clan Surname, Jabatan/Career, PDDIKTI/Kampus, Official SK/CV, & Private Social Bypass)
   const tacticalDorks = useMemo(() => {
     const h = activeHandle;
-    const nm = activeFullName;
+    const nm = activeFullName || h;
+    const { firstName, surname, shortName } = activeNameTokens;
+    const fam = surname || h;
     const org = activeOrg;
     const em = dossier.emails[0] || '';
+    const nameOrShort =
+      activeFullName && shortName && shortName.toLowerCase() !== activeFullName.toLowerCase()
+        ? `"${activeFullName}" OR "${shortName}"`
+        : `"${nm}"`;
+
     return [
+      {
+        id: 'family-clan-relatives',
+        category: 'Family, Surname & Clan Lineage (Keluarga & Marga)',
+        title: `Family & Relatives Sharing Surname ("${fam}")`,
+        query: firstName && fam.toLowerCase() !== firstName.toLowerCase()
+          ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:ac.id OR site:go.id OR filetype:pdf)`
+          : `"${fam}" (intext:"keluarga" OR intext:"marga" OR site:linkedin.com/in/ OR site:facebook.com)`,
+        desc: 'Hunts parents, siblings, and relatives sharing the same family surname/clan across LinkedIn, social media, universities, and public PDFs.',
+      },
+      {
+        id: 'family-lineage-graduation',
+        category: 'Family, Surname & Clan Lineage (Keluarga & Marga)',
+        title: 'Parents, Siblings, Graduation Books & Civil Lineage',
+        query: `(${nameOrShort} OR "${fam}") (intext:"anak dari" OR intext:"putra dari" OR intext:"putri dari" OR intext:"bin" OR intext:"binti" OR intext:"suami" OR intext:"istri" OR intext:"wisuda")`,
+        desc: 'Uncovers parent names (putra/putri dari, bin/binti), spouse mentions, university graduation books (buku wisuda), and family announcements.',
+      },
+      {
+        id: 'career-jabatan-org',
+        category: 'Career, Jabatan & Executive Roles',
+        title: 'Jabatan, Structural Position, PT/CV & Organization Role',
+        query: `(${nameOrShort})${org ? ` "${org}"` : ''} (intext:"Jabatan" OR intext:"Direktur" OR intext:"Komisaris" OR intext:"Manager" OR intext:"Ketua" OR intext:"Divisi" OR intext:"Pengurus" OR intext:"Staff")`,
+        desc: 'Pinpoints job titles, organizational committee roles, corporate directorships (AHU/PT/CV), and structural appointments.',
+      },
+      {
+        id: 'linkedin-pivot',
+        category: 'Career, Jabatan & Executive Roles',
+        title: 'LinkedIn Career & Education Identity Match',
+        query: activeFullName
+          ? `site:linkedin.com/in/ (${nameOrShort})${org ? ` "${org}"` : ''}`
+          : `site:linkedin.com/in/ "${h}"`,
+        desc: 'Locates professional LinkedIn profiles using Full Name, 2-word Short Name variations, and Company/University.',
+      },
+      {
+        id: 'linkedin-activity',
+        category: 'Career, Jabatan & Executive Roles',
+        title: 'LinkedIn Public Post Comments & Colleague Tags',
+        query: activeFullName
+          ? `site:linkedin.com/posts/ (${nameOrShort} OR "${h}")`
+          : `site:linkedin.com/posts/ "${h}"`,
+        desc: 'Finds public LinkedIn posts where the target commented, congratulated colleagues, or was tagged by coworkers.',
+      },
+      {
+        id: 'academic-pddikti-kampus',
+        category: 'Academic, University & PDDIKTI Records',
+        title: 'PDDIKTI, University Repository (.ac.id), NIM & Thesis/Skripsi',
+        query: `(${nameOrShort} OR "${h}") (site:ac.id OR site:pddikti.kemdikbud.go.id OR intext:"NIM" OR intext:"NPM" OR intext:"Skripsi" OR intext:"Tesis" OR intext:"Program Studi")`,
+        desc: 'Searches Indonesian & global university domains (.ac.id), PDDIKTI student/lecturer records, student IDs (NIM/NPM), and thesis repositories.',
+      },
+      {
+        id: 'academic-scholar-garuda',
+        category: 'Academic, University & PDDIKTI Records',
+        title: 'Google Scholar, SINTA, Garuda & Thesis Advisors (Dosen Pembimbing)',
+        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:garuda.kemdikbud.go.id OR site:sinta.kemdikbud.go.id OR intext:"Dosen Pembimbing" OR intext:"Jurusan" OR intext:"Fakultas")`,
+        desc: 'Finds academic journals, co-authors, thesis supervisors (dosen pembimbing), and faculty affiliations.',
+      },
+      {
+        id: 'gov-decrees-sk',
+        category: 'Official Decrees (.go.id), Rosters & Leaked CVs',
+        title: 'Government Decrees (.go.id), SK, Civil Service & Court Records',
+        query: `(${nameOrShort} OR "${fam}") (site:go.id OR intext:"Surat Keputusan" OR intext:"Lampiran" OR intext:"Pengumuman" OR intext:"Daftar Peserta")`,
+        desc: 'Hunts official government websites (.go.id), ministerial decrees (SK), CPNS/BUMN selection rosters, and public registries.',
+      },
+      {
+        id: 'doc-roster-leak',
+        category: 'Official Decrees (.go.id), Rosters & Leaked CVs',
+        title: 'Indexed PDF / XLSX / DOCX CVs, Phone Numbers (+62/08) & Rosters',
+        query: activeFullName
+          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
+        desc: 'Hunts for leaked resumes/CVs, phone numbers, university student lists, event participant rosters, or employee spreadsheets.',
+      },
       {
         id: 'ig-bypass',
         category: 'Private Account Comment & Tag Bypass',
@@ -163,41 +273,14 @@ export function LeadInspectorDrawer({
         desc: 'Uncovers replies from public accounts talking to or tagging a protected/private X account.',
       },
       {
-        id: 'linkedin-activity',
-        category: 'Cross-Platform Identity Pivot',
-        title: 'LinkedIn Public Post Comments & Colleague Tags',
-        query: nm
-          ? `site:linkedin.com/posts/ "${nm}" OR "${h}"`
-          : `site:linkedin.com/posts/ "${h}"`,
-        desc: 'Finds public LinkedIn posts where the target commented, congratulated colleagues, or was tagged.',
-      },
-      {
-        id: 'linkedin-pivot',
-        category: 'Cross-Platform Identity Pivot',
-        title: 'LinkedIn Career & Education Identity Match',
-        query: nm
-          ? `site:linkedin.com/in/ "${nm}"${org ? ` "${org}"` : ''}`
-          : `site:linkedin.com/in/ "${h}"`,
-        desc: 'Locates professional LinkedIn profile using discovered Real Name and Company/University.',
-      },
-      {
-        id: 'doc-roster-leak',
-        category: 'Leaked Documents & Rosters',
-        title: 'Indexed PDF / XLSX / DOCX Rosters, CVs & Directories',
-        query: nm
-          ? `("${nm}" OR "${h}"${em ? ` OR "${em}"` : ''}) (filetype:pdf OR filetype:xlsx OR filetype:docx)`
-          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
-        desc: 'Hunts for leaked resumes, university student lists, event participant rosters, or employee spreadsheets.',
-      },
-      {
         id: 'paste-code-leak',
         category: 'Public Archives & Bio Aggregators',
         title: 'Linktree, Carrd, Pastebin & Forum Bio Leaks',
-        query: `(site:linktr.ee OR site:carrd.co OR site:pastebin.com OR site:t.me OR site:reddit.com) "${h}"`,
-        desc: 'Searches Linktree/Carrd bio hubs, Telegram channels, Reddit discussions, and paste sites for the target handle.',
+        query: `(site:linktr.ee OR site:carrd.co OR site:pastebin.com OR site:t.me OR site:reddit.com) (${activeFullName ? `${nameOrShort} OR "${h}"` : `"${h}"`})`,
+        desc: 'Searches Linktree/Carrd bio hubs, Telegram channels, Reddit discussions, and paste sites for the target name or handle.',
       },
     ];
-  }, [activeHandle, activeFullName, activeOrg, dossier.emails]);
+  }, [activeHandle, activeFullName, activeNameTokens, activeOrg, dossier.emails]);
 
   // Extractable sub-leads from the currently selected node for 1-click "+ Spawn on Board"
   const spawnableNodeLeads = useMemo(() => {
@@ -447,8 +530,29 @@ export function LeadInspectorDrawer({
                   </div>
 
                   <div className="grid grid-cols-1 gap-1.5">
-                    {(selectedNode.type === 'username' || selectedNode.type === 'associate') && (
+                    {(selectedNode.type === 'username' ||
+                      selectedNode.type === 'associate' ||
+                      selectedNode.type === 'organization' ||
+                      selectedNode.type === 'location') && (
                       <>
+                        <button
+                          type="button"
+                          disabled={isScanning}
+                          onClick={() =>
+                            onRunModuleOnNode(selectedNode, [
+                              'deep_profile_extractor',
+                              'connection_mapper',
+                              'social_presence_scanner',
+                            ])
+                          }
+                          className="w-full py-1.5 px-2.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 font-mono text-[11px] font-semibold flex items-center justify-between transition-colors disabled:opacity-50"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Crosshair className="w-3.5 h-3.5 text-sky-400" />
+                            <span>Full Deep Sweep (Profile, Family Clan, Academic & 66+ Sites)</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-sky-300" />
+                        </button>
                         <button
                           type="button"
                           disabled={isScanning}
@@ -459,7 +563,7 @@ export function LeadInspectorDrawer({
                         >
                           <span className="flex items-center gap-2">
                             <Fingerprint className="w-3.5 h-3.5 text-sky-400" />
-                            <span>Extract Deep Profile & Commit Emails</span>
+                            <span>Extract Deep Profile, Academic & Career Leads</span>
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
@@ -471,7 +575,7 @@ export function LeadInspectorDrawer({
                         >
                           <span className="flex items-center gap-2">
                             <Users className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Map Mutual Circle & Collaborators</span>
+                            <span>Map Family Clan, Relatives & Mutual Circle</span>
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
@@ -485,7 +589,7 @@ export function LeadInspectorDrawer({
                         >
                           <span className="flex items-center gap-2">
                             <Globe className="w-3.5 h-3.5 text-sky-400" />
-                            <span>Scan Handle Across 66+ Social & Tech Platforms</span>
+                            <span>Scan Handle / Derived Handles Across 66+ Platforms</span>
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
@@ -986,10 +1090,10 @@ export function LeadInspectorDrawer({
                 onChange={(e) => setPinType(e.target.value as EntityType)}
                 className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               >
-                <option value="username">Username / Social Handle</option>
+                <option value="username">Username or Full Real Name (e.g. Almakius Felix...)</option>
                 <option value="email">Email Address</option>
-                <option value="associate">Associate / Known Friend</option>
-                <option value="organization">Company / University</option>
+                <option value="associate">Associate / Family / Relative</option>
+                <option value="organization">Company / University / Family Surname</option>
                 <option value="location">City / Location</option>
                 <option value="domain">Personal / Work Website</option>
               </select>
@@ -1004,7 +1108,7 @@ export function LeadInspectorDrawer({
                 required
                 value={pinValue}
                 onChange={(e) => setPinValue(e.target.value)}
-                placeholder="e.g. budi.santoso99 or budi@company.com"
+                placeholder="e.g. ALMAKIUS FELIX BARIQ HEKOPUNG or budi@company.com"
                 className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               />
             </div>
@@ -1017,7 +1121,7 @@ export function LeadInspectorDrawer({
                 type="text"
                 value={pinLabel}
                 onChange={(e) => setPinLabel(e.target.value)}
-                placeholder="e.g. Private IG found in friend's comment"
+                placeholder="e.g. Full Name found via PDDIKTI / Google Dork"
                 className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               />
             </div>
@@ -1035,13 +1139,40 @@ export function LeadInspectorDrawer({
               />
             </div>
 
-            <button
-              type="submit"
-              className="w-full py-2 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <Pin className="w-3.5 h-3.5" />
-              <span>Pin Clue onto Board & Connect</span>
-            </button>
+            <div className="space-y-2 pt-1">
+              <button
+                type="submit"
+                className="w-full py-2 px-3 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.12] text-slate-100 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Pin className="w-3.5 h-3.5 text-amber-400" />
+                <span>Pin Clue onto Board & Connect</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={!pinValue.trim() || isScanning}
+                onClick={() => {
+                  const val = pinValue.trim();
+                  if (!val) return;
+                  onAddManualLead(
+                    pinType,
+                    val,
+                    pinLabel || undefined,
+                    selectedNode?.id,
+                    pinNotes || undefined
+                  );
+                  setPinValue('');
+                  setPinLabel('');
+                  setPinNotes('');
+                  onTabChange('node');
+                  onPivotLead(val, pinType, undefined, selectedNode?.id);
+                }}
+                className="w-full py-2 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                <Crosshair className="w-3.5 h-3.5" />
+                <span>Pin Clue & Immediately Chain Deep OSINT Scan →</span>
+              </button>
+            </div>
           </form>
         )}
       </div>
