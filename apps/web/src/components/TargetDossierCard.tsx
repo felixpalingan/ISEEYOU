@@ -493,7 +493,7 @@ export function TargetDossierCard({
             {activeTab === 'circle' && (
               <div className="space-y-2">
                 <div className="text-[10px] font-mono text-slate-400 leading-relaxed">
-                  <strong className="text-slate-200">Mutuals & Co-Authors (&ldquo;Dia kenal siapa aja&rdquo;):</strong> Click{' '}
+                  <strong className="text-slate-200">Mutuals & Co-Authors (Inner Circle):</strong> Click{' '}
                   <span className="text-emerald-400">Hunt</span> to pivot the investigation onto any close associate.
                 </div>
                 {dossier.associates.length === 0 ? (

@@ -695,7 +695,7 @@ export function downloadTargetDossierMarkdown(options: PDFExportOptions): void {
         )
       : [`- _No social profiles enumerated._`]),
     ``,
-    `## 4. Mutual Circle & Associates ("Dia Kenal Siapa Aja") (${associates.length})`,
+    `## 4. Mutual Circle & Associates (Inner Circle) (${associates.length})`,
     ``,
     ...(associates.length > 0
       ? associates.map(

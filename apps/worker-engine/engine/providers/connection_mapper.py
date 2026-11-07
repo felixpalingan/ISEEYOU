@@ -1,6 +1,6 @@
 """
 Social Connection & Mutuals Mapper (ISEEYOU 2.0 - Step 1.2)
-Maps a target's inner circle ("Dia kenal siapa aja / satu circle sama siapa") using public APIs:
+Maps a target's inner circle (mutual followers, collaborators, and organizations) using public APIs:
 1. Mutual Follow Intersection (followers ∩ following):
    - Identifies real-world friends, peers, and colleagues where both accounts follow each other.
 2. Repository Co-Authors & Contributors:

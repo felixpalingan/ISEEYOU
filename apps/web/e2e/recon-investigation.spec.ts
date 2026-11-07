@@ -101,9 +101,9 @@ test.describe('E2E: ISEEYOU 2.0 OSINT Lead-Chaining Caseboard & Target Dossier',
     const dossierCard = page.getByTestId('target-dossier-card');
     await expect(dossierCard).toBeVisible();
 
-    // Switch to Circle tab ("Dia kenal siapa aja")
+    // Switch to Circle tab (Mutuals & Co-Authors)
     await dossierCard.getByRole('button', { name: /Circle/i }).click();
-    await expect(dossierCard).toContainText('Dia kenal siapa aja');
+    await expect(dossierCard).toContainText('Mutuals & Co-Authors');
 
     // Switch to History (Chronological Timeline) tab
     await dossierCard.getByRole('button', { name: /History/i }).click();
