@@ -88,25 +88,25 @@ function RootSeedNode({ data }: NodeProps) {
   const targetType = String(data.type || 'DOMAIN').toUpperCase();
 
   return (
-    <div className="react-flow__node bg-vsc-card border-2 border-vsc-accent-blue rounded p-3 w-[235px] shadow-xl shadow-blue-950/30 select-none cursor-pointer hover:border-sky-400 transition-colors">
-      <Handle type="target" position={Position.Top} className="!bg-vsc-accent-blue" />
-      <Handle type="target" position={Position.Left} className="!bg-vsc-accent-blue" />
-      <div className="flex items-center justify-between text-[10px] font-mono font-bold text-vsc-accent-blue mb-1">
+    <div className="react-flow__node bg-[#131720] border border-sky-400/50 ring-1 ring-sky-400/20 rounded-xl p-3 w-[235px] shadow-2xl select-none cursor-pointer hover:border-sky-400 transition-colors">
+      <Handle type="target" position={Position.Top} className="!bg-sky-400" />
+      <Handle type="target" position={Position.Left} className="!bg-sky-400" />
+      <div className="flex items-center justify-between text-[10px] font-mono font-semibold text-sky-400 mb-1">
         <span>ROOT SEED ({targetType})</span>
         <Radio
-          className={`w-3.5 h-3.5 text-vsc-accent-blue ${isScanning ? 'animate-pulse' : ''}`}
+          className={`w-3.5 h-3.5 text-sky-400 ${isScanning ? 'animate-pulse' : ''}`}
         />
       </div>
-      <div className="font-mono text-sm font-bold text-vsc-bright truncate" title={target}>
+      <div className="font-mono text-sm font-semibold text-slate-100 truncate" title={target}>
         {target}
       </div>
-      <div className="text-[10px] text-vsc-muted mt-1 font-mono flex items-center justify-between">
+      <div className="text-[10px] text-slate-400 mt-1 font-mono flex items-center justify-between">
         <span>{isScanning ? 'Scanning active...' : 'Click to inspect'}</span>
-        <span className="text-vsc-keyword font-semibold">Seed</span>
+        <span className="text-sky-400 font-medium">Seed</span>
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-vsc-accent-blue" />
-      <Handle type="source" position={Position.Right} className="!bg-vsc-accent-blue" />
-      <Handle type="source" position={Position.Left} className="!bg-vsc-accent-blue" />
+      <Handle type="source" position={Position.Bottom} className="!bg-sky-400" />
+      <Handle type="source" position={Position.Right} className="!bg-sky-400" />
+      <Handle type="source" position={Position.Left} className="!bg-sky-400" />
     </div>
   );
 }
@@ -181,25 +181,19 @@ function CustomEntityNode({ data }: NodeProps) {
 
   const getBorderColor = () => {
     if (node?.confidence === 'false_positive') {
-      return 'border-slate-700/50 bg-slate-950/40 opacity-50 line-through';
+      return 'border-white/[0.04] bg-[#0B0E14]/60 opacity-45 line-through';
     }
     if (isSelected) {
-      return 'border-sky-400 bg-sky-950/30 ring-2 ring-sky-400/50';
+      return 'border-sky-400 bg-[#161C28] ring-2 ring-sky-400/25';
     }
     if (node?.confidence === 'verified') {
-      return 'border-emerald-400 bg-emerald-950/25 ring-1 ring-emerald-400/40';
+      return 'border-emerald-500/45 bg-[#121A1D] ring-1 ring-emerald-500/20';
     }
     if (severity === 'critical')
-      return 'border-vsc-critical bg-red-950/30 ring-1 ring-vsc-critical/40';
+      return 'border-rose-500/50 bg-[#1B1318] ring-1 ring-rose-500/25';
     if (severity === 'high')
-      return 'border-orange-500 bg-orange-950/30 ring-1 ring-orange-500/30';
-    if (severity === 'medium') return 'border-yellow-500/80 bg-yellow-950/20';
-    if (type === 'associate') return 'border-emerald-500/70 hover:border-emerald-400';
-    if (type === 'email') return 'border-amber-500/70 hover:border-amber-400';
-    if (type === 'ip') return 'border-emerald-500/70 hover:border-emerald-400';
-    if (type === 'subdomain') return 'border-sky-500/70 hover:border-sky-400';
-    if (type === 'username') return 'border-purple-500/70 hover:border-purple-400';
-    return 'border-vsc-borderSubtle hover:border-vsc-accent-blue';
+      return 'border-amber-500/45 bg-[#191614]';
+    return 'border-white/[0.08] bg-[#131720] hover:border-white/[0.18]';
   };
 
   const handleCopy = (e: React.MouseEvent) => {
@@ -225,16 +219,16 @@ function CustomEntityNode({ data }: NodeProps) {
 
   return (
     <div
-      className={`bg-vsc-card border rounded p-2.5 w-[235px] shadow-md transition-all select-none cursor-pointer hover:shadow-xl group relative ${getBorderColor()}`}
+      className={`border rounded-xl p-2.5 w-[235px] shadow-lg transition-all select-none cursor-pointer hover:shadow-xl group relative ${getBorderColor()}`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-vsc-borderSubtle" />
-      <Handle type="target" position={Position.Left} className="!bg-vsc-borderSubtle" />
+      <Handle type="target" position={Position.Top} className="!bg-slate-600" />
+      <Handle type="target" position={Position.Left} className="!bg-slate-600" />
 
       {/* Header: Icon, Type & Threat Pip */}
       <div className="flex items-center justify-between gap-1.5 mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           {getTypeIcon()}
-          <span className="text-[10px] font-mono uppercase font-bold text-vsc-muted truncate">
+          <span className="text-[10px] font-mono uppercase font-semibold text-slate-400 truncate">
             {type === 'username' && node?.metadata?.platform
               ? String(node.metadata.platform)
               : type}
@@ -243,20 +237,20 @@ function CustomEntityNode({ data }: NodeProps) {
 
         <div className="flex items-center gap-1.5">
           <span
-            className={`w-2 h-2 rounded-full ${
+            className={`w-1.5 h-1.5 rounded-full ${
               severity === 'critical'
-                ? 'bg-vsc-critical animate-ping'
+                ? 'bg-rose-400 animate-ping'
                 : severity === 'high'
-                ? 'bg-orange-500'
+                ? 'bg-amber-400'
                 : severity === 'medium'
-                ? 'bg-yellow-500'
+                ? 'bg-amber-300'
                 : severity === 'low'
-                ? 'bg-blue-400'
+                ? 'bg-sky-400'
                 : 'bg-emerald-400'
             }`}
             title={`Risk Level: ${severity.toUpperCase()}`}
           />
-          <Badge variant={severity as any} size="xs" className="uppercase font-mono font-bold">
+          <Badge variant={severity as any} size="xs" className="uppercase font-mono font-medium">
             {severity}
           </Badge>
         </div>
@@ -269,18 +263,18 @@ function CustomEntityNode({ data }: NodeProps) {
           <img
             src={avatarUrl}
             alt={displayLabel}
-            className="w-7 h-7 rounded-full object-cover border border-indigo-500/50 flex-shrink-0"
+            className="w-7 h-7 rounded-full object-cover border border-white/[0.14] flex-shrink-0"
           />
         )}
         <div className="min-w-0 flex-1">
           <div
-            className="font-mono text-xs font-semibold text-vsc-bright truncate"
+            className="font-mono text-xs font-semibold text-slate-100 truncate"
             title={value}
           >
             {type === 'port' ? `Port :${value}` : displayLabel}
           </div>
           {typeof node?.metadata?.full_name === 'string' && node.metadata.full_name && (
-            <div className="text-[10px] font-sans text-indigo-300 font-medium truncate">
+            <div className="text-[10px] font-sans text-sky-300 font-medium truncate">
               {node.metadata.full_name}
             </div>
           )}
@@ -1471,16 +1465,18 @@ function FlowCanvasInner({
               key={pill.id}
               type="button"
               onClick={() => setCategoryFilter(pill.id)}
-              className={`px-2.5 py-1 rounded text-[11px] font-mono border backdrop-blur transition-all flex items-center gap-1.5 shadow ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono border backdrop-blur-md transition-all flex items-center gap-1.5 shadow-lg tabular-nums ${
                 categoryFilter === pill.id
-                  ? 'bg-vsc-accent-blue text-white border-sky-400 font-bold'
-                  : 'bg-vsc-sidebar/90 text-vsc-muted hover:text-vsc-bright border-vsc-border'
+                  ? 'bg-[#161C28] text-white border-sky-400/50 font-semibold'
+                  : 'bg-[#0F1219]/90 text-slate-400 hover:text-slate-100 border-white/[0.08]'
               }`}
             >
               <span>{pill.label}</span>
               <span
-                className={`text-[9px] px-1 rounded ${
-                  categoryFilter === pill.id ? 'bg-black/25 text-white' : 'bg-vsc-canvas text-vsc-muted'
+                className={`text-[9px] px-1.5 py-0.2 rounded ${
+                  categoryFilter === pill.id
+                    ? 'bg-sky-500/20 text-sky-300'
+                    : 'bg-white/[0.04] text-slate-400'
                 }`}
               >
                 {pill.count}
@@ -1490,40 +1486,40 @@ function FlowCanvasInner({
         </Panel>
 
         {/* Top-Center Layout, Auto-Tidy & Cluster Controls */}
-        <Panel position="top-center" className="!mt-3 flex items-center gap-2 z-10">
+        <Panel position="top-center" className="!mt-3 flex items-center gap-1.5 z-10">
           {isScanning && (
-            <div className="bg-vsc-card/90 backdrop-blur border border-vsc-accent-blue px-2.5 py-1 rounded text-[11px] font-mono text-vsc-accent-blue flex items-center gap-1.5 shadow-lg shadow-blue-950/20">
-              <span className="w-2 h-2 rounded-full bg-vsc-accent-blue animate-ping" />
+            <div className="bg-[#0F1219]/92 backdrop-blur-md border border-sky-400/40 px-2.5 py-1 rounded-lg text-[11px] font-mono text-sky-300 flex items-center gap-1.5 shadow-lg">
+              <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
               <span>Streaming Recon Graph...</span>
             </div>
           )}
 
           {/* Layout Mode Switcher: Tree vs Radial */}
-          <div className="bg-vsc-sidebar/90 backdrop-blur border border-vsc-border p-0.5 rounded flex items-center gap-0.5 shadow-md text-[10px] font-mono">
+          <div className="bg-[#0F1219]/92 backdrop-blur-md border border-white/[0.08] p-0.5 rounded-lg flex items-center gap-0.5 shadow-lg text-[10px] font-mono">
             <button
               type="button"
               onClick={() => setLayoutMode('tree')}
-              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+              className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-all ${
                 layoutMode === 'tree'
-                  ? 'bg-vsc-accent-blue text-white font-bold'
-                  : 'text-vsc-muted hover:text-vsc-bright'
+                  ? 'bg-white/[0.09] text-white font-semibold border border-white/[0.08]'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
               title="Structured Multi-Tier Tree Layout (Zero Overlap)"
             >
-              <GitBranch className="w-3 h-3" />
+              <GitBranch className="w-3 h-3 text-sky-400" />
               <span>Tree</span>
             </button>
             <button
               type="button"
               onClick={() => setLayoutMode('radial')}
-              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+              className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-all ${
                 layoutMode === 'radial'
-                  ? 'bg-vsc-accent-blue text-white font-bold'
-                  : 'text-vsc-muted hover:text-vsc-bright'
+                  ? 'bg-white/[0.09] text-white font-semibold border border-white/[0.08]'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
               title="Concentric Radial Rings Layout"
             >
-              <Compass className="w-3 h-3" />
+              <Compass className="w-3 h-3 text-sky-400" />
               <span>Radial</span>
             </button>
           </div>
@@ -1533,28 +1529,28 @@ function FlowCanvasInner({
             type="button"
             data-testid="auto-tidy-graph-btn"
             onClick={handleAutoTidy}
-            className="bg-emerald-950/80 hover:bg-emerald-800/80 text-emerald-300 border border-emerald-700/60 px-2.5 py-1 rounded text-[11px] font-mono font-semibold shadow transition-colors flex items-center gap-1.5"
+            className="bg-[#0F1219]/92 hover:bg-[#161C28] backdrop-blur-md text-slate-200 hover:text-white border border-white/[0.08] px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium shadow-lg transition-colors flex items-center gap-1.5"
             title="Auto-tidy and separate any overlapping nodes"
           >
-            <Sparkles className="w-3 h-3 text-emerald-400" />
+            <Sparkles className="w-3 h-3 text-sky-400" />
             <span>Auto-Tidy</span>
           </button>
 
           {/* Cluster controls */}
-          <div className="bg-vsc-sidebar/90 backdrop-blur border border-vsc-border p-0.5 rounded flex items-center gap-1 shadow-md">
+          <div className="bg-[#0F1219]/92 backdrop-blur-md border border-white/[0.08] p-0.5 rounded-lg flex items-center gap-1 shadow-lg">
             <button
               type="button"
               onClick={handleExpandAll}
-              className="px-2 py-0.5 rounded text-[10px] font-mono text-vsc-muted hover:text-vsc-bright hover:bg-vsc-panel transition-colors"
+              className="px-2 py-0.5 rounded-md text-[10px] font-mono text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors"
               title="Expand all grouped clusters"
             >
               Expand All
             </button>
-            <span className="text-vsc-border">•</span>
+            <span className="text-white/[0.12]">•</span>
             <button
               type="button"
               onClick={handleCollapseAll}
-              className="px-2 py-0.5 rounded text-[10px] font-mono text-vsc-muted hover:text-vsc-bright hover:bg-vsc-panel transition-colors"
+              className="px-2 py-0.5 rounded-md text-[10px] font-mono text-slate-400 hover:text-white hover:bg-white/[0.05] transition-colors"
               title="Fold clusters into compact summary cards"
             >
               Fold All
@@ -1562,9 +1558,9 @@ function FlowCanvasInner({
           </div>
 
           {/* Node and Edge Counter */}
-          <div className="bg-vsc-sidebar/90 backdrop-blur border border-vsc-border px-2.5 py-1 rounded text-[11px] font-mono text-vsc-muted flex items-center gap-1.5 shadow-md">
-            <span className="text-vsc-bright font-bold">{nodes.length} Nodes</span>
-            <span>•</span>
+          <div className="bg-[#0F1219]/92 backdrop-blur-md border border-white/[0.08] px-2.5 py-1 rounded-lg text-[11px] font-mono text-slate-400 flex items-center gap-1.5 shadow-lg tabular-nums">
+            <span className="text-slate-100 font-semibold">{nodes.length} Nodes</span>
+            <span className="text-white/[0.15]">•</span>
             <span>{edges.length} Links</span>
           </div>
 
@@ -1572,10 +1568,10 @@ function FlowCanvasInner({
           <button
             type="button"
             onClick={() => fitView({ padding: 0.22, duration: 400 })}
-            className="bg-vsc-sidebar hover:bg-vsc-card text-vsc-bright border border-vsc-border p-1.5 rounded text-xs font-mono shadow transition-colors flex items-center gap-1"
+            className="bg-[#0F1219]/92 hover:bg-[#161C28] backdrop-blur-md text-slate-200 border border-white/[0.08] p-1.5 rounded-lg text-xs font-mono shadow-lg transition-colors flex items-center gap-1"
             title="Fit View to Screen"
           >
-            <Maximize2 className="w-3.5 h-3.5 text-vsc-muted" />
+            <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
           </button>
         </Panel>
       </ReactFlow>

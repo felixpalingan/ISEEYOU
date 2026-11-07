@@ -384,7 +384,7 @@ export function LeadInspectorDrawer({
                 <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2">
                   <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
                     <Play className="w-3 h-3 text-sky-400" />
-                    <span>Chain Next OSINT Step</span>
+                    <span>Chain Next OSINT Step From This Lead</span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-1.5">

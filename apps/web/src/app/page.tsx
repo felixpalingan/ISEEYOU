@@ -7,13 +7,12 @@ import {
   FileDown,
   RotateCcw,
   Pin,
-  Search,
+  Radar,
   FolderOpen,
   Table,
   Network,
   Terminal,
   X,
-  Database,
 } from 'lucide-react';
 import {
   OmniSearchBar,
@@ -74,12 +73,10 @@ export default function WorkspacePage() {
     selectedNode,
     pivotHistory,
     startScan,
-    cancelScan,
     revertPivot,
     clearLogs,
     selectFinding,
     selectNode,
-    resetWorkspace,
     addManualLead,
     updateNodeAnnotation,
     setCaseNotes,
@@ -176,28 +173,28 @@ export default function WorkspacePage() {
   const latestLog = logs[logs.length - 1];
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#0B0D12] text-slate-200 font-sans antialiased overflow-hidden select-none">
-      {/* 1. FLOATING TOP INVESTIGATION COMMAND BAR */}
-      <header className="h-14 bg-[#111318]/95 backdrop-blur-xl border-b border-slate-800/90 flex items-center justify-between px-4 z-30 shadow-lg">
+    <div className="flex flex-col h-screen w-screen bg-[#090B10] text-slate-200 font-sans antialiased overflow-hidden select-none">
+      {/* 1. FLOATING TOP INVESTIGATION COMMAND BAR (Quiet Carbon Obsidian Surface) */}
+      <header className="h-14 bg-[#0F1219]/95 backdrop-blur-xl border-b border-white/[0.07] flex items-center justify-between px-4 z-30">
         {/* Left Brand & Active Case Badge */}
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="ISEEYOU" className="w-6 h-6" />
           <div>
-            <div className="font-bold text-xs tracking-wider text-white font-mono flex items-center gap-1.5">
+            <div className="font-semibold text-xs tracking-wider text-slate-100 font-mono flex items-center gap-1.5">
               <span>ISEEYOU 2.0</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-600/30 border border-indigo-500/50 text-indigo-300">
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-500/25 text-sky-300 font-medium">
                 OSINT CASEBOARD
               </span>
             </div>
             <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
               <span>Target:</span>
-              <strong className="text-indigo-300">{target}</strong>
+              <strong className="text-slate-100 font-medium">{target}</strong>
               {pivotHistory.length > 0 && (
                 <button
                   type="button"
                   onClick={revertPivot}
-                  className="ml-1 px-1.5 py-0.2 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 text-[9px] flex items-center gap-0.5"
+                  className="ml-1 px-1.5 py-0.2 rounded bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-amber-300 text-[9px] flex items-center gap-0.5 transition-colors"
                   title="Step back to previous lead in chain"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
@@ -222,7 +219,7 @@ export default function WorkspacePage() {
           onToggleModule={handleToggleModule}
         />
 
-        {/* Right Tactical Actions Bar */}
+        {/* Right Tactical Actions Bar (Unified Quiet Surface + Crisp Icon Accents) */}
         <div className="flex items-center gap-1.5 font-mono text-[11px]">
           <button
             type="button"
@@ -231,7 +228,11 @@ export default function WorkspacePage() {
               setInspectorTab('pin');
               setIsRightDrawerOpen(true);
             }}
-            className="px-2.5 py-1.5 rounded-lg bg-amber-950/60 hover:bg-amber-900/70 border border-amber-700/50 text-amber-200 font-semibold flex items-center gap-1 transition-colors"
+            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all ${
+              isRightDrawerOpen && inspectorTab === 'pin'
+                ? 'bg-white/[0.09] border-sky-400/50 text-white'
+                : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-200'
+            }`}
             title="Pin a manually discovered clue onto the Caseboard"
           >
             <Pin className="w-3.5 h-3.5 text-amber-400" />
@@ -245,10 +246,14 @@ export default function WorkspacePage() {
               setInspectorTab('dorks');
               setIsRightDrawerOpen(true);
             }}
-            className="px-2.5 py-1.5 rounded-lg bg-purple-950/60 hover:bg-purple-900/70 border border-purple-700/50 text-purple-200 font-semibold flex items-center gap-1 transition-colors"
+            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all ${
+              isRightDrawerOpen && inspectorTab === 'dorks'
+                ? 'bg-white/[0.09] border-sky-400/50 text-white'
+                : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-200'
+            }`}
             title="Open Tactical Google Dork Matrix (Private IG/TikTok/X Comment Bypass)"
           >
-            <Search className="w-3.5 h-3.5 text-purple-400" />
+            <Radar className="w-3.5 h-3.5 text-sky-400" />
             <span className="hidden lg:inline">Dork Matrix</span>
           </button>
 
@@ -262,7 +267,11 @@ export default function WorkspacePage() {
                 runAIAnalysis();
               }
             }}
-            className="px-2.5 py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/70 border border-emerald-700/50 text-emerald-200 font-semibold flex items-center gap-1 transition-colors"
+            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all ${
+              isRightDrawerOpen && inspectorTab === 'ai'
+                ? 'bg-white/[0.09] border-sky-400/50 text-white'
+                : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-200'
+            }`}
             title="Open AI OSINT Detective & BYOK Token Settings"
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
@@ -273,40 +282,40 @@ export default function WorkspacePage() {
             type="button"
             data-testid="btn-open-case-manager"
             onClick={() => setIsCaseModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-medium flex items-center gap-1.5 transition-colors"
             title="Save, Load, or Export Investigation (.case.json)"
           >
-            <FolderOpen className="w-3.5 h-3.5 text-indigo-400" />
+            <FolderOpen className="w-3.5 h-3.5 text-sky-400" />
             <span className="hidden xl:inline">Cases</span>
           </button>
 
           {/* View Switcher: Caseboard Graph vs Structured Table */}
-          <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+          <div className="flex items-center bg-[#090B10] border border-white/[0.08] rounded-lg p-0.5">
             <button
               type="button"
               onClick={() => setActiveView('caseboard')}
-              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-colors ${
+              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-all ${
                 activeView === 'caseboard'
-                  ? 'bg-indigo-600 text-white font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white/[0.09] text-white font-semibold border border-white/[0.08]'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
               title="Interactive Infinite OSINT Caseboard"
             >
-              <Network className="w-3.5 h-3.5" />
+              <Network className="w-3.5 h-3.5 text-sky-400" />
               <span className="hidden 2xl:inline">Board</span>
             </button>
             <button
               type="button"
               data-testid="btn-activity-table"
               onClick={() => setActiveView('table')}
-              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-colors ${
+              className={`px-2 py-1 rounded-md flex items-center gap-1 transition-all ${
                 activeView === 'table'
-                  ? 'bg-indigo-600 text-white font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white/[0.09] text-white font-semibold border border-white/[0.08]'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
               }`}
               title="Structured Evidence Table & Matrix"
             >
-              <Table className="w-3.5 h-3.5" />
+              <Table className="w-3.5 h-3.5 text-sky-400" />
               <span className="hidden 2xl:inline">Table</span>
             </button>
           </div>
@@ -315,7 +324,7 @@ export default function WorkspacePage() {
             type="button"
             data-testid="btn-activity-export-pdf"
             onClick={() => setIsExportModalOpen(true)}
-            className="px-2.5 py-1.5 rounded-lg bg-sky-950/60 hover:bg-sky-900/70 border border-sky-700/50 text-sky-200 font-semibold flex items-center gap-1 transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-medium flex items-center gap-1.5 transition-colors"
             title="Export Target Dossier Report (PDF / JSON / Markdown)"
           >
             <FileDown className="w-3.5 h-3.5 text-sky-400" />
@@ -326,7 +335,7 @@ export default function WorkspacePage() {
             type="button"
             data-testid="btn-activity-legal"
             onClick={() => setIsLegalModalOpen(true)}
-            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-emerald-400 transition-colors"
+            className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-400 hover:text-slate-100 transition-colors"
             title="Privacy & Legal Takedown Generator (UU PDP & GDPR)"
           >
             <Scale className="w-4 h-4" />
@@ -397,10 +406,10 @@ export default function WorkspacePage() {
             {/* Subtle Floating Activity Log Pill (Bottom-Left above Zoom Controls) */}
             <div className="absolute bottom-3 left-14 z-20 max-w-md">
               {isActivityLogOpen ? (
-                <div className="w-[420px] max-h-56 bg-[#111318]/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl overflow-hidden flex flex-col font-mono text-[11px]">
-                  <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-                    <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                      <Terminal className="w-3.5 h-3.5 text-indigo-400" />
+                <div className="w-[420px] max-h-56 bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden flex flex-col font-mono text-[11px]">
+                  <div className="px-3 py-1.5 bg-[#131720] border-b border-white/[0.07] flex items-center justify-between">
+                    <span className="font-semibold text-slate-200 flex items-center gap-1.5 tabular-nums">
+                      <Terminal className="w-3.5 h-3.5 text-sky-400" />
                       Live OSINT Stream ({logs.length})
                     </span>
                     <div className="flex items-center gap-2">
@@ -423,8 +432,8 @@ export default function WorkspacePage() {
                   <div className="flex-1 overflow-y-auto p-2.5 space-y-1 select-text">
                     {logs.slice(-25).map((l) => (
                       <div key={l.id} className="leading-snug">
-                        <span className="text-slate-500">[{l.timestamp}]</span>{' '}
-                        <span className="text-indigo-400 font-semibold">[{l.module}]</span>{' '}
+                        <span className="text-slate-500 tabular-nums">[{l.timestamp}]</span>{' '}
+                        <span className="text-sky-400 font-medium">[{l.module}]</span>{' '}
                         <span
                           className={
                             l.level === 'error'
@@ -446,7 +455,7 @@ export default function WorkspacePage() {
                 <button
                   type="button"
                   onClick={() => setIsActivityLogOpen(true)}
-                  className="px-3 py-1.5 rounded-full bg-[#111318]/90 backdrop-blur border border-slate-800 hover:border-indigo-500/50 text-[11px] font-mono text-slate-300 flex items-center gap-2 shadow-lg max-w-sm truncate"
+                  className="px-3 py-1.5 rounded-full bg-[#0F1219]/92 backdrop-blur-md border border-white/[0.08] hover:border-white/[0.18] text-[11px] font-mono text-slate-300 flex items-center gap-2 shadow-lg max-w-sm truncate transition-colors"
                   title="Click to expand live OSINT telemetry log"
                 >
                   <span
@@ -464,7 +473,7 @@ export default function WorkspacePage() {
         )}
 
         {activeView === 'table' && (
-          <div className="flex-1 overflow-auto p-6 bg-[#0B0D12]">
+          <div className="flex-1 overflow-auto p-6 bg-[#090B10]">
             <StructuredDataView
               nodes={nodes}
               edges={edges}
@@ -500,7 +509,7 @@ export default function WorkspacePage() {
         )}
 
         {activeView === 'ai' && (
-          <div className="flex-1 overflow-auto p-6 bg-[#0B0D12]">
+          <div className="flex-1 overflow-auto p-6 bg-[#090B10]">
             <AIAnalystCard
               report={aiReport}
               isAnalyzing={isAIAnalyzing}
