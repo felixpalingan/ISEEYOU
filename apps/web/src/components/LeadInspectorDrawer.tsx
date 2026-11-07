@@ -127,37 +127,54 @@ export function LeadInspectorDrawer({
     return dossier.organizations[0] || '';
   }, [selectedNode, dossier.organizations]);
 
-  // Built-in Tactical Google Dorks (Private Account Comment/Tag Bypass + Pivots)
+  // Built-in Tactical Google Dorks (All 8 Private Account Comment/Tag Bypass + Pivots)
   const tacticalDorks = useMemo(() => {
     const h = activeHandle;
     const nm = activeFullName;
     const org = activeOrg;
+    const em = dossier.emails[0] || '';
     return [
       {
         id: 'ig-bypass',
         category: 'Private Account Comment & Tag Bypass',
-        title: 'Instagram Private Account Public Comments & Mentions',
+        title: 'Instagram Private Account — Third-Party Mentions Only',
         query: `site:instagram.com "${h}" -inurl:instagram.com/${h}`,
-        desc: 'Extracts public posts, reels, and comment threads where this private IG handle commented or was tagged by friends.',
+        desc: 'Excludes the target profile URL so results are 100% public posts/comments from friends mentioning or replying to the private IG handle.',
+      },
+      {
+        id: 'ig-posts-reels',
+        category: 'Private Account Comment & Tag Bypass',
+        title: 'Instagram Public Posts & Reels Comments / Friend Tags',
+        query: `site:instagram.com/p/ "${h}" OR site:instagram.com/reel/ "${h}"`,
+        desc: 'Finds public photo posts (/p/) and Reels (/reel/) where the target commented or was tagged in captions.',
       },
       {
         id: 'tiktok-bypass',
         category: 'Private Account Comment & Tag Bypass',
-        title: 'TikTok Public Replies, Duets & Mentions',
+        title: 'TikTok Public Video Replies, Duets & Mentions',
         query: `site:tiktok.com "${h}" -inurl:"@${h}"`,
-        desc: 'Finds public TikTok comment sections and video captions mentioning the handle.',
+        desc: 'Finds public TikTok comment sections and video captions mentioning or replying to the handle.',
       },
       {
         id: 'x-bypass',
         category: 'Private Account Comment & Tag Bypass',
-        title: 'X / Twitter External Replies & Thread Mentions',
+        title: 'X / Twitter External Replies to Protected Account',
         query: `(site:x.com OR site:twitter.com) "${h}" -inurl:${h}/status`,
         desc: 'Uncovers replies from public accounts talking to or tagging a protected/private X account.',
       },
       {
+        id: 'linkedin-activity',
+        category: 'Cross-Platform Identity Pivot',
+        title: 'LinkedIn Public Post Comments & Colleague Tags',
+        query: nm
+          ? `site:linkedin.com/posts/ "${nm}" OR "${h}"`
+          : `site:linkedin.com/posts/ "${h}"`,
+        desc: 'Finds public LinkedIn posts where the target commented, congratulated colleagues, or was tagged.',
+      },
+      {
         id: 'linkedin-pivot',
         category: 'Cross-Platform Identity Pivot',
-        title: 'LinkedIn Career & Education Match',
+        title: 'LinkedIn Career & Education Identity Match',
         query: nm
           ? `site:linkedin.com/in/ "${nm}"${org ? ` "${org}"` : ''}`
           : `site:linkedin.com/in/ "${h}"`,
@@ -168,19 +185,61 @@ export function LeadInspectorDrawer({
         category: 'Leaked Documents & Rosters',
         title: 'Indexed PDF / XLSX / DOCX Rosters, CVs & Directories',
         query: nm
-          ? `("${nm}" OR "${h}") (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          ? `("${nm}" OR "${h}"${em ? ` OR "${em}"` : ''}) (filetype:pdf OR filetype:xlsx OR filetype:docx)`
           : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
         desc: 'Hunts for leaked resumes, university student lists, event participant rosters, or employee spreadsheets.',
       },
       {
         id: 'paste-code-leak',
-        category: 'Public Archives & Forums',
-        title: 'Public Pastebins, Telegram & Forum Mentions',
-        query: `"${h}" (site:pastebin.com OR site:t.me OR site:reddit.com OR site:medium.com)`,
-        desc: 'Searches public Telegram channels, Reddit discussions, and paste sites for the target handle.',
+        category: 'Public Archives & Bio Aggregators',
+        title: 'Linktree, Carrd, Pastebin & Forum Bio Leaks',
+        query: `(site:linktr.ee OR site:carrd.co OR site:pastebin.com OR site:t.me OR site:reddit.com) "${h}"`,
+        desc: 'Searches Linktree/Carrd bio hubs, Telegram channels, Reddit discussions, and paste sites for the target handle.',
       },
     ];
-  }, [activeHandle, activeFullName, activeOrg]);
+  }, [activeHandle, activeFullName, activeOrg, dossier.emails]);
+
+  // Extractable sub-leads from the currently selected node for 1-click "+ Spawn on Board"
+  const spawnableNodeLeads = useMemo(() => {
+    if (!selectedNode?.metadata) return [];
+    const meta = selectedNode.metadata;
+    const leads: Array<{ key: string; label: string; value: string; type: EntityType }> = [];
+
+    if (typeof meta.email === 'string' && meta.email.includes('@')) {
+      leads.push({ key: 'email', label: 'Email', value: meta.email, type: 'email' });
+    }
+    if (typeof meta.twitter_username === 'string' && meta.twitter_username.trim()) {
+      leads.push({
+        key: 'twitter',
+        label: 'X / Twitter Handle',
+        value: meta.twitter_username.replace(/^@/, ''),
+        type: 'username',
+      });
+    }
+    if (typeof meta.blog === 'string' && meta.blog.trim()) {
+      const cleanDom = meta.blog.replace(/^https?:\/\//i, '').split('/')[0];
+      if (cleanDom.includes('.')) {
+        leads.push({ key: 'blog', label: 'Personal Website', value: cleanDom, type: 'domain' });
+      }
+    }
+    if (typeof meta.company === 'string' && meta.company.trim()) {
+      leads.push({
+        key: 'company',
+        label: 'Organization / Campus',
+        value: meta.company.trim(),
+        type: 'organization',
+      });
+    }
+    if (typeof meta.location === 'string' && meta.location.trim()) {
+      leads.push({
+        key: 'location',
+        label: 'Location',
+        value: meta.location.trim(),
+        type: 'location',
+      });
+    }
+    return leads;
+  }, [selectedNode]);
 
   if (!isOpen) return null;
 
@@ -563,6 +622,47 @@ export function LeadInspectorDrawer({
                   />
                 </div>
 
+                {/* Extracted Sub-Leads with 1-Click "+ Spawn on Board" */}
+                {spawnableNodeLeads.length > 0 && (
+                  <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-sky-400 font-semibold">
+                      Extracted Leads from This Node
+                    </div>
+                    <div className="space-y-1.5">
+                      {spawnableNodeLeads.map((item) => (
+                        <div
+                          key={`${item.key}-${item.value}`}
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#090B10] border border-white/[0.06]"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-[9px] font-mono text-slate-500 uppercase">
+                              {item.label}
+                            </div>
+                            <div className="text-[11px] font-mono font-medium text-slate-100 truncate">
+                              {item.value}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onAddManualLead(
+                                item.type,
+                                item.value,
+                                `${item.label}: ${item.value}`,
+                                selectedNode.id,
+                                `Extracted from ${selectedNode.label}`
+                              )
+                            }
+                            className="px-2 py-1 rounded bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-200 font-mono text-[10px] font-medium flex-shrink-0 transition-colors"
+                          >
+                            + Spawn on Board
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Extracted Metadata Table */}
                 {selectedNode.metadata && Object.keys(selectedNode.metadata).length > 0 && (
                   <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-1.5">
@@ -792,6 +892,38 @@ export function LeadInspectorDrawer({
                             className="px-2 py-1 rounded-md bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-200 font-mono text-[10px] font-medium flex-shrink-0 transition-colors"
                           >
                             Hunt →
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Suggested Custom Dorks */}
+                {aiReport.suggestedDorks && aiReport.suggestedDorks.length > 0 && (
+                  <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-sky-400 font-semibold">
+                      AI-Crafted Tactical Dorks
+                    </div>
+                    <div className="space-y-2">
+                      {aiReport.suggestedDorks.map((dork, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 rounded-lg bg-[#090B10] border border-white/[0.06] space-y-1.5"
+                        >
+                          <div className="text-[11px] font-semibold text-slate-100">
+                            {dork.title}
+                          </div>
+                          <div className="text-[10px] text-slate-400">{dork.purpose}</div>
+                          <div className="font-mono text-[10px] text-sky-300 break-all select-all">
+                            {dork.query}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => launchGoogleDork(dork.query)}
+                            className="w-full py-1 px-2 rounded bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-slate-200 font-mono text-[10px] font-medium"
+                          >
+                            Launch Google Dork ↗
                           </button>
                         </div>
                       ))}
