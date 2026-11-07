@@ -1,5 +1,5 @@
 /**
- * Core entity classifications for ISEEYOU Reconnaissance
+ * Core entity classifications for ISEEYOU 2.0 OSINT & Reconnaissance Workbench
  */
 export type EntityType =
   | 'domain'
@@ -10,9 +10,14 @@ export type EntityType =
   | 'breach'
   | 'port'
   | 'secret'
-  | 'document';
+  | 'document'
+  | 'associate'
+  | 'organization'
+  | 'location';
 
 export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+export type NodeConfidence = 'verified' | 'suspected' | 'unverified' | 'false_positive';
 
 export interface EntityNode {
   id: string;
@@ -26,6 +31,59 @@ export interface EntityNode {
   isCluster?: boolean;
   clusterCount?: number;
   discoveredAt: string;
+  confidence?: NodeConfidence;
+  investigatorNotes?: string;
+  timelineDate?: string;
+  isManual?: boolean;
+}
+
+export interface TimelineEvent {
+  year: string;
+  date?: string;
+  event: string;
+  platform: string;
+  nodeId?: string;
+}
+
+export interface TargetDossier {
+  primaryTarget: string;
+  fullNames: string[];
+  handles: string[];
+  emails: string[];
+  avatars: string[];
+  locations: string[];
+  organizations: string[];
+  domains: string[];
+  bios: Array<{ platform: string; text: string }>;
+  socialProfiles: Array<{
+    platform: string;
+    handle: string;
+    url: string;
+    category?: string;
+    nodeId: string;
+  }>;
+  associates: Array<{
+    handle: string;
+    relationship: string;
+    avatarUrl?: string;
+    profileUrl?: string;
+    nodeId: string;
+  }>;
+  breachesCount: number;
+  timeline: TimelineEvent[];
+}
+
+export interface CaseFile {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  seedInput: string;
+  riskScore: number;
+  nodes: EntityNode[];
+  edges: EntityEdge[];
+  findings: VulnerabilityFinding[];
+  caseNotes?: string;
 }
 
 export interface ScanRequestPayload {
