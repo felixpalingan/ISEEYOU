@@ -914,7 +914,7 @@ export function LeadInspectorDrawer({
                           <div className="text-[11px] font-semibold text-slate-100">
                             {dork.title}
                           </div>
-                          <div className="text-[10px] text-slate-400">{dork.purpose}</div>
+                          <div className="text-[10px] text-slate-400">{dork.description}</div>
                           <div className="font-mono text-[10px] text-sky-300 break-all select-all">
                             {dork.query}
                           </div>
