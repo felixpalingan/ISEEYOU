@@ -12,35 +12,35 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<string, string> = {
-  // Severity variants
-  critical: 'bg-red-950/70 border-vsc-critical text-vsc-critical font-bold',
-  high: 'bg-orange-950/70 border-orange-500 text-orange-400 font-bold',
-  medium: 'bg-yellow-950/70 border-vsc-warning text-vsc-warning font-semibold',
-  low: 'bg-blue-950/50 border-blue-400 text-blue-300',
-  info: 'bg-vsc-dropdown border-vsc-borderSubtle text-vsc-info',
-  success: 'bg-emerald-950/60 border-vsc-success text-vsc-success font-semibold',
+  // Severity variants (Restrained saturation, high contrast legibility)
+  critical: 'bg-rose-500/10 border-rose-500/30 text-rose-300 font-semibold',
+  high: 'bg-amber-500/10 border-amber-500/30 text-amber-300 font-semibold',
+  medium: 'bg-amber-500/10 border-amber-500/25 text-amber-200 font-medium',
+  low: 'bg-sky-500/10 border-sky-500/25 text-sky-300',
+  info: 'bg-white/[0.04] border-white/[0.08] text-slate-300',
+  success: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 font-medium',
 
-  // Entity type variants
-  domain: 'bg-vsc-dropdown border-vsc-borderSubtle text-vsc-keyword font-mono font-bold',
-  subdomain: 'bg-vsc-dropdown border-vsc-borderSubtle text-sky-400 font-mono',
-  ip: 'bg-vsc-dropdown border-vsc-borderSubtle text-emerald-400 font-mono font-semibold',
-  email: 'bg-vsc-dropdown border-vsc-borderSubtle text-amber-400 font-mono font-semibold',
-  username: 'bg-vsc-dropdown border-vsc-borderSubtle text-purple-400 font-mono font-semibold',
-  port: 'bg-vsc-dropdown border-vsc-borderSubtle text-cyan-300 font-mono',
-  breach: 'bg-red-950/80 border-vsc-critical text-vsc-critical font-mono font-bold',
-  secret: 'bg-rose-950/80 border-rose-500 text-rose-300 font-mono font-bold',
-  document: 'bg-vsc-dropdown border-vsc-border text-vsc-text font-mono',
-  associate: 'bg-emerald-950/70 border-emerald-600/50 text-emerald-300 font-mono font-semibold',
-  organization: 'bg-amber-950/70 border-amber-600/50 text-amber-300 font-mono font-semibold',
-  location: 'bg-rose-950/70 border-rose-600/50 text-rose-300 font-mono font-semibold',
+  // Entity type variants (Quiet dark surface + subtle semantic text tint)
+  domain: 'bg-sky-500/10 border-sky-500/25 text-sky-300 font-mono font-medium',
+  subdomain: 'bg-white/[0.04] border-white/[0.08] text-sky-300 font-mono',
+  ip: 'bg-white/[0.04] border-white/[0.08] text-emerald-300 font-mono font-medium',
+  email: 'bg-amber-500/10 border-amber-500/25 text-amber-300 font-mono font-medium',
+  username: 'bg-sky-500/10 border-sky-500/25 text-sky-300 font-mono font-medium',
+  port: 'bg-white/[0.04] border-white/[0.08] text-cyan-300 font-mono',
+  breach: 'bg-rose-500/10 border-rose-500/30 text-rose-300 font-mono font-semibold',
+  secret: 'bg-rose-500/10 border-rose-500/30 text-rose-300 font-mono font-semibold',
+  document: 'bg-white/[0.04] border-white/[0.08] text-slate-300 font-mono',
+  associate: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 font-mono font-medium',
+  organization: 'bg-white/[0.04] border-white/[0.08] text-amber-200 font-mono font-medium',
+  location: 'bg-white/[0.04] border-white/[0.08] text-slate-300 font-mono font-medium',
 
-  default: 'bg-vsc-dropdown border-vsc-border text-vsc-muted',
+  default: 'bg-white/[0.04] border-white/[0.08] text-slate-400',
 };
 
 const sizeStyles = {
-  xs: 'text-[9px] px-1 py-0.2 rounded',
-  sm: 'text-[10px] px-1.5 py-0.5 rounded',
-  md: 'text-xs px-2 py-0.5 rounded',
+  xs: 'text-[9px] px-1.5 py-0.5 rounded',
+  sm: 'text-[10px] px-1.5 py-0.5 rounded-md',
+  md: 'text-xs px-2 py-0.5 rounded-md',
 };
 
 export function Badge({
@@ -56,7 +56,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 border select-none transition-colors tracking-wide',
+        'inline-flex items-center gap-1 border select-none transition-colors tracking-wide tabular-nums',
         style,
         sizeStyles[size],
         className
@@ -67,7 +67,7 @@ export function Badge({
         <span
           className={cn(
             'w-1.5 h-1.5 rounded-full animate-pulse',
-            variant === 'critical' ? 'bg-vsc-critical' : 'bg-vsc-accent-blue'
+            variant === 'critical' ? 'bg-rose-400' : 'bg-sky-400'
           )}
         />
       )}
@@ -75,4 +75,3 @@ export function Badge({
     </span>
   );
 }
-

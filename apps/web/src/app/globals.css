@@ -5,98 +5,113 @@
 @tailwind utilities;
 
 :root {
-  /* VS Code Dark Modern Exact Tokens */
-  --vsc-canvas: #1E1E1E;
-  --vsc-sidebar: #252526;
-  --vsc-activity-bar: #333333;
-  --vsc-panel-bg: #181818;
-  --vsc-dropdown-bg: #2D2D2D;
-  --vsc-card-bg: #252526;
-  
-  --vsc-border: #2B2B2B;
-  --vsc-border-focus: #007ACC;
-  --vsc-border-subtle: #333333;
+  /* Tactical Carbon Obsidian Design System Tokens */
+  --vsc-canvas: #090B10;
+  --vsc-sidebar: #0F1219;
+  --vsc-activity-bar: #141821;
+  --vsc-panel-bg: #0B0E14;
+  --vsc-dropdown-bg: #141821;
+  --vsc-card-bg: #131720;
 
-  --vsc-text-primary: #CCCCCC;
-  --vsc-text-secondary: #858585;
-  --vsc-text-bright: #FFFFFF;
-  
-  --vsc-accent-blue: #007ACC;
-  --vsc-accent-hover: #0062A3;
-  --vsc-selection: #04395E;
+  --vsc-border: #1E2433;
+  --vsc-border-focus: #38BDF8;
+  --vsc-border-subtle: #262E40;
 
-  --vsc-severity-critical: #F14C4C;
-  --vsc-severity-warning: #CCA700;
-  --vsc-severity-info: #3794FF;
-  --vsc-severity-success: #89D185;
+  --vsc-text-primary: #CBD5E1;
+  --vsc-text-secondary: #64748B;
+  --vsc-text-bright: #F8FAFC;
 
-  --vsc-syntax-keyword: #569CD6;
-  --vsc-syntax-string: #CE9178;
-  --vsc-syntax-number: #B5CEA8;
+  --vsc-accent-blue: #38BDF8;
+  --vsc-accent-hover: #0EA5E9;
+  --vsc-selection: rgba(56, 189, 248, 0.18);
+
+  --vsc-severity-critical: #F43F5E;
+  --vsc-severity-warning: #F59E0B;
+  --vsc-severity-info: #38BDF8;
+  --vsc-severity-success: #10B981;
+
+  --vsc-syntax-keyword: #38BDF8;
+  --vsc-syntax-string: #F59E0B;
+  --vsc-syntax-number: #10B981;
+}
+
+* {
+  caret-color: var(--vsc-accent-blue);
+}
+
+::selection {
+  background-color: rgba(56, 189, 248, 0.22);
+  color: #F8FAFC;
 }
 
 body {
   background-color: var(--vsc-canvas);
   color: var(--vsc-text-primary);
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom VS Code Scrollbars */
+/* Refined Tactical Scrollbars */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 0px;
+  background: rgba(148, 163, 184, 0.16);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(148, 163, 184, 0.28);
 }
 
-/* React Flow Dark Modern Overrides */
+/* React Flow Carbon Obsidian Overrides */
 .react-flow__controls {
-  background-color: #252526 !important;
-  border: 1px solid #2B2B2B !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
-  border-radius: 4px !important;
+  background-color: rgba(15, 18, 25, 0.92) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+  border-radius: 8px !important;
   overflow: hidden;
 }
 
 .react-flow__controls-button {
-  background-color: #252526 !important;
-  border-bottom: 1px solid #2B2B2B !important;
-  fill: #CCCCCC !important;
-  color: #CCCCCC !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  fill: #94A3B8 !important;
+  color: #94A3B8 !important;
+  transition: background-color 150ms ease, fill 150ms ease !important;
 }
 
 .react-flow__controls-button:hover {
-  background-color: #333333 !important;
-  fill: #FFFFFF !important;
-  color: #FFFFFF !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  fill: #F8FAFC !important;
+  color: #F8FAFC !important;
 }
 
 .react-flow__minimap {
-  background-color: #181818 !important;
-  border: 1px solid #2B2B2B !important;
-  border-radius: 4px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  background-color: rgba(15, 18, 25, 0.92) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
 }
 
 .react-flow__edge-path {
-  stroke: #007ACC !important;
+  stroke: #334155 !important;
   stroke-width: 1.5 !important;
 }
 
 .react-flow__handle {
-  width: 8px !important;
-  height: 8px !important;
-  background-color: #007ACC !important;
-  border: 2px solid #1E1E1E !important;
+  width: 7px !important;
+  height: 7px !important;
+  background-color: #475569 !important;
+  border: 1.5px solid #090B10 !important;
   border-radius: 50% !important;
 }

@@ -9,22 +9,22 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles = {
   primary:
-    'bg-vsc-blue hover:bg-vsc-blueHover text-white border-transparent focus:ring-1 focus:ring-vsc-borderFocus',
+    'bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold border-transparent shadow-sm focus-visible:ring-2 focus-visible:ring-sky-400/60',
   secondary:
-    'bg-vsc-dropdown hover:bg-vsc-card border-vsc-border text-vsc-text hover:text-vsc-bright',
+    'bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] text-slate-200 hover:text-white',
   danger:
-    'bg-red-900/60 hover:bg-red-800/80 border-vsc-critical text-vsc-critical hover:text-white',
+    'bg-rose-500/15 hover:bg-rose-500/25 border-rose-500/30 text-rose-300 hover:text-rose-200',
   ghost:
-    'bg-transparent hover:bg-vsc-card text-vsc-muted hover:text-vsc-bright border-transparent',
+    'bg-transparent hover:bg-white/[0.05] text-slate-400 hover:text-slate-100 border-transparent',
   outline:
-    'bg-transparent hover:bg-vsc-card border-vsc-border text-vsc-text hover:text-vsc-bright',
+    'bg-transparent hover:bg-white/[0.05] border-white/[0.1] text-slate-300 hover:text-white',
 };
 
 const sizeStyles = {
-  xs: 'text-[10px] px-1.5 py-0.5 rounded',
-  sm: 'text-xs px-2.5 py-1 rounded',
-  md: 'text-xs px-3 py-1.5 rounded font-medium',
-  icon: 'w-7 h-7 p-0 flex items-center justify-center rounded',
+  xs: 'text-[10px] px-2 py-0.5 rounded-md',
+  sm: 'text-xs px-2.5 py-1 rounded-md',
+  md: 'text-xs px-3 py-1.5 rounded-md font-medium',
+  icon: 'w-7 h-7 p-0 flex items-center justify-center rounded-md',
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -45,7 +45,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(
-          'inline-flex items-center justify-center gap-1.5 border transition-all duration-150 select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed outline-none font-sans',
+          'inline-flex items-center justify-center gap-1.5 border transition-all duration-150 select-none cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed outline-none font-sans',
           variantStyles[variant],
           sizeStyles[size],
           className
@@ -62,4 +62,3 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
-
