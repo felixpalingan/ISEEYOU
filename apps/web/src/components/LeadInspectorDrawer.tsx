@@ -485,7 +485,7 @@ export function LeadInspectorDrawer({
                         >
                           <span className="flex items-center gap-2">
                             <Globe className="w-3.5 h-3.5 text-sky-400" />
-                            <span>Scan Handle Across 16+ Social Platforms</span>
+                            <span>Scan Handle Across 66+ Social & Tech Platforms</span>
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>

@@ -52,9 +52,9 @@ export const AVAILABLE_OSINT_MODULES: ModuleConfigItem[] = [
   },
   {
     id: 'social_presence_scanner',
-    label: 'Social Accounts (16+ Sites)',
-    shortLabel: '16+ Socials',
-    description: 'Concurrent username reconnaissance across GitHub, Reddit, Keybase, Steam, etc.',
+    label: 'Social Accounts (66+ Sites)',
+    shortLabel: '66+ Socials',
+    description: 'Deep footprint scan across 66+ Developer, Social, Security, Gaming & Creator platforms',
     modes: ['identity'],
   },
   {

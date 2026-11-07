@@ -216,6 +216,16 @@ export function buildTargetDossier(
     if (node.type === 'domain' && node.value.includes('.')) {
       domains.add(node.value.trim().toLowerCase());
     }
+    if (typeof meta.website === 'string' && meta.website.includes('.')) {
+      const cleanedSite = meta.website
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .split('/')[0];
+      if (cleanedSite && cleanedSite.includes('.')) {
+        domains.add(cleanedSite);
+      }
+    }
     if (Array.isArray(meta.domains)) {
       for (const dom of meta.domains) {
         if (typeof dom === 'string' && dom.includes('.')) domains.add(dom.trim().toLowerCase());
