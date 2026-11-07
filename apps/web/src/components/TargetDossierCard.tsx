@@ -19,6 +19,9 @@ import {
   Fingerprint,
   Layers,
   Radar,
+  Copy,
+  Check,
+  ImagePlus,
 } from 'lucide-react';
 import { TargetDossier, EntityType } from '@iseeyou/shared-types';
 
@@ -41,24 +44,42 @@ export function TargetDossierCard({
 }: TargetDossierCardProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<'dossier' | 'circle' | 'timeline'>('dossier');
+  const [selectedAvatarIdx, setSelectedAvatarIdx] = useState(0);
+  const [customPhotoUrl, setCustomPhotoUrl] = useState('');
+  const [showPhotoInput, setShowPhotoInput] = useState(false);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
 
-  const primaryAvatar = dossier.avatars[0] || null;
+  const activeAvatar =
+    customPhotoUrl.trim() ||
+    dossier.avatars[selectedAvatarIdx] ||
+    dossier.avatars[0] ||
+    null;
   const primaryName = dossier.fullNames[0] || dossier.primaryTarget;
 
-  const openReverseImageSearch = (engine: 'lens' | 'yandex' | 'bing', imageUrl: string) => {
+  const openReverseImageSearch = (
+    engine: 'lens' | 'yandex' | 'bing' | 'tineye',
+    imageUrl: string
+  ) => {
     const encoded = encodeURIComponent(imageUrl);
     const urls = {
       lens: `https://lens.google.com/uploadbyurl?url=${encoded}`,
       yandex: `https://yandex.com/images/search?rpt=imageview&url=${encoded}`,
       bing: `https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:${encoded}`,
+      tineye: `https://tineye.com/search?url=${encoded}`,
     };
     window.open(urls[engine], '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCopyText = (key: string, text: string) => {
+    navigator.clipboard?.writeText(text);
+    setCopiedItem(key);
+    setTimeout(() => setCopiedItem(null), 1500);
   };
 
   return (
     <aside
       data-testid="target-dossier-card"
-      className="w-[330px] max-h-[calc(100vh-88px)] flex flex-col bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden text-xs text-slate-200 select-none z-20 transition-all"
+      className="w-[335px] max-h-[calc(100vh-88px)] flex flex-col bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden text-xs text-slate-200 select-none z-20 transition-all"
     >
       {/* Header Bar */}
       <div className="px-3.5 py-2.5 bg-[#131720] border-b border-white/[0.07] flex items-center justify-between">
@@ -73,14 +94,28 @@ export function TargetDossierCard({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => setIsCollapsed((prev) => !prev)}
-          className="p-1 rounded-md hover:bg-white/[0.06] text-slate-400 hover:text-white transition-colors"
-          title={isCollapsed ? 'Expand Dossier' : 'Minimize Dossier'}
-        >
-          {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setShowPhotoInput((prev) => !prev)}
+            className={`p-1 rounded-md transition-colors ${
+              showPhotoInput
+                ? 'bg-sky-500/20 text-sky-300'
+                : 'hover:bg-white/[0.06] text-slate-400 hover:text-white'
+            }`}
+            title="Paste custom target photo URL for Reverse Image Search"
+          >
+            <ImagePlus className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            className="p-1 rounded-md hover:bg-white/[0.06] text-slate-400 hover:text-white transition-colors"
+            title={isCollapsed ? 'Expand Dossier' : 'Minimize Dossier'}
+          >
+            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
 
       {!isCollapsed && (
@@ -90,10 +125,10 @@ export function TargetDossierCard({
             <div className="flex items-start gap-3">
               {/* Avatar with Subtle Frame */}
               <div className="relative group flex-shrink-0">
-                {primaryAvatar ? (
+                {activeAvatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={primaryAvatar}
+                    src={activeAvatar}
                     alt={primaryName}
                     className="w-13 h-13 rounded-lg object-cover border border-white/[0.14] shadow-md bg-[#131720]"
                   />
@@ -105,14 +140,35 @@ export function TargetDossierCard({
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-slate-100 truncate">{primaryName}</div>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="text-sm font-semibold text-slate-100 truncate">{primaryName}</div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText('primary-name', primaryName)}
+                    className="p-0.5 text-slate-500 hover:text-slate-200 transition-colors flex-shrink-0"
+                    title="Copy target name/handle"
+                  >
+                    {copiedItem === 'primary-name' ? (
+                      <Check className="w-3 h-3 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                  </button>
+                </div>
                 <div className="text-[11px] text-sky-400 font-mono truncate">
                   {targetType === 'username' ? `@${dossier.primaryTarget}` : dossier.primaryTarget}
                 </div>
 
+                {/* Discovered Aliases / Full Names */}
+                {dossier.fullNames.length > 1 && (
+                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                    AKA: {dossier.fullNames.slice(1).join(', ')}
+                  </div>
+                )}
+
                 {/* Location & Affiliation Badges */}
                 <div className="mt-1.5 flex flex-wrap gap-1">
-                  {dossier.locations.slice(0, 1).map((loc) => (
+                  {dossier.locations.slice(0, 2).map((loc) => (
                     <span
                       key={loc}
                       className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.07]"
@@ -121,7 +177,7 @@ export function TargetDossierCard({
                       <span className="truncate max-w-[115px]">{loc}</span>
                     </span>
                   ))}
-                  {dossier.organizations.slice(0, 1).map((org) => (
+                  {dossier.organizations.slice(0, 2).map((org) => (
                     <span
                       key={org}
                       className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.07]"
@@ -134,17 +190,75 @@ export function TargetDossierCard({
               </div>
             </div>
 
-            {/* 1-Click Reverse Image Search Bar (Quiet Unified Buttons) */}
-            {primaryAvatar && (
+            {/* Multi-Avatar Switcher (if multiple avatars discovered across platforms) */}
+            {dossier.avatars.length > 1 && !customPhotoUrl && (
+              <div className="mt-2.5 flex items-center gap-1.5">
+                <span className="text-[9px] font-mono text-slate-500">Avatars:</span>
+                {dossier.avatars.slice(0, 5).map((av, idx) => (
+                  <button
+                    key={av}
+                    type="button"
+                    onClick={() => setSelectedAvatarIdx(idx)}
+                    className={`w-6 h-6 rounded overflow-hidden border transition-all ${
+                      selectedAvatarIdx === idx
+                        ? 'border-sky-400 ring-1 ring-sky-400/40'
+                        : 'border-white/[0.1] opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={av} alt={`Avatar ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Optional Custom Photo URL Input for Reverse Image Search */}
+            {showPhotoInput && (
+              <div className="mt-2.5 pt-2.5 border-t border-white/[0.06] space-y-1.5">
+                <label className="block text-[10px] font-mono text-slate-400">
+                  Paste Target Photo URL (IG / LinkedIn / Avatar):
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="url"
+                    value={customPhotoUrl}
+                    onChange={(e) => setCustomPhotoUrl(e.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                    className="flex-1 px-2 py-1 rounded bg-[#090B10] border border-white/[0.1] text-[11px] font-mono text-slate-100 outline-none focus:border-sky-400/60"
+                  />
+                  {customPhotoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomPhotoUrl('')}
+                      className="px-2 py-1 rounded bg-white/[0.05] text-[10px] font-mono text-slate-400 hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 1-Click Reverse Image Search Bar */}
+            {activeAvatar && (
               <div className="mt-3 pt-2.5 border-t border-white/[0.06]">
-                <div className="text-[10px] font-mono text-slate-400 mb-1.5 flex items-center gap-1.5">
-                  <Camera className="w-3 h-3 text-sky-400" />
-                  <span>Reverse Avatar Lookup:</span>
+                <div className="text-[10px] font-mono text-slate-400 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-3 h-3 text-sky-400" />
+                    <span>Reverse Avatar Lookup:</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openReverseImageSearch('tineye', activeAvatar)}
+                    className="text-[9px] text-sky-400 hover:underline"
+                  >
+                    TinEye ↗
+                  </button>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
-                    onClick={() => openReverseImageSearch('lens', primaryAvatar)}
+                    onClick={() => openReverseImageSearch('lens', activeAvatar)}
                     className="px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-colors"
                     title="Find other accounts using this photo via Google Lens"
                   >
@@ -153,7 +267,7 @@ export function TargetDossierCard({
                   </button>
                   <button
                     type="button"
-                    onClick={() => openReverseImageSearch('yandex', primaryAvatar)}
+                    onClick={() => openReverseImageSearch('yandex', activeAvatar)}
                     className="px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-colors"
                     title="Face & photo matching via Yandex Images"
                   >
@@ -162,7 +276,7 @@ export function TargetDossierCard({
                   </button>
                   <button
                     type="button"
-                    onClick={() => openReverseImageSearch('bing', primaryAvatar)}
+                    onClick={() => openReverseImageSearch('bing', activeAvatar)}
                     className="px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-colors"
                     title="Visual search via Bing Images"
                   >
@@ -260,20 +374,34 @@ export function TargetDossierCard({
                           <span className="font-mono text-[11px] text-amber-200/90 truncate">
                             {em}
                           </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onPivotLead(em, 'email', [
-                                'email_correlator',
-                                'breach_credential_hunter',
-                              ])
-                            }
-                            className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-200 text-[10px] font-mono font-medium flex items-center gap-1 flex-shrink-0 transition-colors"
-                            title="Trace this email across Gravatar, PGP Keyservers, GitHub & HIBP Breaches"
-                          >
-                            <span>Trace</span>
-                            <ArrowRight className="w-2.5 h-2.5" />
-                          </button>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(em, em)}
+                              className="p-1 rounded hover:bg-white/[0.06] text-slate-400 hover:text-white"
+                              title="Copy email"
+                            >
+                              {copiedItem === em ? (
+                                <Check className="w-3 h-3 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onPivotLead(em, 'email', [
+                                  'email_correlator',
+                                  'breach_credential_hunter',
+                                ])
+                              }
+                              className="px-2 py-0.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-200 text-[10px] font-mono font-medium flex items-center gap-1 transition-colors"
+                              title="Trace this email across Gravatar, PGP Keyservers, GitHub & HIBP Breaches"
+                            >
+                              <span>Trace</span>
+                              <ArrowRight className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
