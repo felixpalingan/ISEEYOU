@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from engine.models.entities import EntityType, SeverityLevel
+from engine.core.name_intelligence import is_full_name_input, parse_full_name
 from engine.providers.social_scanner import (
     SocialPresenceScanner,
     SOCIAL_PLATFORMS,
@@ -250,6 +251,21 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(registered)
         user_providers = provider_registry.get_providers_for_type(EntityType.USERNAME)
         self.assertIn(registered, user_providers)
+
+    def test_full_name_validation_and_handle_permutation(self):
+        full_name = "ALMAKIUS FELIX BARIQ HEKOPUNG"
+        self.assertTrue(is_full_name_input(full_name))
+        self.assertTrue(self.scanner.validate_input(full_name, EntityType.USERNAME))
+
+        parsed = parse_full_name(full_name)
+        self.assertTrue(parsed["is_full_name"])
+        self.assertEqual(parsed["formatted_name"], "Almakius Felix Bariq Hekopung")
+        self.assertEqual(parsed["surname"], "Hekopung")
+        self.assertIn("bariqhkp", parsed["candidate_handles"])
+        self.assertEqual(
+            self.scanner._extract_username(full_name, EntityType.USERNAME),
+            "bariqhkp",
+        )
 
 
 if __name__ == "__main__":

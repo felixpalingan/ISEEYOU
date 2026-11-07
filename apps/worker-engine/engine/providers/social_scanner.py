@@ -20,6 +20,7 @@ import httpx
 import logging
 
 from engine.core.base_provider import BaseOSINTProvider, provider_registry
+from engine.core.name_intelligence import is_full_name_input, parse_full_name
 from engine.models.entities import (
     EntityType,
     SeverityLevel,
@@ -58,10 +59,15 @@ class SocialPresenceScanner(BaseOSINTProvider):
         self.request_timeout = request_timeout
 
     def _extract_username(self, target: str, target_type: EntityType) -> str:
-        """Extracts candidate handle from email address or username target"""
+        """Extracts candidate handle from email address, full human name, or username target"""
         if target_type == EntityType.EMAIL:
             return target.split("@")[0].strip().lower()
-        return target.strip().lstrip("@").lower()
+        clean = target.strip().lstrip("@")
+        if is_full_name_input(clean):
+            parsed = parse_full_name(clean)
+            if parsed.get("candidate_handles"):
+                return parsed["candidate_handles"][0]
+        return clean.lower()
 
     def _validate_username_regex(self, platform: Dict[str, Any], username: str) -> bool:
         """

@@ -22,6 +22,7 @@ import re
 import html
 
 from engine.core.base_provider import BaseOSINTProvider, provider_registry
+from engine.core.name_intelligence import is_full_name_input, parse_full_name
 from engine.models.entities import (
     EntityType,
     SeverityLevel,
@@ -371,38 +372,253 @@ class DeepProfileExtractor(BaseOSINTProvider):
             logger.debug(f"HackerNews lookup failed for {username}: {e}")
             return None
 
+    async def _search_github_by_full_name(
+        self, name_info: Dict[str, Any], client: httpx.AsyncClient
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Searches GitHub Users API by Full Name variations and derived candidate handles
+        (e.g. 'ALMAKIUS FELIX BARIQ HEKOPUNG' -> searches 'Bariq Hekopung', 'Almakius',
+        and probes derived handles like 'bariqhkp'), then runs full commit/event extraction.
+        """
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "ISEEYOU-OSINT-Workbench/2.0",
+        }
+        candidate_logins: List[str] = []
+
+        # 1. Search GitHub Users API by name variations
+        for query_name in name_info.get("name_variations", [])[:3]:
+            try:
+                resp = await client.get(
+                    f"{self.GITHUB_API}/search/users",
+                    params={"q": f'"{query_name}" in:name', "per_page": 3},
+                    headers=headers,
+                    timeout=5.0,
+                )
+                if resp.status_code == 200:
+                    items = resp.json().get("items") or []
+                    for item in items:
+                        login = (item.get("login") or "").strip()
+                        if login and login.lower() not in candidate_logins:
+                            candidate_logins.append(login.lower())
+            except Exception as e:
+                logger.debug(f"GitHub name search failed for '{query_name}': {e}")
+
+        # 2. Also include top derived handles (e.g. 'bariqhkp', 'felixbariq', 'almakius')
+        for h in name_info.get("candidate_handles", [])[:4]:
+            if h.lower() not in candidate_logins:
+                candidate_logins.append(h.lower())
+
+        # Probe candidates until we find an active GitHub profile
+        for handle in candidate_logins[:5]:
+            intel = await self._fetch_github_deep_intel(handle, client)
+            if intel:
+                return intel
+        return None
+
+    async def _fetch_academic_and_career_intel(
+        self, full_name: str, client: httpx.AsyncClient
+    ) -> Dict[str, Any]:
+        """
+        Queries OpenAlex (250M+ global & Indonesian academic works/authors),
+        CrossRef (DOI registry), and Wikidata to uncover:
+        - Universities / Campuses / Research Affiliations (last_known_institutions)
+        - Published Theses / Skripsi / Journal Papers & publication years
+        - Academic Co-Authors (supervisors / dosen pembimbing / peers)
+        - Public Roles / Jabatan / Descriptions from Wikidata
+        """
+        affiliations: List[str] = []
+        publications: List[Dict[str, str]] = []
+        coauthors: List[str] = []
+        roles_and_titles: List[str] = []
+        orcid_id: Optional[str] = None
+
+        name_info = parse_full_name(full_name)
+        search_queries = name_info.get("name_variations", [full_name])[:2]
+
+        headers = {"User-Agent": "ISEEYOU-OSINT-Workbench/2.0 (mailto:security@iseeyou.local)"}
+
+        # 1. OpenAlex Authors API
+        for q_name in search_queries:
+            try:
+                oa_resp = await client.get(
+                    "https://api.openalex.org/authors",
+                    params={"search": q_name, "per_page": 3},
+                    headers=headers,
+                    timeout=6.0,
+                )
+                if oa_resp.status_code == 200:
+                    results = oa_resp.json().get("results") or []
+                    for author in results:
+                        disp_name = (author.get("display_name") or "").strip()
+                        # Ensure at least one core token matches
+                        if not any(tok in disp_name.lower() for tok in name_info["tokens"]):
+                            continue
+                        if author.get("orcid") and not orcid_id:
+                            orcid_id = author["orcid"]
+                        insts = author.get("last_known_institutions") or []
+                        if not insts and author.get("affiliations"):
+                            insts = [
+                                (a.get("institution") or {})
+                                for a in author.get("affiliations", [])
+                            ]
+                        for inst in insts:
+                            inst_name = (inst.get("display_name") or "").strip()
+                            if inst_name and inst_name not in affiliations:
+                                affiliations.append(inst_name)
+                    if affiliations:
+                        break
+            except Exception as e:
+                logger.debug(f"OpenAlex author lookup failed for '{q_name}': {e}")
+
+        # 2. CrossRef Works API (Journal & Conference Papers, Affiliations, Co-Authors)
+        for q_name in search_queries[:2]:
+            try:
+                cr_resp = await client.get(
+                    "https://api.crossref.org/works",
+                    params={"query.author": q_name, "rows": 4},
+                    headers=headers,
+                    timeout=6.0,
+                )
+                if cr_resp.status_code == 200:
+                    items = (cr_resp.json().get("message") or {}).get("items") or []
+                    surname_lower = (name_info.get("surname") or name_info["tokens"][-1]).lower()
+                    for item in items:
+                        authors = item.get("author") or []
+                        matched_target = False
+                        paper_coauthors: List[str] = []
+                        for au in authors:
+                            given = (au.get("given") or "").strip()
+                            family = (au.get("family") or "").strip()
+                            full_au = f"{given} {family}".strip()
+                            if surname_lower in full_au.lower():
+                                matched_target = True
+                                for aff in au.get("affiliation") or []:
+                                    aff_name = (aff.get("name") or "").strip()
+                                    if aff_name and aff_name not in affiliations:
+                                        affiliations.append(aff_name)
+                            elif full_au:
+                                paper_coauthors.append(full_au)
+
+                        if matched_target:
+                            titles = item.get("title") or []
+                            title_str = titles[0].strip() if titles else "Academic Publication"
+                            pub_year = ""
+                            issued = (item.get("issued") or {}).get("date-parts") or [[]]
+                            if issued and issued[0]:
+                                pub_year = str(issued[0][0])
+                            url_str = item.get("URL") or ""
+                            publications.append(
+                                {
+                                    "title": title_str[:120],
+                                    "year": pub_year or "2024",
+                                    "url": url_str,
+                                }
+                            )
+                            for ca in paper_coauthors[:4]:
+                                if ca not in coauthors:
+                                    coauthors.append(ca)
+                    if publications:
+                        break
+            except Exception as e:
+                logger.debug(f"CrossRef lookup failed for '{q_name}': {e}")
+
+        # 3. Wikidata Public Entity / Jabatan Lookup
+        try:
+            wd_resp = await client.get(
+                "https://www.wikidata.org/w/api.php",
+                params={
+                    "action": "wbsearchentities",
+                    "search": name_info["formatted_name"],
+                    "language": "id",
+                    "format": "json",
+                    "limit": 3,
+                },
+                headers=headers,
+                timeout=5.0,
+            )
+            if wd_resp.status_code == 200:
+                search_items = wd_resp.json().get("search") or []
+                for s_item in search_items:
+                    desc = (s_item.get("description") or "").strip()
+                    label = (s_item.get("label") or "").strip()
+                    if desc and label:
+                        roles_and_titles.append(f"{label}: {desc}")
+        except Exception as e:
+            logger.debug(f"Wikidata lookup failed for '{full_name}': {e}")
+
+        return {
+            "affiliations": affiliations[:6],
+            "publications": publications[:5],
+            "coauthors": coauthors[:6],
+            "roles_and_titles": roles_and_titles[:4],
+            "orcid_id": orcid_id,
+        }
+
     async def execute_recon(
         self, target: str, target_type: EntityType, session_id: str
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Executes deep profile lead extraction across GitHub, Keybase, Reddit, and HackerNews.
-        Emits discovered Full Names, Avatars, Bios, Commit Emails, Locations, Organizations,
-        and Personal Websites as connected graph leads.
+        Executes deep profile lead extraction across GitHub, Keybase, Reddit, HackerNews,
+        OpenAlex, CrossRef, and Wikidata. Supports both single-token handles ('bariqhkp')
+        and Full Real Names ('ALMAKIUS FELIX BARIQ HEKOPUNG').
         """
-        username = self._normalize_handle(target, target_type)
-        root_node_id = f"{target_type.value}:{target.strip()}"
+        raw_target = target.strip()
+        full_name_mode = is_full_name_input(raw_target)
+        name_info = parse_full_name(raw_target) if full_name_mode else None
 
-        yield self.create_log(
-            TelemetryLevel.INFO,
-            f"Launching Deep Profile & Commit Lead Extractor for handle '{username}'...",
+        username = (
+            name_info["candidate_handles"][0]
+            if (full_name_mode and name_info and name_info.get("candidate_handles"))
+            else self._normalize_handle(raw_target, target_type)
         )
+        root_node_id = f"{target_type.value}:{raw_target}"
+
+        if full_name_mode and name_info:
+            yield self.create_log(
+                TelemetryLevel.INFO,
+                f"Full-Name Identity Mode active for '{name_info['formatted_name']}' "
+                f"(Family Surname: '{name_info['surname']}', Top Candidate Handles: {', '.join(name_info['candidate_handles'][:5])})...",
+            )
+        else:
+            yield self.create_log(
+                TelemetryLevel.INFO,
+                f"Launching Deep Profile & Commit Lead Extractor for handle '{username}'...",
+            )
 
         async with self.get_http_client() as client:
-            gh_res, kb_res, rd_res, hn_res = await asyncio.gather(
-                self._fetch_github_deep_intel(username, client),
-                self._fetch_keybase_intel(username, client),
-                self._fetch_reddit_intel(username, client),
-                self._fetch_hn_intel(username, client),
-                return_exceptions=True,
-            )
+            if full_name_mode and name_info:
+                gh_res, kb_res, rd_res, hn_res, acad_res = await asyncio.gather(
+                    self._search_github_by_full_name(name_info, client),
+                    self._fetch_keybase_intel(username, client),
+                    self._fetch_reddit_intel(username, client),
+                    self._fetch_hn_intel(username, client),
+                    self._fetch_academic_and_career_intel(name_info["formatted_name"], client),
+                    return_exceptions=True,
+                )
+            else:
+                gh_res, kb_res, rd_res, hn_res = await asyncio.gather(
+                    self._fetch_github_deep_intel(username, client),
+                    self._fetch_keybase_intel(username, client),
+                    self._fetch_reddit_intel(username, client),
+                    self._fetch_hn_intel(username, client),
+                    return_exceptions=True,
+                )
+                acad_res = None
 
         gh = gh_res if isinstance(gh_res, dict) else None
         kb = kb_res if isinstance(kb_res, dict) else None
         rd = rd_res if isinstance(rd_res, dict) else None
         hn = hn_res if isinstance(hn_res, dict) else None
+        acad = acad_res if isinstance(acad_res, dict) else None
+
+        if gh and gh.get("username"):
+            username = gh["username"]
 
         discovered_emails: Set[str] = set()
         discovered_names: List[str] = []
+        if full_name_mode and name_info:
+            discovered_names.append(name_info["formatted_name"])
         discovered_locations: List[str] = []
         discovered_orgs: List[str] = []
         discovered_domains: Set[str] = set()
@@ -644,6 +860,98 @@ class DeepProfileExtractor(BaseOSINTProvider):
                 target=hn_node_id,
                 relation="deep_profile",
             )
+
+        # Aggregate from Academic, University & Career Intelligence (OpenAlex / CrossRef / Wikidata)
+        if acad:
+            for aff in acad.get("affiliations", []):
+                if aff and aff not in discovered_orgs:
+                    discovered_orgs.append(aff)
+            for role_desc in acad.get("roles_and_titles", []):
+                discovered_bios.append({"platform": "Wikidata / Public Record", "text": role_desc})
+            for pub in acad.get("publications", []):
+                pub_year = pub.get("year") or "2024"
+                pub_title = pub.get("title") or "Academic Publication"
+                timeline_events.append(
+                    {
+                        "year": pub_year,
+                        "date": pub_year,
+                        "event": f"Published Paper/Thesis: {pub_title}",
+                        "platform": "CrossRef / OpenAlex",
+                    }
+                )
+                doc_node_id = f"doc:{re.sub(r'[^a-z0-9_]', '_', pub_title.lower()[:32])}"
+                yield self.create_node(
+                    node_id=doc_node_id,
+                    entity_type=EntityType.DOCUMENT,
+                    value=pub.get("url") or pub_title,
+                    label=f"📄 {pub_title[:42]}...",
+                    severity=SeverityLevel.INFO,
+                    parent_id=root_node_id,
+                    metadata={
+                        "title": pub_title,
+                        "year": pub_year,
+                        "profile_url": pub.get("url"),
+                        "source": "Academic / Thesis Index (OpenAlex & CrossRef)",
+                    },
+                )
+                yield self.create_edge(
+                    edge_id=f"edge:{root_node_id}->{doc_node_id}",
+                    source=root_node_id,
+                    target=doc_node_id,
+                    relation="authored_publication",
+                )
+
+        # Full-Name Identity Mode: Emit Family Surname/Clan Lead & Derived Handle Candidates
+        if full_name_mode and name_info:
+            surname = name_info.get("surname")
+            if surname and len(surname) >= 3:
+                clan_node_id = f"clan:{surname.lower()}"
+                yield self.create_node(
+                    node_id=clan_node_id,
+                    entity_type=EntityType.ORGANIZATION,
+                    value=surname,
+                    label=f"👨‍👩‍👧‍👦 Family / Clan: {surname}",
+                    severity=SeverityLevel.INFO,
+                    parent_id=root_node_id,
+                    metadata={
+                        "organization": f"Family Surname: {surname}",
+                        "surname": surname,
+                        "full_name": name_info["formatted_name"],
+                        "category": "Family / Clan Lineage",
+                        "source": "Surname & Lineage Extractor",
+                    },
+                )
+                yield self.create_edge(
+                    edge_id=f"edge:{root_node_id}->{clan_node_id}",
+                    source=root_node_id,
+                    target=clan_node_id,
+                    relation="family_lineage",
+                )
+
+            # Emit top 3 derived candidate handles as actionable username leads
+            for cand_handle in name_info.get("candidate_handles", [])[:3]:
+                cand_node_id = f"candidate:handle:{cand_handle}"
+                yield self.create_node(
+                    node_id=cand_node_id,
+                    entity_type=EntityType.USERNAME,
+                    value=cand_handle,
+                    label=f"🎯 Candidate Handle: @{cand_handle}",
+                    severity=SeverityLevel.INFO,
+                    parent_id=root_node_id,
+                    metadata={
+                        "handle": cand_handle,
+                        "full_name": name_info["formatted_name"],
+                        "platform": "Derived Handle",
+                        "category": "Predicted Handle",
+                        "source": "Smart Name-to-Handle Permutation",
+                    },
+                )
+                yield self.create_edge(
+                    edge_id=f"edge:{root_node_id}->{cand_node_id}",
+                    source=root_node_id,
+                    target=cand_node_id,
+                    relation="derived_handle",
+                )
 
         # ------------------------------------------------------------------
         # Emit Chained Lead Nodes: Extracted Emails, Organizations, Locations, Domains
