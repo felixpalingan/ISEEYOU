@@ -18,10 +18,12 @@ import {
   Play,
   Users,
   Mail,
-  UserCheck,
   Globe,
   ShieldAlert,
   Camera,
+  Crosshair,
+  Radar,
+  Fingerprint,
 } from 'lucide-react';
 import {
   EntityNode,
@@ -72,7 +74,6 @@ export function LeadInspectorDrawer({
   onClose,
   selectedNode,
   target,
-  targetType,
   dossier,
   isScanning,
   onRunModuleOnNode,
@@ -131,31 +132,31 @@ export function LeadInspectorDrawer({
     const h = activeHandle;
     const nm = activeFullName;
     const org = activeOrg;
-    const list = [
+    return [
       {
         id: 'ig-bypass',
-        category: '🔓 Private Account Comment & Tag Bypass',
+        category: 'Private Account Comment & Tag Bypass',
         title: 'Instagram Private Account Public Comments & Mentions',
         query: `site:instagram.com "${h}" -inurl:instagram.com/${h}`,
         desc: 'Extracts public posts, reels, and comment threads where this private IG handle commented or was tagged by friends.',
       },
       {
         id: 'tiktok-bypass',
-        category: '🔓 Private Account Comment & Tag Bypass',
+        category: 'Private Account Comment & Tag Bypass',
         title: 'TikTok Public Replies, Duets & Mentions',
         query: `site:tiktok.com "${h}" -inurl:"@${h}"`,
         desc: 'Finds public TikTok comment sections and video captions mentioning the handle.',
       },
       {
         id: 'x-bypass',
-        category: '🔓 Private Account Comment & Tag Bypass',
+        category: 'Private Account Comment & Tag Bypass',
         title: 'X / Twitter External Replies & Thread Mentions',
         query: `(site:x.com OR site:twitter.com) "${h}" -inurl:${h}/status`,
         desc: 'Uncovers replies from public accounts talking to or tagging a protected/private X account.',
       },
       {
         id: 'linkedin-pivot',
-        category: '🧭 Cross-Platform Identity Pivot',
+        category: 'Cross-Platform Identity Pivot',
         title: 'LinkedIn Career & Education Match',
         query: nm
           ? `site:linkedin.com/in/ "${nm}"${org ? ` "${org}"` : ''}`
@@ -164,7 +165,7 @@ export function LeadInspectorDrawer({
       },
       {
         id: 'doc-roster-leak',
-        category: '📄 Leaked Documents & University/Company Rosters',
+        category: 'Leaked Documents & Rosters',
         title: 'Indexed PDF / XLSX / DOCX Rosters, CVs & Directories',
         query: nm
           ? `("${nm}" OR "${h}") (filetype:pdf OR filetype:xlsx OR filetype:docx)`
@@ -173,13 +174,12 @@ export function LeadInspectorDrawer({
       },
       {
         id: 'paste-code-leak',
-        category: '📄 Leaked Documents & University/Company Rosters',
+        category: 'Public Archives & Forums',
         title: 'Public Pastebins, Telegram & Forum Mentions',
         query: `"${h}" (site:pastebin.com OR site:t.me OR site:reddit.com OR site:medium.com)`,
         desc: 'Searches public Telegram channels, Reddit discussions, and paste sites for the target handle.',
       },
     ];
-    return list;
   }, [activeHandle, activeFullName, activeOrg]);
 
   if (!isOpen) return null;
@@ -213,64 +213,68 @@ export function LeadInspectorDrawer({
   return (
     <aside
       data-testid="lead-inspector-drawer"
-      className="w-[380px] max-h-[calc(100vh-88px)] flex flex-col bg-[#111318]/95 backdrop-blur-xl border border-slate-800/90 rounded-xl shadow-2xl overflow-hidden text-xs text-slate-200 z-20"
+      className="w-[380px] max-h-[calc(100vh-88px)] flex flex-col bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden text-xs text-slate-200 z-20"
     >
-      {/* Top Navigation Tabs */}
-      <div className="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-1 font-mono text-[10px]">
+      {/* Top Navigation Segmented Bar */}
+      <div className="px-3 py-2 bg-[#131720] border-b border-white/[0.07] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 font-mono text-[10px] bg-[#090B10] p-0.5 rounded-lg border border-white/[0.06] flex-1">
           <button
             type="button"
             onClick={() => onTabChange('node')}
-            className={`px-2 py-1 rounded font-bold transition-colors ${
+            className={`flex-1 py-1 px-1.5 rounded-md font-medium flex items-center justify-center gap-1 transition-all ${
               activeTab === 'node'
-                ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/50'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white/[0.09] text-white border border-white/[0.08] shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
             }`}
           >
-            🔎 Lead
+            <Crosshair className="w-3 h-3 text-sky-400" />
+            <span>Lead</span>
           </button>
           <button
             type="button"
             onClick={() => onTabChange('dorks')}
             data-testid="tab-dork-matrix"
-            className={`px-2 py-1 rounded font-bold transition-colors ${
+            className={`flex-1 py-1 px-1.5 rounded-md font-medium flex items-center justify-center gap-1 transition-all ${
               activeTab === 'dorks'
-                ? 'bg-purple-600/30 text-purple-200 border border-purple-500/50'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white/[0.09] text-white border border-white/[0.08] shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
             }`}
           >
-            🕵️ Dork Matrix
+            <Radar className="w-3 h-3 text-sky-400" />
+            <span>Dork Matrix</span>
           </button>
           <button
             type="button"
             onClick={() => onTabChange('ai')}
             data-testid="tab-ai-detective"
-            className={`px-2 py-1 rounded font-bold transition-colors ${
+            className={`flex-1 py-1 px-1.5 rounded-md font-medium flex items-center justify-center gap-1 transition-all ${
               activeTab === 'ai'
-                ? 'bg-emerald-600/30 text-emerald-200 border border-emerald-500/50'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white/[0.09] text-white border border-white/[0.08] shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
             }`}
           >
-            🤖 AI Detective
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            <span>AI</span>
           </button>
           <button
             type="button"
             onClick={() => onTabChange('pin')}
             data-testid="tab-pin-clue"
-            className={`px-2 py-1 rounded font-bold transition-colors ${
+            className={`flex-1 py-1 px-1.5 rounded-md font-medium flex items-center justify-center gap-1 transition-all ${
               activeTab === 'pin'
-                ? 'bg-amber-600/30 text-amber-200 border border-amber-500/50'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-white/[0.09] text-white border border-white/[0.08] shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
             }`}
           >
-            📌 Pin Clue
+            <Pin className="w-3 h-3 text-amber-400" />
+            <span>Pin</span>
           </button>
         </div>
 
         <button
           type="button"
           onClick={onClose}
-          className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+          className="p-1 rounded-md hover:bg-white/[0.06] text-slate-400 hover:text-white transition-colors"
           title="Close Inspector"
         >
           <X className="w-4 h-4" />
@@ -278,35 +282,35 @@ export function LeadInspectorDrawer({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-3.5 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5">
         {/* TAB 1: NODE LEAD INSPECTOR & STICKY NOTES */}
         {activeTab === 'node' && (
           <>
             {selectedNode ? (
               <div className="space-y-3.5">
                 {/* Node Identity Header */}
-                <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2.5">
                   <div className="flex items-start gap-3">
                     {selectedAvatar && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={selectedAvatar}
                         alt={selectedNode.label}
-                        className="w-12 h-12 rounded-xl object-cover border border-indigo-500/40 flex-shrink-0"
+                        className="w-11 h-11 rounded-lg object-cover border border-white/[0.12] flex-shrink-0"
                       />
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/50 font-bold">
+                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/25 font-medium">
                           {selectedNode.type}
                         </span>
                         {typeof selectedNode.metadata?.platform === 'string' && (
-                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.05] text-slate-300 border border-white/[0.07]">
                             {selectedNode.metadata.platform}
                           </span>
                         )}
                       </div>
-                      <div className="text-sm font-bold text-white mt-1 truncate">
+                      <div className="text-sm font-semibold text-slate-100 mt-1 truncate">
                         {selectedNode.label}
                       </div>
                       <div className="text-[11px] font-mono text-slate-400 break-all">
@@ -320,7 +324,7 @@ export function LeadInspectorDrawer({
                     <button
                       type="button"
                       onClick={() => copyText('node-val', selectedNode.value)}
-                      className="flex-1 py-1.5 px-2.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      className="flex-1 py-1.5 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 font-mono text-[10px] font-medium flex items-center justify-center gap-1.5 transition-colors"
                     >
                       {copiedKey === 'node-val' ? (
                         <>
@@ -329,7 +333,7 @@ export function LeadInspectorDrawer({
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3 h-3" />
+                          <Copy className="w-3 h-3 text-slate-400" />
                           <span>Copy Value</span>
                         </>
                       )}
@@ -339,18 +343,18 @@ export function LeadInspectorDrawer({
                         href={selectedProfileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 py-1.5 px-2.5 rounded bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 font-mono text-[10px] font-bold flex items-center justify-center gap-1.5 transition-colors"
+                        className="flex-1 py-1.5 px-2.5 rounded-md bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-200 font-mono text-[10px] font-medium flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <ExternalLink className="w-3 h-3" />
-                        <span>Open Profile ↗</span>
+                        <span>Open Profile</span>
                       </a>
                     )}
                   </div>
 
                   {/* Reverse Image Search if node has an avatar */}
                   {selectedAvatar && (
-                    <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-1.5">
-                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                    <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-1.5">
+                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
                         <Camera className="w-3 h-3 text-sky-400" />
                         Reverse Photo:
                       </span>
@@ -359,7 +363,7 @@ export function LeadInspectorDrawer({
                           href={`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(selectedAvatar)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2 py-0.5 rounded bg-sky-950/70 border border-sky-700/50 text-sky-200 text-[10px] font-mono hover:bg-sky-900"
+                          className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-slate-200 text-[10px] font-mono hover:bg-white/[0.08]"
                         >
                           Lens ↗
                         </a>
@@ -367,7 +371,7 @@ export function LeadInspectorDrawer({
                           href={`https://yandex.com/images/search?rpt=imageview&url=${encodeURIComponent(selectedAvatar)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2 py-0.5 rounded bg-amber-950/70 border border-amber-700/50 text-amber-200 text-[10px] font-mono hover:bg-amber-900"
+                          className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] text-slate-200 text-[10px] font-mono hover:bg-white/[0.08]"
                         >
                           Yandex ↗
                         </a>
@@ -377,10 +381,10 @@ export function LeadInspectorDrawer({
                 </div>
 
                 {/* 1-Click Lead-Chaining Actions on Selected Node */}
-                <div className="p-3 rounded-xl bg-indigo-950/20 border border-indigo-500/30 space-y-2">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300 font-bold flex items-center gap-1.5">
-                    <Play className="w-3 h-3" />
-                    <span>Chain Next OSINT Step From This Lead</span>
+                <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
+                    <Play className="w-3 h-3 text-sky-400" />
+                    <span>Chain Next OSINT Step</span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-1.5">
@@ -392,19 +396,25 @@ export function LeadInspectorDrawer({
                           onClick={() =>
                             onRunModuleOnNode(selectedNode, ['deep_profile_extractor'])
                           }
-                          className="w-full py-1.5 px-2.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-600/50 text-indigo-200 font-mono text-[11px] font-semibold flex items-center justify-between disabled:opacity-50"
+                          className="w-full py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-mono text-[11px] font-medium flex items-center justify-between transition-colors disabled:opacity-50"
                         >
-                          <span>🧬 Extract Deep Profile, Bio & Commit Emails</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span className="flex items-center gap-2">
+                            <Fingerprint className="w-3.5 h-3.5 text-sky-400" />
+                            <span>Extract Deep Profile & Commit Emails</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         <button
                           type="button"
                           disabled={isScanning}
                           onClick={() => onRunModuleOnNode(selectedNode, ['connection_mapper'])}
-                          className="w-full py-1.5 px-2.5 rounded bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-600/50 text-emerald-200 font-mono text-[11px] font-semibold flex items-center justify-between disabled:opacity-50"
+                          className="w-full py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-mono text-[11px] font-medium flex items-center justify-between transition-colors disabled:opacity-50"
                         >
-                          <span>👥 Map Mutual Circle (&ldquo;Dia kenal siapa aja&rdquo;)</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span className="flex items-center gap-2">
+                            <Users className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Map Mutual Circle & Collaborators</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         <button
                           type="button"
@@ -412,10 +422,13 @@ export function LeadInspectorDrawer({
                           onClick={() =>
                             onRunModuleOnNode(selectedNode, ['social_presence_scanner'])
                           }
-                          className="w-full py-1.5 px-2.5 rounded bg-purple-950/70 hover:bg-purple-900/80 border border-purple-600/50 text-purple-200 font-mono text-[11px] font-semibold flex items-center justify-between disabled:opacity-50"
+                          className="w-full py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-mono text-[11px] font-medium flex items-center justify-between transition-colors disabled:opacity-50"
                         >
-                          <span>🌐 Scan Handle Across 16+ Social Platforms</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span className="flex items-center gap-2">
+                            <Globe className="w-3.5 h-3.5 text-sky-400" />
+                            <span>Scan Handle Across 16+ Social Platforms</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                       </>
                     )}
@@ -426,10 +439,13 @@ export function LeadInspectorDrawer({
                           type="button"
                           disabled={isScanning}
                           onClick={() => onRunModuleOnNode(selectedNode, ['email_correlator'])}
-                          className="w-full py-1.5 px-2.5 rounded bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-600/50 text-indigo-200 font-mono text-[11px] font-semibold flex items-center justify-between disabled:opacity-50"
+                          className="w-full py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-mono text-[11px] font-medium flex items-center justify-between transition-colors disabled:opacity-50"
                         >
-                          <span>🪪 Lookup Gravatar, OpenPGP Key & GitHub Account</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span className="flex items-center gap-2">
+                            <Mail className="w-3.5 h-3.5 text-amber-400" />
+                            <span>Lookup Gravatar, OpenPGP & GitHub</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         <button
                           type="button"
@@ -437,47 +453,54 @@ export function LeadInspectorDrawer({
                           onClick={() =>
                             onRunModuleOnNode(selectedNode, ['breach_credential_hunter'])
                           }
-                          className="w-full py-1.5 px-2.5 rounded bg-amber-950/70 hover:bg-amber-900/80 border border-amber-600/50 text-amber-200 font-mono text-[11px] font-semibold flex items-center justify-between disabled:opacity-50"
+                          className="w-full py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-mono text-[11px] font-medium flex items-center justify-between transition-colors disabled:opacity-50"
                         >
-                          <span>🚨 Check Email in Data Breaches (k-Anonymity)</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
+                          <span className="flex items-center gap-2">
+                            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Check Email in Data Breaches</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                       </>
                     )}
 
                     {(selectedNode.type === 'domain' || selectedNode.type === 'subdomain') && (
-                      <>
-                        <button
-                          type="button"
-                          disabled={isScanning}
-                          onClick={() =>
-                            onRunModuleOnNode(selectedNode, [
-                              'subdomain_dns_resolver',
-                              'ip_threat_intel',
-                            ])
-                          }
-                          className="w-full py-1.5 px-2.5 rounded bg-sky-950/70 hover:bg-sky-900/80 border border-sky-600/50 text-sky-200 font-mono text-[11px] font-semibold flex items-center justify-between disabled:opacity-50"
-                        >
-                          <span>🌐 Enumerate Subdomains, DNS & Origin IPs</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        disabled={isScanning}
+                        onClick={() =>
+                          onRunModuleOnNode(selectedNode, [
+                            'subdomain_dns_resolver',
+                            'ip_threat_intel',
+                          ])
+                        }
+                        className="w-full py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-mono text-[11px] font-medium flex items-center justify-between transition-colors disabled:opacity-50"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Globe className="w-3.5 h-3.5 text-sky-400" />
+                          <span>Enumerate Subdomains, DNS & Origin IPs</span>
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                      </button>
                     )}
 
                     <button
                       type="button"
                       onClick={() => onTabChange('dorks')}
-                      className="w-full py-1.5 px-2.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-[11px] font-semibold flex items-center justify-between"
+                      className="w-full py-1.5 px-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.08] text-slate-200 font-mono text-[11px] font-medium flex items-center justify-between transition-colors"
                     >
-                      <span>🕵️ Generate Private Account Bypass Dorks</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <span className="flex items-center gap-2">
+                        <Radar className="w-3.5 h-3.5 text-sky-400" />
+                        <span>Generate Private Account Bypass Dorks</span>
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                     </button>
                   </div>
                 </div>
 
                 {/* Confidence Tagging & Investigator Sticky Notes */}
-                <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1.5">
+                <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2.5">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
                     <StickyNote className="w-3 h-3 text-amber-400" />
                     <span>Confidence Status & Detective Notes</span>
                   </div>
@@ -488,10 +511,10 @@ export function LeadInspectorDrawer({
                       onClick={() =>
                         onUpdateNodeAnnotation(selectedNode.id, { confidence: 'verified' })
                       }
-                      className={`py-1 px-2 rounded border flex items-center justify-center gap-1 font-bold transition-colors ${
+                      className={`py-1.5 px-2 rounded-md border flex items-center justify-center gap-1 font-medium transition-colors ${
                         selectedNode.confidence === 'verified'
-                          ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                          : 'bg-[#090B10] border-white/[0.06] text-slate-400 hover:text-slate-200'
                       }`}
                     >
                       <CheckCircle2 className="w-3 h-3 text-emerald-400" />
@@ -502,10 +525,10 @@ export function LeadInspectorDrawer({
                       onClick={() =>
                         onUpdateNodeAnnotation(selectedNode.id, { confidence: 'suspected' })
                       }
-                      className={`py-1 px-2 rounded border flex items-center justify-center gap-1 font-bold transition-colors ${
+                      className={`py-1.5 px-2 rounded-md border flex items-center justify-center gap-1 font-medium transition-colors ${
                         selectedNode.confidence === 'suspected'
-                          ? 'bg-amber-950/80 border-amber-500 text-amber-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                          : 'bg-[#090B10] border-white/[0.06] text-slate-400 hover:text-slate-200'
                       }`}
                     >
                       <AlertTriangle className="w-3 h-3 text-amber-400" />
@@ -516,10 +539,10 @@ export function LeadInspectorDrawer({
                       onClick={() =>
                         onUpdateNodeAnnotation(selectedNode.id, { confidence: 'false_positive' })
                       }
-                      className={`py-1 px-2 rounded border flex items-center justify-center gap-1 font-bold transition-colors ${
+                      className={`py-1.5 px-2 rounded-md border flex items-center justify-center gap-1 font-medium transition-colors ${
                         selectedNode.confidence === 'false_positive'
-                          ? 'bg-rose-950/80 border-rose-500 text-rose-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                          ? 'bg-rose-500/15 border-rose-500/40 text-rose-300'
+                          : 'bg-[#090B10] border-white/[0.06] text-slate-400 hover:text-slate-200'
                       }`}
                     >
                       <XCircle className="w-3 h-3 text-rose-400" />
@@ -536,14 +559,14 @@ export function LeadInspectorDrawer({
                       })
                     }
                     placeholder="Write investigator sticky notes for this lead (e.g. 'Confirmed same person via IG bio link')..."
-                    className="w-full rounded-lg bg-slate-950 border border-slate-800 focus:border-indigo-500 outline-none p-2 text-[11px] text-slate-200 font-mono placeholder:text-slate-600"
+                    className="w-full rounded-lg bg-[#090B10] border border-white/[0.08] focus:border-sky-400/60 outline-none p-2 text-[11px] text-slate-200 font-mono placeholder:text-slate-600"
                   />
                 </div>
 
                 {/* Extracted Metadata Table */}
                 {selectedNode.metadata && Object.keys(selectedNode.metadata).length > 0 && (
-                  <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800/80 space-y-1.5">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">
+                  <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-1.5">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
                       Raw Intelligence Attributes
                     </div>
                     <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
@@ -559,7 +582,7 @@ export function LeadInspectorDrawer({
                         .map(([k, v]) => (
                           <div
                             key={k}
-                            className="flex items-start justify-between gap-2 text-[10px] font-mono py-1 border-b border-slate-800/60 last:border-none"
+                            className="flex items-start justify-between gap-2 text-[10px] font-mono py-1 border-b border-white/[0.05] last:border-none"
                           >
                             <span className="text-slate-400 flex-shrink-0">{k}:</span>
                             <span className="text-slate-200 text-right break-all">
@@ -572,9 +595,9 @@ export function LeadInspectorDrawer({
                 )}
               </div>
             ) : (
-              <div className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
-                <Search className="w-6 h-6 text-indigo-400 mx-auto" />
-                <div className="text-xs font-bold text-white">No Evidence Card Selected</div>
+              <div className="p-5 rounded-xl bg-[#131720]/70 border border-white/[0.06] text-center space-y-2">
+                <Search className="w-5 h-5 text-sky-400 mx-auto" />
+                <div className="text-xs font-semibold text-slate-100">No Evidence Card Selected</div>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Click any node card on the Caseboard to inspect its extracted metadata, chain
                   deeper OSINT modules, or tag its confidence level.
@@ -586,17 +609,18 @@ export function LeadInspectorDrawer({
 
         {/* TAB 2: TACTICAL GOOGLE DORK MATRIX (PRIVATE ACCOUNT COMMENT BYPASS) */}
         {activeTab === 'dorks' && (
-          <div className="space-y-3.5" data-testid="dork-matrix-panel">
-            <div className="p-3 rounded-xl bg-purple-950/25 border border-purple-500/40 space-y-2">
-              <div className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
-                <span>🕵️ Tactical Google Dork Matrix</span>
+          <div className="space-y-3" data-testid="dork-matrix-panel">
+            <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.08] space-y-2">
+              <div className="text-xs font-semibold text-slate-100 flex items-center gap-1.5">
+                <Radar className="w-3.5 h-3.5 text-sky-400" />
+                <span>Tactical Google Dork Matrix</span>
               </div>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                Even if a target&apos;s Instagram, TikTok, or X account is <strong>Private</strong>,
-                their comments on friends&apos; public posts and public tags are indexed by Google.
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Even if a target&apos;s Instagram, TikTok, or X account is <strong className="text-slate-200">Private</strong>,
+                their comments on friends&apos; public posts and public tags remain indexed by Google.
               </p>
               <div className="pt-1">
-                <label className="block text-[10px] font-mono text-purple-300 mb-1">
+                <label className="block text-[10px] font-mono text-slate-400 mb-1">
                   Target Handle for Dork Injection:
                 </label>
                 <input
@@ -604,7 +628,7 @@ export function LeadInspectorDrawer({
                   value={customDorkHandle}
                   onChange={(e) => setCustomDorkHandle(e.target.value)}
                   placeholder={`Default: ${activeHandle}`}
-                  className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-purple-700/50 text-xs font-mono text-white outline-none focus:border-purple-400"
+                  className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
                 />
               </div>
             </div>
@@ -613,21 +637,21 @@ export function LeadInspectorDrawer({
               {tacticalDorks.map((dork) => (
                 <div
                   key={dork.id}
-                  className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 space-y-2 transition-colors"
+                  className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] hover:border-white/[0.14] space-y-2 transition-colors"
                 >
-                  <div className="text-[9px] font-mono uppercase tracking-wider text-purple-400 font-bold">
+                  <div className="text-[9px] font-mono uppercase tracking-wider text-sky-400 font-semibold">
                     {dork.category}
                   </div>
-                  <div className="text-xs font-bold text-white">{dork.title}</div>
+                  <div className="text-xs font-semibold text-slate-100">{dork.title}</div>
                   <div className="text-[10px] text-slate-400 leading-relaxed">{dork.desc}</div>
-                  <div className="p-2 rounded bg-slate-950 border border-slate-800 font-mono text-[10px] text-emerald-300 break-all select-all">
+                  <div className="p-2 rounded-md bg-[#090B10] border border-white/[0.06] font-mono text-[10px] text-slate-200 break-all select-all">
                     {dork.query}
                   </div>
                   <div className="flex items-center gap-2 pt-0.5">
                     <button
                       type="button"
                       onClick={() => copyText(dork.id, dork.query)}
-                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-[10px] flex items-center gap-1"
+                      className="px-2.5 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 font-mono text-[10px] flex items-center gap-1 transition-colors"
                     >
                       {copiedKey === dork.id ? (
                         <>
@@ -636,7 +660,7 @@ export function LeadInspectorDrawer({
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3 h-3" />
+                          <Copy className="w-3 h-3 text-slate-400" />
                           <span>Copy Query</span>
                         </>
                       )}
@@ -644,7 +668,7 @@ export function LeadInspectorDrawer({
                     <button
                       type="button"
                       onClick={() => launchGoogleDork(dork.query)}
-                      className="flex-1 py-1 px-2.5 rounded bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 text-purple-200 font-mono text-[10px] font-bold flex items-center justify-center gap-1"
+                      className="flex-1 py-1 px-2.5 rounded-md bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-200 font-mono text-[10px] font-medium flex items-center justify-center gap-1 transition-colors"
                     >
                       <span>Launch Google Dork ↗</span>
                     </button>
@@ -657,27 +681,27 @@ export function LeadInspectorDrawer({
 
         {/* TAB 3: AI DETECTIVE & BYOK TOKEN SETTINGS */}
         {activeTab === 'ai' && (
-          <div className="space-y-3.5" data-testid="ai-detective-panel">
+          <div className="space-y-3" data-testid="ai-detective-panel">
             {/* BYOK Token & Provider Bar */}
-            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+            <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-bold text-white">AI OSINT Detective</span>
+                  <span className="text-xs font-semibold text-slate-100">AI OSINT Detective</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowByokForm((prev) => !prev)}
                   data-testid="btn-toggle-byok"
-                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/40 font-mono text-[10px] font-semibold flex items-center gap-1"
+                  className="px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border border-white/[0.09] font-mono text-[10px] font-medium flex items-center gap-1 transition-colors"
                 >
-                  <KeyRound className="w-3 h-3" />
-                  <span>{aiConfig.apiKey ? '🔑 Key Active' : '🔑 Set AI Token'}</span>
+                  <KeyRound className="w-3 h-3 text-amber-400" />
+                  <span>{aiConfig.apiKey ? 'Key Active' : 'Set AI Token'}</span>
                 </button>
               </div>
 
               {showByokForm && (
-                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                <div className="p-2.5 rounded-lg bg-[#090B10] border border-white/[0.07] space-y-2">
                   <div className="text-[10px] font-mono text-slate-400">
                     Bring-Your-Own-Key (stored locally in your browser):
                   </div>
@@ -687,10 +711,10 @@ export function LeadInspectorDrawer({
                         key={prov}
                         type="button"
                         onClick={() => onUpdateAiConfig({ ...aiConfig, provider: prov })}
-                        className={`py-1 rounded border uppercase font-bold ${
+                        className={`py-1 rounded border uppercase font-medium transition-colors ${
                           aiConfig.provider === prov
-                            ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
-                            : 'bg-slate-900 border-slate-800 text-slate-400'
+                            ? 'bg-sky-500/15 border-sky-500/40 text-sky-300'
+                            : 'bg-[#131720] border-white/[0.06] text-slate-400 hover:text-slate-200'
                         }`}
                       >
                         {prov}
@@ -705,7 +729,7 @@ export function LeadInspectorDrawer({
                         onUpdateAiConfig({ ...aiConfig, apiKey: e.target.value })
                       }
                       placeholder={`Paste ${aiConfig.provider.toUpperCase()} API Key...`}
-                      className="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-xs font-mono text-white outline-none focus:border-emerald-400"
+                      className="w-full px-2.5 py-1.5 rounded-md bg-[#131720] border border-white/[0.09] text-xs font-mono text-white outline-none focus:border-sky-400/60"
                     />
                   )}
                   <input
@@ -715,7 +739,7 @@ export function LeadInspectorDrawer({
                       onUpdateAiConfig({ ...aiConfig, modelOverride: e.target.value })
                     }
                     placeholder="Optional model override (e.g. llama-3.3-70b-versatile)"
-                    className="w-full px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 text-[11px] font-mono text-slate-200 outline-none"
+                    className="w-full px-2.5 py-1.5 rounded-md bg-[#131720] border border-white/[0.09] text-[11px] font-mono text-slate-200 outline-none"
                   />
                 </div>
               )}
@@ -724,7 +748,7 @@ export function LeadInspectorDrawer({
                 type="button"
                 disabled={isAIAnalyzing}
                 onClick={() => onRunAIAnalysis()}
-                className="w-full py-1.5 px-3 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/50 text-emerald-200 font-mono text-[11px] font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="w-full py-1.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>
@@ -739,21 +763,21 @@ export function LeadInspectorDrawer({
               <div className="space-y-3">
                 {/* Predicted Alternate Handles / Emails */}
                 {aiReport.predictedLeads && aiReport.predictedLeads.length > 0 && (
-                  <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">
-                      🔮 Predicted Alternate Handles & Emails
+                  <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-2">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-sky-400 font-semibold">
+                      Predicted Alternate Handles & Emails
                     </div>
                     <div className="space-y-1.5">
                       {aiReport.predictedLeads.map((lead, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800"
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#090B10] border border-white/[0.06]"
                         >
                           <div className="min-w-0">
-                            <div className="text-xs font-mono font-bold text-white truncate">
+                            <div className="text-xs font-mono font-semibold text-slate-100 truncate">
                               {lead.value}
                             </div>
-                            <div className="text-[10px] text-slate-400 truncate">
+                            <div className="text-[10px] text-slate-400 truncate tabular-nums">
                               {lead.reason} ({Math.round(lead.confidence * 100)}%)
                             </div>
                           </div>
@@ -765,7 +789,7 @@ export function LeadInspectorDrawer({
                                 (lead.leadType as EntityType) || 'username'
                               )
                             }
-                            className="px-2 py-1 rounded bg-emerald-950 hover:bg-emerald-800 border border-emerald-600/50 text-emerald-200 font-mono text-[10px] font-bold flex-shrink-0"
+                            className="px-2 py-1 rounded-md bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/30 text-sky-200 font-mono text-[10px] font-medium flex-shrink-0 transition-colors"
                           >
                             Hunt →
                           </button>
@@ -776,9 +800,9 @@ export function LeadInspectorDrawer({
                 )}
 
                 {/* Executive Dossier Synthesis */}
-                <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+                <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.07] space-y-1.5">
                   <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                    <span className="uppercase font-bold text-indigo-300">
+                    <span className="uppercase font-semibold text-sky-400">
                       Detective Synthesis
                     </span>
                     <span>Model: {aiReport.model}</span>
@@ -810,10 +834,10 @@ export function LeadInspectorDrawer({
               setPinNotes('');
               onTabChange('node');
             }}
-            className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3"
+            className="p-3.5 rounded-xl bg-[#131720] border border-white/[0.07] space-y-3"
           >
-            <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-              <Pin className="w-3.5 h-3.5" />
+            <div className="text-xs font-semibold text-slate-100 flex items-center gap-1.5">
+              <Pin className="w-3.5 h-3.5 text-amber-400" />
               <span>Pin Manual Clue to Caseboard</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
@@ -828,14 +852,14 @@ export function LeadInspectorDrawer({
               <select
                 value={pinType}
                 onChange={(e) => setPinType(e.target.value as EntityType)}
-                className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-white outline-none"
+                className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               >
-                <option value="username">👤 Username / Social Handle</option>
-                <option value="email">📧 Email Address</option>
-                <option value="associate">🤝 Associate / Known Friend</option>
-                <option value="organization">🏢 Company / University</option>
-                <option value="location">📍 City / Location</option>
-                <option value="domain">🌐 Personal / Work Website</option>
+                <option value="username">Username / Social Handle</option>
+                <option value="email">Email Address</option>
+                <option value="associate">Associate / Known Friend</option>
+                <option value="organization">Company / University</option>
+                <option value="location">City / Location</option>
+                <option value="domain">Personal / Work Website</option>
               </select>
             </div>
 
@@ -849,7 +873,7 @@ export function LeadInspectorDrawer({
                 value={pinValue}
                 onChange={(e) => setPinValue(e.target.value)}
                 placeholder="e.g. budi.santoso99 or budi@company.com"
-                className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-white outline-none focus:border-amber-400"
+                className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               />
             </div>
 
@@ -862,7 +886,7 @@ export function LeadInspectorDrawer({
                 value={pinLabel}
                 onChange={(e) => setPinLabel(e.target.value)}
                 placeholder="e.g. Private IG found in friend's comment"
-                className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-white outline-none"
+                className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               />
             </div>
 
@@ -875,13 +899,13 @@ export function LeadInspectorDrawer({
                 value={pinNotes}
                 onChange={(e) => setPinNotes(e.target.value)}
                 placeholder="Where did you find this clue?"
-                className="w-full px-2.5 py-1.5 rounded bg-slate-950 border border-slate-700 text-xs font-mono text-white outline-none"
+                className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-2 px-3 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/60 text-amber-200 font-mono text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full py-2 px-3 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-mono text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
             >
               <Pin className="w-3.5 h-3.5" />
               <span>Pin Clue onto Board & Connect</span>
@@ -892,4 +916,3 @@ export function LeadInspectorDrawer({
     </aside>
   );
 }
-
