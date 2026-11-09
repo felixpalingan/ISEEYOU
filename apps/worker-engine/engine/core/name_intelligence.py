@@ -201,3 +201,4 @@ def parse_full_name(raw_name: str) -> Dict[str, Any]:
         "name_variations": name_variations,
         "candidate_handles": clean_candidates[:10],
     }
+

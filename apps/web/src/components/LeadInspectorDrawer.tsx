@@ -1108,7 +1108,7 @@ export function LeadInspectorDrawer({
                 required
                 value={pinValue}
                 onChange={(e) => setPinValue(e.target.value)}
-                placeholder="e.g. ALMAKIUS FELIX BARIQ HEKOPUNG or budi@company.com"
+                placeholder="e.g. budi.santoso99 or budi@company.com"
                 className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               />
             </div>
@@ -1121,7 +1121,7 @@ export function LeadInspectorDrawer({
                 type="text"
                 value={pinLabel}
                 onChange={(e) => setPinLabel(e.target.value)}
-                placeholder="e.g. Full Name found via PDDIKTI / Google Dork"
+                placeholder="e.g. Private IG found in friend's comment"
                 className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
               />
             </div>
