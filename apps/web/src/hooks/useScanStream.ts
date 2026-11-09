@@ -547,9 +547,11 @@ export function useScanStream() {
           seed_input: string;
           force_refresh: boolean;
           enabled_modules?: string[];
+          entity_type?: EntityType;
         } = {
           seed_input: target,
           force_refresh: false,
+          entity_type: type,
         };
         if (enabledModules && enabledModules.length > 0) {
           requestBody.enabled_modules = enabledModules;

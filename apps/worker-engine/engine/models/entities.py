@@ -114,6 +114,7 @@ class ScanRequest(BaseModel):
     seed_input: str
     force_refresh: bool = False
     enabled_modules: Optional[List[str]] = None
+    entity_type: Optional[EntityType] = None
 
     @field_validator("seed_input")
     @classmethod

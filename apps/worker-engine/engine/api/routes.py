@@ -112,18 +112,46 @@ _sessions = SessionStore(max_capacity=100, default_ttl_seconds=7200)
 
 
 
-def classify_input(seed: str) -> EntityType:
-    """Classifies raw seed string into supported EntityType"""
+KNOWN_TLDS = {
+    "com", "org", "net", "edu", "gov", "mil", "int", "io", "ai", "co", "id", "dev", "app", "me",
+    "info", "biz", "tech", "xyz", "cloud", "site", "online", "store", "top", "pro", "live", "club",
+    "space", "agency", "digital", "life", "network", "world", "global", "media", "news", "press",
+    "cc", "tv", "ws", "fm", "to", "gg", "is", "sh", "ly", "so",
+    "uk", "us", "ca", "de", "fr", "jp", "au", "ru", "cn", "in", "br", "nl", "se", "ch", "es",
+    "sg", "my", "kr", "vn", "th", "ph", "nz", "za", "mx", "ar", "cl", "it", "pl", "eu", "no",
+    "fi", "dk", "be", "at", "cz", "ro", "gr", "pt", "tr", "ua", "hk", "tw", "ie", "il",
+}
+
+
+def classify_input(seed: str, explicit_type: Optional[EntityType] = None) -> EntityType:
+    """Classifies raw seed string into supported EntityType, respecting explicit client type override."""
+    if explicit_type:
+        return explicit_type
+
     seed = seed.strip()
+    if not seed:
+        return EntityType.USERNAME
+
+    # Explicit @ prefix or full name with spaces -> Username
+    if seed.startswith("@") or " " in seed:
+        return EntityType.USERNAME
+
     # Email regex
     if re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", seed):
         return EntityType.EMAIL
+
     # IPv4 regex
     if re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", seed):
         return EntityType.IP
-    # Domain regex
-    if re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z]{2,})+$", seed):
-        return EntityType.DOMAIN
+
+    # Domain regex: must match domain syntax AND terminate with recognized public TLD
+    if re.match(r"^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z0-9-]+)+$", seed):
+        tld = seed.split(".")[-1].lower()
+        if tld in KNOWN_TLDS:
+            return EntityType.DOMAIN
+        # Usernames with dots like 'john.doe', 'bariq.hkp', 'budi.santoso' are not domains
+        return EntityType.USERNAME
+
     # Fallback to username
     return EntityType.USERNAME
 
@@ -265,7 +293,7 @@ async def create_scan(request: ScanRequest, req: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
     session_id = str(uuid.uuid4())
-    seed_type = classify_input(clean_target)
+    seed_type = request.entity_type or classify_input(clean_target)
 
     session_data = {
         "session_id": session_id,
@@ -338,6 +366,7 @@ async def stream_scan(session_id: str):
 async def direct_stream_scan(
     req: Request,
     target: str = Query(..., description="Target seed (domain, IP, email, or username)"),
+    entity_type: Optional[EntityType] = Query(None, description="Explicit entity type override"),
 ):
     """
     1-Click direct SSE streaming endpoint.
@@ -360,7 +389,7 @@ async def direct_stream_scan(
         raise HTTPException(status_code=400, detail=str(e))
 
     session_id = str(uuid.uuid4())
-    seed_type = classify_input(clean_target)
+    seed_type = entity_type or classify_input(clean_target)
 
     session_data = {
         "session_id": session_id,

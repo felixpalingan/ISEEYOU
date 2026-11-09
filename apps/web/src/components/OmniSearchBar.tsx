@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Check,
   SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 import { EntityType, sanitizeTargetInput, isBlockedInternalTarget } from '@iseeyou/shared-types';
 import { classifyTarget, ENTITY_BADGE_CONFIGS } from '@/lib/classifier';
@@ -114,6 +115,8 @@ export function OmniSearchBar({
   const [value, setValue] = useState(initialValue);
   const [isFocused, setIsFocused] = useState(false);
   const [internalMode, setInternalMode] = useState<ReconOperatingMode>('identity');
+  const [manualType, setManualType] = useState<EntityType | null>(null);
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
   const [internalModules, setInternalModules] = useState<string[]>([
     'deep_profile_extractor',
     'connection_mapper',
@@ -124,6 +127,7 @@ export function OmniSearchBar({
     'ip_threat_intel',
   ]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const typeDropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync input when initialValue changes externally (e.g. pivot)
@@ -148,19 +152,16 @@ export function OmniSearchBar({
     return () => window.removeEventListener('keydown', handleGlobalSlash);
   }, []);
 
-  // Instant deterministic entity classification
-  const detectedType = useMemo(() => classifyTarget(value), [value]);
-  const badgeConfig = ENTITY_BADGE_CONFIGS[detectedType] || ENTITY_BADGE_CONFIGS.domain;
-
-  // Determine operating mode based on detectedType or manual switch
+  // Determine operating mode strictly controlled or internal
   const currentMode: ReconOperatingMode = useMemo(() => {
     if (controlledMode) return controlledMode;
-    if (detectedType === 'username' || detectedType === 'email') return 'identity';
-    if (detectedType === 'domain' || detectedType === 'subdomain' || detectedType === 'ip') {
-      return 'web';
-    }
     return internalMode;
-  }, [controlledMode, detectedType, internalMode]);
+  }, [controlledMode, internalMode]);
+
+  // Instant deterministic entity classification respecting active mode
+  const detectedType = useMemo(() => classifyTarget(value, currentMode), [value, currentMode]);
+  const effectiveType: EntityType = manualType || detectedType;
+  const badgeConfig = ENTITY_BADGE_CONFIGS[effectiveType] || ENTITY_BADGE_CONFIGS.domain;
 
   const activeModuleIds = controlledModules ?? internalModules;
 
@@ -185,11 +186,6 @@ export function OmniSearchBar({
   const handleSwitchMode = (mode: ReconOperatingMode) => {
     setInternalMode(mode);
     onModeChange?.(mode);
-    if (mode === 'identity' && (detectedType === 'domain' || detectedType === 'ip')) {
-      setValue('octocat');
-    } else if (mode === 'web' && (detectedType === 'username' || detectedType === 'email')) {
-      setValue('example.com');
-    }
   };
 
   // Real-time Anti-SSRF & sanitization security check
@@ -222,9 +218,12 @@ export function OmniSearchBar({
     const check = isBlockedInternalTarget(clean);
     if (check.isBlocked) return;
     setIsFocused(false);
+    setIsTypeDropdownOpen(false);
 
     const targetMode: ReconOperatingMode =
-      detectedType === 'username' || detectedType === 'email' ? 'identity' : 'web';
+      effectiveType === 'username' || effectiveType === 'email' || effectiveType === 'associate'
+        ? 'identity'
+        : 'web';
     const validModulesForTarget = AVAILABLE_OSINT_MODULES.filter((m) =>
       m.modes.includes(targetMode)
     ).map((m) => m.id);
@@ -232,7 +231,7 @@ export function OmniSearchBar({
 
     onScan(
       clean,
-      detectedType,
+      effectiveType,
       selectedForTarget.length > 0 ? selectedForTarget : validModulesForTarget
     );
   };
@@ -247,11 +246,14 @@ export function OmniSearchBar({
     }
   };
 
-  // Close suggestions when clicking outside
+  // Close suggestions and entity-type menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsFocused(false);
+      }
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target as Node)) {
+        setIsTypeDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -314,14 +316,8 @@ export function OmniSearchBar({
             type="text"
             value={value}
             onChange={(e) => {
-              const nextVal = e.target.value;
-              setValue(nextVal);
-              const nextType = classifyTarget(nextVal);
-              if (nextType === 'username' || nextType === 'email') {
-                onModeChange?.('identity');
-              } else if (nextType === 'domain' || nextType === 'ip') {
-                onModeChange?.('web');
-              }
+              setValue(e.target.value);
+              if (manualType) setManualType(null);
             }}
             onFocus={() => setIsFocused(true)}
             onKeyDown={handleKeyDown}
@@ -333,7 +329,10 @@ export function OmniSearchBar({
           {value.length > 0 && !isScanning && (
             <button
               type="button"
-              onClick={() => setValue('')}
+              onClick={() => {
+                setValue('');
+                if (manualType) setManualType(null);
+              }}
               className="text-slate-500 hover:text-slate-200 p-0.5 mr-1.5 transition-colors"
               title="Clear input"
             >
@@ -341,7 +340,7 @@ export function OmniSearchBar({
             </button>
           )}
 
-          {/* Dynamic Entity Classification / Anti-SSRF Alert Badge */}
+          {/* Dynamic Entity Classification / Interactive Manual Switcher Dropdown */}
           {ssrfCheck.isBlocked ? (
             <Badge
               variant="critical"
@@ -354,15 +353,105 @@ export function OmniSearchBar({
               <span>SSRF BLOCKED</span>
             </Badge>
           ) : (
-            <Badge
-              variant={detectedType}
-              size="xs"
-              data-testid="detected-entity-badge"
-              className="mr-2 flex-shrink-0 flex items-center font-medium tracking-wider"
-            >
-              {renderIcon()}
-              <span>{badgeConfig.label}</span>
-            </Badge>
+            <div className="relative mr-2 flex-shrink-0" ref={typeDropdownRef}>
+              <button
+                type="button"
+                data-testid="detected-entity-badge"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFocused(false);
+                  setIsTypeDropdownOpen((prev) => !prev);
+                }}
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium tracking-wider transition-colors border select-none cursor-pointer',
+                  badgeConfig.colorClass,
+                  'hover:brightness-125 focus:outline-none focus:ring-1 focus:ring-sky-400/50'
+                )}
+                title="Click to manually switch entity type (Username, Domain, Email, IP)"
+              >
+                {renderIcon()}
+                <span>{badgeConfig.label}</span>
+                <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+              </button>
+
+              {/* Entity Type Manual Selection Menu */}
+              {isTypeDropdownOpen && (
+                <div
+                  data-testid="entity-type-dropdown"
+                  className="absolute right-0 top-full mt-1.5 w-40 bg-[#0F1219]/98 backdrop-blur-xl border border-white/[0.1] rounded-lg shadow-2xl py-1 z-[60] font-mono text-[11px]"
+                >
+                  <div className="px-2.5 py-1 text-[9px] uppercase tracking-wider text-slate-400 font-semibold border-b border-white/[0.06]">
+                    Set Entity Type
+                  </div>
+                  {(
+                    [
+                      {
+                        type: 'username' as EntityType,
+                        label: 'USERNAME',
+                        icon: User,
+                        mode: 'identity' as ReconOperatingMode,
+                      },
+                      {
+                        type: 'domain' as EntityType,
+                        label: 'DOMAIN',
+                        icon: Globe,
+                        mode: 'web' as ReconOperatingMode,
+                      },
+                      {
+                        type: 'email' as EntityType,
+                        label: 'EMAIL',
+                        icon: Mail,
+                        mode: 'identity' as ReconOperatingMode,
+                      },
+                      {
+                        type: 'ip' as EntityType,
+                        label: 'IP ADDRESS',
+                        icon: Network,
+                        mode: 'web' as ReconOperatingMode,
+                      },
+                    ] as const
+                  ).map((item) => {
+                    const isSelected = effectiveType === item.type;
+                    const IconComp = item.icon;
+                    return (
+                      <button
+                        key={item.type}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setManualType(item.type);
+                          handleSwitchMode(item.mode);
+                          setIsTypeDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full px-2.5 py-1.5 flex items-center justify-between text-left hover:bg-white/[0.06] transition-colors',
+                          isSelected ? 'text-sky-300 font-semibold' : 'text-slate-300'
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <IconComp className="w-3 h-3 text-slate-400" />
+                          <span>{item.label}</span>
+                        </div>
+                        {isSelected && <Check className="w-3 h-3 text-sky-400 stroke-[2.5]" />}
+                      </button>
+                    );
+                  })}
+                  {manualType && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setManualType(null);
+                        setIsTypeDropdownOpen(false);
+                      }}
+                      className="w-full px-2.5 py-1 text-[10px] text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] text-left border-t border-white/[0.06] mt-0.5"
+                    >
+                      Reset to Auto-Detect
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Scan Button */}
@@ -499,6 +588,7 @@ export function OmniSearchBar({
                   type="button"
                   onClick={() => {
                     setValue(sample.value);
+                    setManualType(sample.type);
                     setIsFocused(false);
                     const validMods = modeModules.map((m) => m.id);
                     const activeForMode = activeModuleIds.filter((id) => validMods.includes(id));

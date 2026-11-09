@@ -44,6 +44,20 @@ test.describe('E2E: ISEEYOU 2.0 OSINT Lead-Chaining Caseboard & Target Dossier',
     // Test Username classification (label: USERNAME)
     await searchInput.fill('torvalds');
     await expect(entityBadge).toContainText('USERNAME');
+
+    // Test Dotted Usernames (non-TLD extensions like .hkp, .doe) stay USERNAME
+    await searchInput.fill('bariq.hkp');
+    await expect(entityBadge).toContainText('USERNAME');
+
+    await searchInput.fill('john.doe');
+    await expect(entityBadge).toContainText('USERNAME');
+
+    // Test Manual Entity Type Selection via dropdown
+    await entityBadge.click();
+    const typeDropdown = page.getByTestId('entity-type-dropdown');
+    await expect(typeDropdown).toBeVisible();
+    await typeDropdown.getByRole('button', { name: /DOMAIN/i }).click();
+    await expect(entityBadge).toContainText('DOMAIN');
   });
 
   test('should open Tactical Dork Matrix with Private Account Comment Bypass dorks', async ({ page }) => {

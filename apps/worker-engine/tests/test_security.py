@@ -248,6 +248,48 @@ class TestAPIEndpointSecurity(unittest.TestCase):
         self.assertEqual(extract_client_ip(malicious_req), "203.0.113.5")
 
 
+class TestEntityClassificationAndOverride(unittest.TestCase):
+    def test_classify_dotted_usernames_vs_domains(self):
+        from engine.api.routes import classify_input
+        from engine.models.entities import EntityType
+
+        # Usernames with dots (non-TLDs) must classify as USERNAME
+        self.assertEqual(classify_input("john.doe"), EntityType.USERNAME)
+        self.assertEqual(classify_input("bariq.hkp"), EntityType.USERNAME)
+        self.assertEqual(classify_input("budi.santoso"), EntityType.USERNAME)
+        self.assertEqual(classify_input("@john.doe"), EntityType.USERNAME)
+
+        # Recognized public TLDs must classify as DOMAIN
+        self.assertEqual(classify_input("acme-defense.io"), EntityType.DOMAIN)
+        self.assertEqual(classify_input("example.com"), EntityType.DOMAIN)
+        self.assertEqual(classify_input("sub.target.co.id"), EntityType.DOMAIN)
+
+        # Standard IP & Email
+        self.assertEqual(classify_input("8.8.8.8"), EntityType.IP)
+        self.assertEqual(classify_input("user@example.com"), EntityType.EMAIL)
+
+        # Explicit type override takes precedence
+        self.assertEqual(
+            classify_input("example.com", explicit_type=EntityType.USERNAME),
+            EntityType.USERNAME,
+        )
+
+    def test_api_scan_respects_explicit_entity_type(self):
+        from engine.models.entities import EntityType
+
+        client = TestClient(app)
+        # Scan with explicit entity_type: username on a target that would otherwise match domain regex
+        resp = client.post(
+            "/api/v1/scan",
+            json={
+                "seed_input": "john.doe",
+                "entity_type": "username",
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["seed_type"], "username")
+
 
 if __name__ == "__main__":
     unittest.main()
