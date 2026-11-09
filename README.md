@@ -92,7 +92,7 @@ flowchart LR
 | **Design System** | **Tailwind CSS**, Carbon Obsidian Tokens, Lucide Icons | High-contrast, low-noise tactical interface with `tabular-nums` alignment and keyboard-first navigation (`/`). |
 | **OSINT Worker Engine** | **Python 3.11+**, **FastAPI**, **Asyncio**, **HTTPX** | High-concurrency asynchronous I/O for non-blocking multi-source OSINT extraction and SSE streaming. |
 | **AI Detective & MCP** | **Gemini**, **Groq**, **OpenAI/OpenRouter**, **Ollama**, **MCP** | Bring-Your-Own-Key (BYOK) multi-provider LLM routing plus a standard JSON-RPC 2.0 stdio MCP server. |
-| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 88 Python unit tests and 12 Playwright E2E browser tests. |
+| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 90 Python unit tests and 12 Playwright E2E browser tests. |
 
 ---
 
@@ -102,16 +102,17 @@ flowchart LR
 - **Deep Profile, Full-Name & Academic/Career Extractor (`deep_profile_extractor.py` & `name_intelligence.py`):** Queries GitHub (`/users/{u}`, `/search/users`, and `/users/{u}/events/public`), Keybase, Reddit, HackerNews, **OpenAlex (250M+ Academic & University Records)**, **CrossRef**, and **Wikidata**. Supports both single-token handles and **Full Real Names** — extracting commit emails, university/company affiliations, published theses/papers, family clan surnames, and smart consonant-abbreviated candidate handles.
 - **Inner Circle, Family Surname Relatives & Co-Author Mapper (`connection_mapper.py`):** Maps a target's social and family graph across 2-way mutual follows (`followers ∩ following`), repository co-authors, stargazers, direct followers, **Same-Surname Family Clan Relatives** (OpenAlex/CrossRef/GitHub surname matching), and academic thesis co-authors/supervisors.
 - **Email-to-Identity Correlator (`email_correlator.py`):** Computes MD5 hashes for Gravatar profile/avatar extraction, queries the Ubuntu OpenPGP HKP keyserver for registered full names and UIDs, searches GitHub commits by author email, and isolates custom organization domains.
-- **66+ Platform Deep Social Footprint Engine (`social_scanner.py` & `sites_catalog.py`):** Concurrent username reconnaissance across 66+ Developer, Security/CTF, Social, Community, Identity, Creative, Gaming, and Creator platforms using lightweight `url_probe` separation, pre-flight `regex_check` validation, `response_url` redirect trap detection, dual `presence_strings` / `absence_strings` verification, Anti-WAF false-positive filtering (Cloudflare, PerimeterX, Vercel, DDoS-Guard), and in-flight regex profile metadata extraction (`avatar_url`, `full_name`, `bio`, `location`, `secondary_link`).
+- **500+ Platform Deep Social Footprint Engine (Sherlock + Maigret Architecture — `social_scanner.py` & `sites_catalog.py`):** High-speed concurrent username reconnaissance across 500+ platforms spanning 10 specialized categories (Developer, Security/CTF, Social, Community, Identity, Creative, Gaming, Streaming, Finance/Crypto, and Indonesian Regional portals). Utilizes lightweight `url_probe` separation, pre-flight `regex_check` validation, `response_url` redirect trap detection, dual `presence_strings` / `absence_strings` verification, Anti-WAF false-positive filtering (Cloudflare, PerimeterX, Vercel, DDoS-Guard), and in-flight regex profile metadata extraction (`avatar_url`, `full_name`, `bio`, `location`, `secondary_link`).
 - **Infrastructure & Breach Intelligence:** Combines Certificate Transparency (`crt.sh` / CertSpotter), Cloudflare DNS-over-HTTPS (DoH), Shodan InternetDB open port/CVE lookups, and HaveIBeenPwned k-Anonymity breach checks.
 
-### 2. 14-Formula Tactical Google Dork Matrix (Family Clan, Jabatan, PDDIKTI & Private Social Bypass)
+### 2. 14-Formula Tactical Google Dork Matrix with Multi-Language Regional Presets
 The built-in Dork Matrix automatically parses Full Names, Family Surnames/Clans, Short Name Variations, Handles, Emails, and Organizations to craft 14 targeted queries across 5 investigation pillars:
-- **Family, Surname & Clan Lineage (`"{surname}" -"{firstName}"`):** Hunts parents, siblings, and relatives sharing the same family surname across LinkedIn, social media, university domains, graduation books (`bin / binti / anak dari / wisuda`), and public PDFs.
-- **Career, Jabatan & Executive Roles:** Pinpoints structural job titles (`Direktur`, `Komisaris`, `Manager`, `Ketua`, `Divisi`, `Pengurus`), LinkedIn career profiles, and colleague post tags.
-- **Academic, University (`.ac.id`) & PDDIKTI Records:** Searches university repositories, PDDIKTI student/lecturer records, student IDs (`NIM` / `NPM`), theses (`Skripsi` / `Tesis`), Google Scholar, SINTA, and Garuda.
-- **Official Decrees (`.go.id`), Rosters & Leaked CVs:** Hunts ministerial decrees (`Surat Keputusan`), civil service rosters, and indexed `PDF`/`XLSX`/`DOCX` resumes or phone numbers.
-- **Private Account Comment & Tag Bypass (IG, TikTok, X):** Surfaces public third-party comments, photo tags, Reels mentions, and replies addressing locked or protected social accounts.
+- **Multi-Language Regional Switcher (1-Click Selector):** Dynamically recomputes queries, titles, and descriptions across 6 regional presets: 🌐 **English (Global / US / UK)**, 🇮🇩 **Indonesia (ID / Kemdikbud)**, 🌍 **Global + ID (Dual / Bilingual)**, 🇪🇸 **Español (ES / LATAM)**, 🇩🇪 **Deutsch (DE / AT / CH)**, and 🇫🇷 **Français (FR / BE / CA)**. Features smart auto-detection from target country cues and domain extensions (`.id`, `.ac.id`, `.es`, `.de`, `.fr`).
+- **Family, Surname & Clan Lineage (`"{surname}" -"{firstName}"`):** Hunts parents, siblings, and relatives sharing the same family surname across LinkedIn, social media, university domains, graduation books (`bin / binti / anak dari / wisuda` in ID, `son of / commencement` in EN, `hijo de / orla` in ES, `Sohn von / Abschluss` in DE, `fils de / promotion` in FR), and public PDFs.
+- **Career, Jabatan & Executive Roles:** Pinpoints structural job titles (`Direktur`, `Komisaris`, `Manager`, `CEO`, `Vorstand`, `Directeur`, `Gerente`), LinkedIn career profiles, and colleague post tags.
+- **Academic, University & Thesis Repositories:** Searches university repositories (`.edu`, `.ac.uk`, `.ac.id`, `.es`, `.de`, `.univ.fr`), student IDs (`NIM` / `Matrikelnummer` / `Numéro étudiant`), theses (`Skripsi` / `Dissertation`), Google Scholar, SINTA, and Garuda.
+- **Official Decrees, Gazettes & Leaked CVs:** Hunts ministerial decrees (`Surat Keputusan` / `Journal Officiel` / `BOE` / `Bundesgesetzblatt`), civil service rosters, and indexed `PDF`/`XLSX`/`DOCX` resumes or contact rosters.
+- **Private Account Comment & Tag Bypass (IG, TikTok, X):** Universal platform-operator queries surfacing public third-party comments, photo tags, Reels mentions, and replies addressing locked or protected social accounts.
 
 ### 3. Live Target Dossier, Visual Reverse Image Search & Timeline
 - **1-Click Avatar Reverse Image Search:** Launch visual identity lookups across **Google Lens**, **Yandex Images**, **Bing Visual Search**, and **TinEye** from any discovered avatar or paste a custom target photo URL directly into the Dossier card.
@@ -185,7 +186,7 @@ python -m engine.mcp_server
 ## 🧪 Automated Testing & Verification
 
 ```bash
-# 1. Run Python Worker Engine Unit & Anti-SSRF Security Tests (79 passed)
+# 1. Run Python Worker Engine Unit & Anti-SSRF Security Tests (90 passed)
 python -m pytest apps/worker-engine/tests -v
 
 # 2. Build Next.js Production Bundle

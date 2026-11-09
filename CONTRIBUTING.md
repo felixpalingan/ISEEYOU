@@ -63,7 +63,7 @@ Please treat everyone with respect, kindness, and professionalism. We are commit
    npm run build:types
    npm run build --workspace=apps/web
 
-   # Run Python engine unit tests (79 tests)
+   # Run Python engine unit tests (90 tests)
    python -m pytest apps/worker-engine/tests -v
 
    # Run Playwright E2E browser test suite (12 tests)
