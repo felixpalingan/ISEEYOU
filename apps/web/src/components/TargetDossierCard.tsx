@@ -24,6 +24,7 @@ import {
   ImagePlus,
 } from 'lucide-react';
 import { TargetDossier, EntityType } from '@iseeyou/shared-types';
+import { cn } from '@/lib/utils';
 
 interface TargetDossierCardProps {
   dossier: TargetDossier;
@@ -94,17 +95,20 @@ export function TargetDossierCard({
   return (
     <aside
       data-testid="target-dossier-card"
-      className="w-[335px] max-h-[calc(100vh-88px)] flex flex-col bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden text-xs text-slate-200 select-none z-20 transition-all"
+      className={cn(
+        'flex flex-col bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden text-xs text-slate-200 select-none z-20 transition-all',
+        isCollapsed ? 'w-[220px]' : 'w-[305px] max-h-[calc(100vh-90px)]'
+      )}
     >
       {/* Header Bar */}
-      <div className="px-3.5 py-2.5 bg-[#131720] border-b border-white/[0.07] flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="px-3 py-2 bg-[#131720] border-b border-white/[0.07] flex items-center justify-between">
+        <div className="flex items-center gap-1.5 min-w-0">
           <Fingerprint className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
           <span className="font-mono text-[11px] font-semibold tracking-wider uppercase text-slate-100 truncate">
             Target Dossier
           </span>
           {isScanning && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono">
+            <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 font-mono">
               ACTIVE
             </span>
           )}
@@ -136,19 +140,19 @@ export function TargetDossierCard({
       {!isCollapsed && (
         <>
           {/* Target Identity Hero Section */}
-          <div className="p-3.5 border-b border-white/[0.06] bg-[#0B0E14]/60">
-            <div className="flex items-start gap-3">
-              {/* Avatar with Subtle Frame */}
+          <div className="p-2.5 border-b border-white/[0.06] bg-[#0B0E14]/60">
+            <div className="flex items-start gap-2.5">
+              {/* Compact Avatar with Strict Max Bounds */}
               <div className="relative group flex-shrink-0">
                 {activeAvatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={activeAvatar}
                     alt={primaryName}
-                    className="w-13 h-13 rounded-lg object-cover border border-white/[0.14] shadow-md bg-[#131720]"
+                    className="w-9 h-9 max-w-[36px] max-h-[36px] rounded-lg object-cover border border-white/[0.14] shadow-sm bg-[#131720]"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-[#141821] border border-white/[0.09] flex items-center justify-center text-sky-300 font-semibold text-base font-mono">
+                  <div className="w-9 h-9 max-w-[36px] max-h-[36px] rounded-lg bg-[#141821] border border-white/[0.09] flex items-center justify-center text-sky-300 font-semibold text-xs font-mono">
                     {primaryName.slice(0, 2).toUpperCase()}
                   </div>
                 )}
@@ -156,7 +160,7 @@ export function TargetDossierCard({
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-1">
-                  <div className="text-sm font-semibold text-slate-100 truncate">{primaryName}</div>
+                  <div className="text-xs font-semibold text-slate-100 truncate">{primaryName}</div>
                   <button
                     type="button"
                     onClick={() => handleCopyText('primary-name', primaryName)}
@@ -170,51 +174,51 @@ export function TargetDossierCard({
                     )}
                   </button>
                 </div>
-                <div className="text-[11px] text-sky-400 font-mono truncate">
+                <div className="text-[10px] text-sky-400 font-mono truncate">
                   {targetType === 'username' ? `@${dossier.primaryTarget}` : dossier.primaryTarget}
                 </div>
 
                 {/* Discovered Aliases / Full Names */}
                 {dossier.fullNames.length > 1 && (
-                  <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                  <div className="text-[9px] text-slate-400 truncate mt-0.5">
                     AKA: {dossier.fullNames.slice(1).join(', ')}
                   </div>
                 )}
 
                 {/* Location & Affiliation Badges */}
-                <div className="mt-1.5 flex flex-wrap gap-1">
+                <div className="mt-1 flex flex-wrap gap-1">
                   {dossier.locations.slice(0, 2).map((loc) => (
                     <span
                       key={loc}
-                      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.07]"
+                      className="inline-flex items-center gap-1 text-[9px] px-1 py-0.2 rounded bg-white/[0.04] text-slate-300 border border-white/[0.07]"
                     >
                       <MapPin className="w-2.5 h-2.5 text-slate-400" />
-                      <span className="truncate max-w-[115px]">{loc}</span>
+                      <span className="truncate max-w-[105px]">{loc}</span>
                     </span>
                   ))}
                   {dossier.organizations.slice(0, 2).map((org) => (
                     <span
                       key={org}
-                      className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-slate-300 border border-white/[0.07]"
+                      className="inline-flex items-center gap-1 text-[9px] px-1 py-0.2 rounded bg-white/[0.04] text-slate-300 border border-white/[0.07]"
                     >
                       <Building2 className="w-2.5 h-2.5 text-amber-400/80" />
-                      <span className="truncate max-w-[115px]">{org}</span>
+                      <span className="truncate max-w-[105px]">{org}</span>
                     </span>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Multi-Avatar Switcher (if multiple avatars discovered across platforms) */}
+            {/* Multi-Avatar Switcher (Compact Thumbnails) */}
             {dossier.avatars.length > 1 && !customPhotoUrl && (
-              <div className="mt-2.5 flex items-center gap-1.5">
+              <div className="mt-2 flex items-center gap-1">
                 <span className="text-[9px] font-mono text-slate-400">Avatars:</span>
                 {dossier.avatars.slice(0, 5).map((av, idx) => (
                   <button
                     key={av}
                     type="button"
                     onClick={() => setSelectedAvatarIdx(idx)}
-                    className={`w-6 h-6 rounded overflow-hidden border transition-all ${
+                    className={`w-5 h-5 max-w-[20px] max-h-[20px] rounded overflow-hidden border transition-all ${
                       selectedAvatarIdx === idx
                         ? 'border-sky-400 ring-1 ring-sky-400/40'
                         : 'border-white/[0.1] opacity-60 hover:opacity-100'
@@ -254,49 +258,45 @@ export function TargetDossierCard({
               </div>
             )}
 
-            {/* 1-Click Reverse Image Search Bar */}
+            {/* 1-Click Reverse Image Search Bar (Compact Inline Row) */}
             {activeAvatar && (
-              <div className="mt-3 pt-2.5 border-t border-white/[0.06]">
-                <div className="text-[10px] font-mono text-slate-400 mb-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Camera className="w-3 h-3 text-sky-400" />
-                    <span>Reverse Avatar Lookup:</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => openReverseImageSearch('tineye', activeAvatar)}
-                    className="text-[9px] text-sky-400 hover:underline"
-                  >
-                    TinEye ↗
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
+              <div className="mt-2 pt-2 border-t border-white/[0.06] flex items-center justify-between gap-1 text-[10px] font-mono">
+                <span className="flex items-center gap-1 text-[9px] text-slate-400 flex-shrink-0">
+                  <Camera className="w-2.5 h-2.5 text-sky-400" />
+                  <span>Reverse:</span>
+                </span>
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => openReverseImageSearch('lens', activeAvatar)}
-                    className="px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-colors"
+                    className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-[9px] font-mono flex items-center gap-1 transition-colors"
                     title="Find other accounts using this photo via Google Lens"
                   >
-                    <Search className="w-2.5 h-2.5 text-sky-400" />
-                    <span>Google Lens</span>
+                    <span>Lens</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => openReverseImageSearch('yandex', activeAvatar)}
-                    className="px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-colors"
+                    className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-amber-300 hover:text-white text-[9px] font-mono flex items-center gap-1 transition-colors"
                     title="Face & photo matching via Yandex Images"
                   >
-                    <Search className="w-2.5 h-2.5 text-amber-400" />
                     <span>Yandex</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => openReverseImageSearch('bing', activeAvatar)}
-                    className="px-2 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-200 hover:text-white text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-colors"
+                    className="px-2 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white text-[9px] font-mono flex items-center gap-1 transition-colors"
                     title="Visual search via Bing Images"
                   >
-                    <Search className="w-2.5 h-2.5 text-slate-400" />
                     <span>Bing</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openReverseImageSearch('tineye', activeAvatar)}
+                    className="px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-sky-300 hover:text-white text-[9px] font-mono flex items-center gap-0.5 transition-colors"
+                    title="Search via TinEye"
+                  >
+                    <span>TinEye</span>
                   </button>
                 </div>
               </div>
@@ -614,10 +614,10 @@ export function TargetDossierCard({
                           <img
                             src={assoc.avatarUrl}
                             alt={assoc.handle}
-                            className="w-7 h-7 rounded-full object-cover border border-white/[0.12] flex-shrink-0"
+                            className="w-5 h-5 max-w-[20px] max-h-[20px] rounded-full object-cover border border-white/[0.12] flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-7 h-7 rounded-full bg-emerald-500/15 text-emerald-300 font-mono text-[10px] font-semibold flex items-center justify-center flex-shrink-0">
+                          <div className="w-5 h-5 max-w-[20px] max-h-[20px] rounded-full bg-emerald-500/15 text-emerald-300 font-mono text-[9px] font-semibold flex items-center justify-center flex-shrink-0">
                             {assoc.handle.slice(0, 2).toUpperCase()}
                           </div>
                         )}

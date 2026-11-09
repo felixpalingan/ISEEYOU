@@ -438,7 +438,7 @@ export function LeadInspectorDrawer({
                       <img
                         src={selectedAvatar}
                         alt={selectedNode.label}
-                        className="w-11 h-11 rounded-lg object-cover border border-white/[0.12] flex-shrink-0"
+                        className="w-8 h-8 max-w-[32px] max-h-[32px] rounded-lg object-cover border border-white/[0.12] flex-shrink-0"
                       />
                     )}
                     <div className="flex-1 min-w-0">

@@ -271,7 +271,7 @@ function CustomEntityNode({ data }: NodeProps) {
           <img
             src={avatarUrl}
             alt={displayLabel}
-            className="w-7 h-7 rounded-full object-cover border border-white/[0.14] flex-shrink-0"
+            className="w-5 h-5 max-w-[20px] max-h-[20px] rounded-full object-cover border border-white/[0.14] flex-shrink-0"
           />
         )}
         <div className="min-w-0 flex-1">
