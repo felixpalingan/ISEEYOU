@@ -60,7 +60,7 @@ test.describe('E2E: ISEEYOU 2.0 OSINT Lead-Chaining Caseboard & Target Dossier',
     await expect(entityBadge).toContainText('DOMAIN');
   });
 
-  test('should open Tactical Dork Matrix with Private Account Comment Bypass dorks', async ({ page }) => {
+  test('should open Tactical Dork Matrix with Private Account Comment Bypass dorks and multi-language switcher', async ({ page }) => {
     const dorkBtn = page.getByTestId('btn-open-dork-matrix');
     await expect(dorkBtn).toBeVisible();
     await dorkBtn.click();
@@ -70,6 +70,14 @@ test.describe('E2E: ISEEYOU 2.0 OSINT Lead-Chaining Caseboard & Target Dossier',
     await expect(dorkPanel).toContainText('Instagram Private Account Public Comments & Mentions');
     await expect(dorkPanel).toContainText('site:instagram.com');
     await expect(dorkPanel).toContainText('-inurl:instagram.com/');
+
+    // Verify multi-language selector is present and switches language formulas dynamically
+    const langSelector = page.getByTestId('dork-language-selector');
+    await expect(langSelector).toBeVisible();
+    await page.getByTestId('dork-lang-id').click();
+    await expect(dorkPanel).toContainText('Keluarga & Marga');
+    await page.getByTestId('dork-lang-en').click();
+    await expect(dorkPanel).toContainText('Family, Surname & Clan Lineage');
   });
 
   test('should allow pinning a manual clue onto the Caseboard and inspecting it', async ({ page }) => {

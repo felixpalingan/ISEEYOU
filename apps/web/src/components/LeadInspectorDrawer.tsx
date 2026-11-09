@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   X,
   Search,
@@ -24,7 +24,9 @@ import {
   Crosshair,
   Radar,
   Fingerprint,
+  Languages,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   EntityNode,
   EntityType,
@@ -36,6 +38,84 @@ import {
 } from '@iseeyou/shared-types';
 
 export type InspectorDrawerTab = 'node' | 'dorks' | 'ai' | 'pin';
+
+export type DorkLanguage = 'en' | 'id' | 'dual' | 'es' | 'de' | 'fr';
+
+export interface DorkLanguageOption {
+  id: DorkLanguage;
+  label: string;
+  flag: string;
+  region: string;
+}
+
+export const DORK_LANGUAGES: DorkLanguageOption[] = [
+  { id: 'en', label: 'English', flag: '🌐', region: 'Global / US / UK' },
+  { id: 'id', label: 'Indonesia', flag: '🇮🇩', region: 'ID (.id / Kemdikbud)' },
+  { id: 'dual', label: 'Global + ID', flag: '🌍', region: 'Dual / Bilingual' },
+  { id: 'es', label: 'Español', flag: '🇪🇸', region: 'ES / LATAM' },
+  { id: 'de', label: 'Deutsch', flag: '🇩🇪', region: 'DE / AT / CH' },
+  { id: 'fr', label: 'Français', flag: '🇫🇷', region: 'FR / BE / CA' },
+];
+
+export function detectInitialDorkLanguage(target: string, locations?: string[]): DorkLanguage {
+  const t = (target || '').toLowerCase().trim();
+  const locs = (locations || []).join(' ').toLowerCase();
+
+  // Indonesian signals
+  if (
+    t.endsWith('.id') ||
+    t.includes('.ac.id') ||
+    t.includes('.go.id') ||
+    locs.includes('indonesia') ||
+    locs.includes('jakarta') ||
+    locs.includes('bali') ||
+    locs.includes('surabaya') ||
+    locs.includes('bandung') ||
+    locs.includes('yogyakarta') ||
+    locs.includes('medan') ||
+    locs.includes('semarang')
+  ) {
+    return 'id';
+  }
+
+  // Spanish signals
+  if (
+    t.endsWith('.es') ||
+    locs.includes('spain') ||
+    locs.includes('españa') ||
+    locs.includes('mexico') ||
+    locs.includes('colombia') ||
+    locs.includes('argentina')
+  ) {
+    return 'es';
+  }
+
+  // German signals
+  if (
+    t.endsWith('.de') ||
+    t.endsWith('.at') ||
+    t.endsWith('.ch') ||
+    locs.includes('germany') ||
+    locs.includes('deutschland') ||
+    locs.includes('austria') ||
+    locs.includes('switzerland')
+  ) {
+    return 'de';
+  }
+
+  // French signals
+  if (
+    t.endsWith('.fr') ||
+    locs.includes('france') ||
+    locs.includes('paris') ||
+    locs.includes('quebec') ||
+    locs.includes('belgium')
+  ) {
+    return 'fr';
+  }
+
+  return 'en';
+}
 
 interface LeadInspectorDrawerProps {
   isOpen: boolean;
@@ -96,6 +176,18 @@ export function LeadInspectorDrawer({
 
   // Custom Dork Handle Override
   const [customDorkHandle, setCustomDorkHandle] = useState('');
+
+  // Target Dork Language Override (Supports EN, ID, Dual, ES, DE, FR)
+  const [dorkLanguage, setDorkLanguage] = useState<DorkLanguage>(() =>
+    detectInitialDorkLanguage(target, dossier.locations)
+  );
+  const hasUserSelectedLang = useRef(false);
+
+  useEffect(() => {
+    if (!hasUserSelectedLang.current) {
+      setDorkLanguage(detectInitialDorkLanguage(target, dossier.locations));
+    }
+  }, [target, dossier.locations]);
 
   // BYOK AI Settings Local State
   const [showByokForm, setShowByokForm] = useState(false);
@@ -172,33 +264,365 @@ export function LeadInspectorDrawer({
         ? `"${activeFullName}" OR "${shortName}"`
         : `"${nm}"`;
 
-    return [
-      {
-        id: 'family-clan-relatives',
+    // 1. Family, Surname & Clan Lineage
+    let familyClan: { category: string; title: string; query: string; desc: string };
+    if (dorkLanguage === 'id') {
+      familyClan = {
         category: 'Family, Surname & Clan Lineage (Keluarga & Marga)',
         title: `Family & Relatives Sharing Surname ("${fam}")`,
-        query: firstName && fam.toLowerCase() !== firstName.toLowerCase()
-          ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:ac.id OR site:go.id OR filetype:pdf)`
-          : `"${fam}" (intext:"keluarga" OR intext:"marga" OR site:linkedin.com/in/ OR site:facebook.com)`,
+        query:
+          firstName && fam.toLowerCase() !== firstName.toLowerCase()
+            ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:ac.id OR site:go.id OR filetype:pdf)`
+            : `"${fam}" (intext:"keluarga" OR intext:"marga" OR site:linkedin.com/in/ OR site:facebook.com)`,
         desc: 'Hunts parents, siblings, and relatives sharing the same family surname/clan across LinkedIn, social media, universities, and public PDFs.',
-      },
-      {
-        id: 'family-lineage-graduation',
+      };
+    } else if (dorkLanguage === 'dual') {
+      familyClan = {
+        category: 'Family, Surname & Clan Lineage (Global & Indonesia)',
+        title: `Family & Relatives Sharing Surname ("${fam}")`,
+        query:
+          firstName && fam.toLowerCase() !== firstName.toLowerCase()
+            ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:ac.id OR site:go.id OR filetype:pdf)`
+            : `"${fam}" (intext:"keluarga" OR intext:"marga" OR intext:"family" OR intext:"relatives" OR site:linkedin.com/in/ OR site:facebook.com)`,
+        desc: 'Combines Indonesian clan/marga keywords and global family surnames across social networks and institutional portals.',
+      };
+    } else if (dorkLanguage === 'es') {
+      familyClan = {
+        category: 'Linaje Familiar, Apellidos y Parentesco',
+        title: `Familiares y Parientes con Apellido ("${fam}")`,
+        query:
+          firstName && fam.toLowerCase() !== firstName.toLowerCase()
+            ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:es OR filetype:pdf)`
+            : `"${fam}" (intext:"familia" OR intext:"apellido" OR intext:"parientes" OR site:linkedin.com/in/ OR site:facebook.com)`,
+        desc: 'Rastrea padres, hermanos y parientes que comparten el mismo apellido en redes sociales y registros públicos.',
+      };
+    } else if (dorkLanguage === 'de') {
+      familyClan = {
+        category: 'Familienherkunft, Nachname & Verwandtschaft',
+        title: `Familienangehörige mit Nachname ("${fam}")`,
+        query:
+          firstName && fam.toLowerCase() !== firstName.toLowerCase()
+            ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:de OR filetype:pdf)`
+            : `"${fam}" (intext:"Familie" OR intext:"Nachname" OR intext:"Verwandte" OR site:linkedin.com/in/ OR site:facebook.com)`,
+        desc: 'Sucht nach Eltern, Geschwistern und Verwandten mit demselben Nachnamen auf LinkedIn, sozialen Netzwerken und PDFs.',
+      };
+    } else if (dorkLanguage === 'fr') {
+      familyClan = {
+        category: 'Lignée Familiale, Nom de Famille & Proches',
+        title: `Famille & Proches Partageant le Nom ("${fam}")`,
+        query:
+          firstName && fam.toLowerCase() !== firstName.toLowerCase()
+            ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:fr OR filetype:pdf)`
+            : `"${fam}" (intext:"famille" OR intext:"nom de famille" OR intext:"proches" OR site:linkedin.com/in/ OR site:facebook.com)`,
+        desc: 'Recherche les parents, frères et sœurs et proches partageant le nom de famille sur les réseaux sociaux et registres publics.',
+      };
+    } else {
+      familyClan = {
+        category: 'Family, Surname & Clan Lineage',
+        title: `Family & Relatives Sharing Surname ("${fam}")`,
+        query:
+          firstName && fam.toLowerCase() !== firstName.toLowerCase()
+            ? `"${fam}" -"${firstName}" (site:linkedin.com/in/ OR site:instagram.com OR site:facebook.com OR site:twitter.com OR site:x.com OR filetype:pdf)`
+            : `"${fam}" (intext:"family" OR intext:"relatives" OR intext:"clan" OR site:linkedin.com/in/ OR site:facebook.com)`,
+        desc: 'Hunts parents, siblings, and relatives sharing the same family surname/clan across LinkedIn, social media, and public records.',
+      };
+    }
+
+    // 2. Parents, Siblings, Graduation Books & Civil Lineage
+    let familyGraduation: { category: string; title: string; query: string; desc: string };
+    if (dorkLanguage === 'id') {
+      familyGraduation = {
         category: 'Family, Surname & Clan Lineage (Keluarga & Marga)',
         title: 'Parents, Siblings, Graduation Books & Civil Lineage',
         query: `(${nameOrShort} OR "${fam}") (intext:"anak dari" OR intext:"putra dari" OR intext:"putri dari" OR intext:"bin" OR intext:"binti" OR intext:"suami" OR intext:"istri" OR intext:"wisuda")`,
         desc: 'Uncovers parent names (putra/putri dari, bin/binti), spouse mentions, university graduation books (buku wisuda), and family announcements.',
-      },
-      {
-        id: 'career-jabatan-org',
+      };
+    } else if (dorkLanguage === 'dual') {
+      familyGraduation = {
+        category: 'Family, Surname & Clan Lineage (Global & Indonesia)',
+        title: 'Parents, Siblings, Graduation Books & Civil Lineage',
+        query: `(${nameOrShort} OR "${fam}") (intext:"anak dari" OR intext:"putra dari" OR intext:"son of" OR intext:"daughter of" OR intext:"bin" OR intext:"binti" OR intext:"suami" OR intext:"istri" OR intext:"spouse" OR intext:"wisuda" OR intext:"commencement")`,
+        desc: 'Cross-searches bilingual parental lineage, graduation lists (wisuda/commencement), and spouse relationships.',
+      };
+    } else if (dorkLanguage === 'es') {
+      familyGraduation = {
+        category: 'Linaje Familiar, Apellidos y Parentesco',
+        title: 'Padres, Cónyuge, Graduaciones y Parentesco Civil',
+        query: `(${nameOrShort} OR "${fam}") (intext:"hijo de" OR intext:"hija de" OR intext:"padre" OR intext:"madre" OR intext:"esposo" OR intext:"esposa" OR intext:"graduación" OR intext:"orla")`,
+        desc: 'Descubre nombres de padres (hijo/hija de), cónyuge, orlas y listas de graduación universitaria.',
+      };
+    } else if (dorkLanguage === 'de') {
+      familyGraduation = {
+        category: 'Familienherkunft, Nachname & Verwandtschaft',
+        title: 'Eltern, Ehepartner, Abschlusslisten & Abstammung',
+        query: `(${nameOrShort} OR "${fam}") (intext:"Sohn von" OR intext:"Tochter von" OR intext:"Vater" OR intext:"Mutter" OR intext:"Ehemann" OR intext:"Ehefrau" OR intext:"Abschluss" OR intext:"Jahrbuch")`,
+        desc: 'Findet Elternnamen (Sohn/Tochter von), Ehepartner, Jahrbücher und universitäre Abschlussberichte.',
+      };
+    } else if (dorkLanguage === 'fr') {
+      familyGraduation = {
+        category: 'Lignée Familiale, Nom de Famille & Proches',
+        title: 'Parents, Conjoint, Promotions & Lignée Civile',
+        query: `(${nameOrShort} OR "${fam}") (intext:"fils de" OR intext:"fille de" OR intext:"père" OR intext:"mère" OR intext:"époux" OR intext:"épouse" OR intext:"promotion" OR intext:"annuaire")`,
+        desc: 'Identifie les noms des parents (fils/fille de), conjoint, annuaires d\'anciens élèves et avis civils.',
+      };
+    } else {
+      familyGraduation = {
+        category: 'Family, Surname & Clan Lineage',
+        title: 'Parents, Siblings, Commencement Books & Civil Lineage',
+        query: `(${nameOrShort} OR "${fam}") (intext:"son of" OR intext:"daughter of" OR intext:"father" OR intext:"mother" OR intext:"spouse" OR intext:"husband" OR intext:"wife" OR intext:"commencement" OR intext:"yearbook" OR intext:"obituary")`,
+        desc: 'Uncovers parent names (son/daughter of), spouse mentions, university commencement books, yearbooks, and family obituaries.',
+      };
+    }
+
+    // 3. Career, Positions & Executive Roles
+    let careerJabatan: { category: string; title: string; query: string; desc: string };
+    if (dorkLanguage === 'id') {
+      careerJabatan = {
         category: 'Career, Jabatan & Executive Roles',
         title: 'Jabatan, Structural Position, PT/CV & Organization Role',
         query: `(${nameOrShort})${org ? ` "${org}"` : ''} (intext:"Jabatan" OR intext:"Direktur" OR intext:"Komisaris" OR intext:"Manager" OR intext:"Ketua" OR intext:"Divisi" OR intext:"Pengurus" OR intext:"Staff")`,
         desc: 'Pinpoints job titles, organizational committee roles, corporate directorships (AHU/PT/CV), and structural appointments.',
-      },
+      };
+    } else if (dorkLanguage === 'dual') {
+      careerJabatan = {
+        category: 'Career, Positions & Executive Roles',
+        title: 'Jabatan, Structural Position, Executive Roles & Organization Role',
+        query: `(${nameOrShort})${org ? ` "${org}"` : ''} (intext:"Jabatan" OR intext:"Direktur" OR intext:"Director" OR intext:"Komisaris" OR intext:"Manager" OR intext:"CEO" OR intext:"Founder" OR intext:"Ketua" OR intext:"Head of")`,
+        desc: 'Cross-matches bilingual corporate titles, board appointments, and structural organization hierarchy.',
+      };
+    } else if (dorkLanguage === 'es') {
+      careerJabatan = {
+        category: 'Carrera Profesional, Cargos y Directivos',
+        title: 'Cargo, Puesto Ejecutivo, Consejo y Dirección de Empresa',
+        query: `(${nameOrShort})${org ? ` "${org}"` : ''} (intext:"Cargo" OR intext:"Puesto" OR intext:"Director" OR intext:"Gerente" OR intext:"Presidente" OR intext:"Jefe" OR intext:"Fundador" OR intext:"Ejecutivo")`,
+        desc: 'Localiza nombramientos directivos, puestos en consejos de administración y cargos organizativos.',
+      };
+    } else if (dorkLanguage === 'de') {
+      careerJabatan = {
+        category: 'Beruflicher Werdegang, Positionen & Vorstand',
+        title: 'Position, Geschäftsführung, Vorstand & Leitungsfunktionen',
+        query: `(${nameOrShort})${org ? ` "${org}"` : ''} (intext:"Position" OR intext:"Geschäftsführer" OR intext:"Vorstand" OR intext:"Direktor" OR intext:"Leiter" OR intext:"Gründer" OR intext:"Bereichsleiter")`,
+        desc: 'Ermittelt Führungspositionen, Vorstandsrollen, Geschäftsführer-Einträge und leitende Funktionen.',
+      };
+    } else if (dorkLanguage === 'fr') {
+      careerJabatan = {
+        category: 'Parcours Professionnel, Postes & Direction',
+        title: 'Poste, Fonction de Direction, Conseil d\'Administration',
+        query: `(${nameOrShort})${org ? ` "${org}"` : ''} (intext:"Poste" OR intext:"Directeur" OR intext:"Gérant" OR intext:"Président" OR intext:"Responsable" OR intext:"Fondateur" OR intext:"Chef")`,
+        desc: 'Identifie les fonctions de direction, postes au conseil d\'administration et rôles de gestion.',
+      };
+    } else {
+      careerJabatan = {
+        category: 'Career, Positions & Executive Roles',
+        title: 'Job Title, Executive Roles, Corporate Board & Organization Position',
+        query: `(${nameOrShort})${org ? ` "${org}"` : ''} (intext:"Position" OR intext:"Title" OR intext:"Director" OR intext:"Commissioner" OR intext:"Manager" OR intext:"CEO" OR intext:"Founder" OR intext:"Officer" OR intext:"Head of" OR intext:"Executive")`,
+        desc: 'Pinpoints job titles, company executive roles (CEO/Director/Officer), board members, and organizational appointments.',
+      };
+    }
+
+    // 4. Academic, University & Student Records
+    let academicCampus: { category: string; title: string; query: string; desc: string };
+    if (dorkLanguage === 'id') {
+      academicCampus = {
+        category: 'Academic, University & PDDIKTI Records',
+        title: 'PDDIKTI, University Repository (.ac.id), NIM & Thesis/Skripsi',
+        query: `(${nameOrShort} OR "${h}") (site:ac.id OR site:pddikti.kemdikbud.go.id OR intext:"NIM" OR intext:"NPM" OR intext:"Skripsi" OR intext:"Tesis" OR intext:"Program Studi")`,
+        desc: 'Searches Indonesian university domains (.ac.id), PDDIKTI student/lecturer records, student IDs (NIM/NPM), and thesis repositories.',
+      };
+    } else if (dorkLanguage === 'dual') {
+      academicCampus = {
+        category: 'Academic, University & Student Records',
+        title: 'PDDIKTI, University Repositories (.edu / .ac.id), Student ID & Theses',
+        query: `(${nameOrShort} OR "${h}") (site:ac.id OR site:edu OR site:pddikti.kemdikbud.go.id OR intext:"NIM" OR intext:"Student ID" OR intext:"Skripsi" OR intext:"Thesis" OR intext:"Dissertation")`,
+        desc: 'Searches both Indonesian (.ac.id/PDDIKTI) and global university archives (.edu) for matriculation IDs and dissertations.',
+      };
+    } else if (dorkLanguage === 'es') {
+      academicCampus = {
+        category: 'Registros Universitarios y Tesis Académicas',
+        title: 'Repositorios Universitarios (.es / .edu), Matrícula y Tesis',
+        query: `(${nameOrShort} OR "${h}") (site:es OR site:edu OR intext:"Matrícula" OR intext:"Tesis" OR intext:"Tesina" OR intext:"Facultad" OR intext:"Grado" OR intext:"Licenciatura")`,
+        desc: 'Rastrea matrículas universitarias, grados académicos, memorias y repositorios de tesis en español.',
+      };
+    } else if (dorkLanguage === 'de') {
+      academicCampus = {
+        category: 'Akademische Archive, Matrikelnummer & Abschlussarbeiten',
+        title: 'Universitätsarchive (.de / .at / .ch), Matrikelnummer & Dissertationen',
+        query: `(${nameOrShort} OR "${h}") (site:de OR site:at OR site:ch OR intext:"Matrikelnummer" OR intext:"Masterarbeit" OR intext:"Bachelorarbeit" OR intext:"Dissertation" OR intext:"Fakultät")`,
+        desc: 'Durchsucht deutschsprachige Universitätsrepositorien nach Matrikelnummern, Abschlussarbeiten und Fakultäten.',
+      };
+    } else if (dorkLanguage === 'fr') {
+      academicCampus = {
+        category: 'Registres Universitaires, Numéro Étudiant & Thèses',
+        title: 'Dépôts Universitaires (.fr / .univ.fr), Numéro Étudiant & Thèses',
+        query: `(${nameOrShort} OR "${h}") (site:fr OR site:univ.fr OR intext:"Numéro étudiant" OR intext:"Thèse" OR intext:"Mémoire" OR intext:"Faculté" OR intext:"Université")`,
+        desc: 'Recherche dans les universités françaises (.univ.fr) les thèses, mémoires, facultés et numéros étudiants.',
+      };
+    } else {
+      academicCampus = {
+        category: 'Academic, University & Student Records',
+        title: 'University Repositories (.edu / .ac.uk), Student ID, Thesis & Dissertation',
+        query: `(${nameOrShort} OR "${h}") (site:edu OR site:ac.uk OR intext:"Student ID" OR intext:"Thesis" OR intext:"Dissertation" OR intext:"Department" OR intext:"Major" OR intext:"Alumni")`,
+        desc: 'Searches global university domains (.edu, .ac.uk), alumni directories, student IDs, bachelor/master theses, and dissertations.',
+      };
+    }
+
+    // 5. Academic Research Papers & Advisors
+    let academicScholar: { category: string; title: string; query: string; desc: string };
+    if (dorkLanguage === 'id') {
+      academicScholar = {
+        category: 'Academic, University & PDDIKTI Records',
+        title: 'Google Scholar, SINTA, Garuda & Thesis Advisors (Dosen Pembimbing)',
+        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:garuda.kemdikbud.go.id OR site:sinta.kemdikbud.go.id OR intext:"Dosen Pembimbing" OR intext:"Jurusan" OR intext:"Fakultas")`,
+        desc: 'Finds academic journals, co-authors, thesis supervisors (dosen pembimbing), and faculty affiliations.',
+      };
+    } else if (dorkLanguage === 'dual') {
+      academicScholar = {
+        category: 'Academic, University & Research Papers',
+        title: 'Google Scholar, SINTA, ResearchGate & Thesis Advisors',
+        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:researchgate.net OR site:garuda.kemdikbud.go.id OR intext:"Dosen Pembimbing" OR intext:"Advisor" OR intext:"Co-author")`,
+        desc: 'Searches both Indonesian SINTA/Garuda and international Google Scholar / ResearchGate networks.',
+      };
+    } else if (dorkLanguage === 'es') {
+      academicScholar = {
+        category: 'Publicaciones Científicas y Directores de Tesis',
+        title: 'Google Scholar, Dialnet, ResearchGate y Directores de Tesis',
+        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:dialnet.unirioja.es OR site:researchgate.net OR intext:"Director de tesis" OR intext:"Coautor" OR intext:"Departamento")`,
+        desc: 'Encuentra artículos científicos, coautores y directores de tesis en Google Scholar y Dialnet.',
+      };
+    } else if (dorkLanguage === 'de') {
+      academicScholar = {
+        category: 'Wissenschaftliche Publikationen & Betreuer',
+        title: 'Google Scholar, ResearchGate, Koautoren & Doktorvater/Betreuer',
+        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:researchgate.net OR intext:"Doktorvater" OR intext:"Betreuer" OR intext:"Koautor" OR intext:"Institut")`,
+        desc: 'Findet wissenschaftliche Aufsätze, Co-Autoren, Doktorväter und Institutspublikationen.',
+      };
+    } else if (dorkLanguage === 'fr') {
+      academicScholar = {
+        category: 'Publications Scientifiques & Directeurs de Recherche',
+        title: 'Google Scholar, Theses.fr, ResearchGate & Directeurs de Thèse',
+        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:theses.fr OR site:researchgate.net OR intext:"Directeur de thèse" OR intext:"Coauteur" OR intext:"Laboratoire")`,
+        desc: 'Identifie les articles scientifiques, coauteurs et directeurs de recherche universitaire.',
+      };
+    } else {
+      academicScholar = {
+        category: 'Academic, University & Research Papers',
+        title: 'Google Scholar, ResearchGate, Co-Authors & Thesis Advisors',
+        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:researchgate.net OR site:academia.edu OR intext:"Advisor" OR intext:"Supervised by" OR intext:"Co-author" OR intext:"Department")`,
+        desc: 'Finds academic research papers, citations, co-authors, thesis advisors, and institutional affiliations on Scholar & ResearchGate.',
+      };
+    }
+
+    // 6. Government Decrees, Gazettes & Civil Service
+    let govDecrees: { category: string; title: string; query: string; desc: string };
+    if (dorkLanguage === 'id') {
+      govDecrees = {
+        category: 'Official Decrees (.go.id), Rosters & Leaked CVs',
+        title: 'Government Decrees (.go.id), SK, Civil Service & Court Records',
+        query: `(${nameOrShort} OR "${fam}") (site:go.id OR intext:"Surat Keputusan" OR intext:"Lampiran" OR intext:"Pengumuman" OR intext:"Daftar Peserta")`,
+        desc: 'Hunts official government websites (.go.id), ministerial decrees (SK), CPNS/BUMN selection rosters, and public registries.',
+      };
+    } else if (dorkLanguage === 'dual') {
+      govDecrees = {
+        category: 'Official Decrees (.gov / .go.id) & Public Records',
+        title: 'Government Portals (.gov / .go.id), Decrees (SK) & Official Gazettes',
+        query: `(${nameOrShort} OR "${fam}") (site:go.id OR site:gov OR intext:"Surat Keputusan" OR intext:"Decree" OR intext:"Pengumuman" OR intext:"Public Notice" OR intext:"Gazette")`,
+        desc: 'Combines Indonesian .go.id decrees with global .gov / .gov.uk official registers and public appointments.',
+      };
+    } else if (dorkLanguage === 'es') {
+      govDecrees = {
+        category: 'Boletines Oficiales, Decretos y Registros Públicos',
+        title: 'Boletín Oficial del Estado (BOE), Resoluciones y Nombramientos',
+        query: `(${nameOrShort} OR "${fam}") (site:boe.es OR site:gob.es OR site:gob.* OR intext:"Boletín Oficial" OR intext:"Resolución" OR intext:"Decreto" OR intext:"Nombramiento")`,
+        desc: 'Rastrea boletines oficiales (BOE/BOCM), nombramientos públicos, decretos y registros administrativos.',
+      };
+    } else if (dorkLanguage === 'de') {
+      govDecrees = {
+        category: 'Bundesgesetzblätter, Amtsblätter & Öffentliche Register',
+        title: 'Bundesgesetzblatt, Amtsblätter, Ernennungen & Beschlüsse',
+        query: `(${nameOrShort} OR "${fam}") (site:bund.de OR site:gv.at OR intext:"Bundesgesetzblatt" OR intext:"Amtsblatt" OR intext:"Beschluss" OR intext:"Ernennung")`,
+        desc: 'Durchsucht amtliche Bekanntmachungen, Bundesanzeiger, Amtsblätter und offizielle Beschlüsse.',
+      };
+    } else if (dorkLanguage === 'fr') {
+      govDecrees = {
+        category: 'Journal Officiel, Arrêtés & Registres Publics',
+        title: 'Journal Officiel (Légifrance), Arrêtés, Décrets & Nominations',
+        query: `(${nameOrShort} OR "${fam}") (site:legifrance.gouv.fr OR site:gouv.fr OR intext:"Journal Officiel" OR intext:"Arrêté" OR intext:"Décret" OR intext:"Nomination")`,
+        desc: 'Consulte le Journal Officiel, les décrets ministériels, nominations civiles et avis officiels.',
+      };
+    } else {
+      govDecrees = {
+        category: 'Official Decrees (.gov), Rosters & Public Records',
+        title: 'Government Portals (.gov), Public Filings, Decrees & Official Gazettes',
+        query: `(${nameOrShort} OR "${fam}") (site:gov OR site:gov.uk OR intext:"Gazette" OR intext:"Resolution" OR intext:"Public Notice" OR intext:"Appointed" OR intext:"Order" OR intext:"Registry")`,
+        desc: 'Hunts official government registries (.gov / .gov.uk), executive orders, official gazettes, gazetted appointments, and public filings.',
+      };
+    }
+
+    // 7. Indexed Documents & Leaked Rosters
+    let docRoster: { category: string; title: string; query: string; desc: string };
+    if (dorkLanguage === 'id') {
+      docRoster = {
+        category: 'Official Decrees (.go.id), Rosters & Leaked CVs',
+        title: 'Indexed PDF / XLSX / DOCX CVs, Phone Numbers (+62/08) & Rosters',
+        query: activeFullName
+          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
+        desc: 'Hunts for leaked resumes/CVs, phone numbers, university student lists, event participant rosters, or employee spreadsheets.',
+      };
+    } else if (dorkLanguage === 'dual') {
+      docRoster = {
+        category: 'Official Decrees & Leaked Document Rosters',
+        title: 'Indexed PDF / XLSX / DOCX CVs, Resumes & Participant Rosters',
+        query: activeFullName
+          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (intext:"Curriculum Vitae" OR intext:"Resume" OR intext:"CV" OR intext:"Kontak" OR intext:"Phone") (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
+        desc: 'Bilingual sweep for leaked resumes/CVs, phone numbers, attendee rosters, and organizational spreadsheets.',
+      };
+    } else if (dorkLanguage === 'es') {
+      docRoster = {
+        category: 'Documentos Indexados, Registros y CV Filtrados',
+        title: 'Currículums (CV), Teléfonos y Listados en PDF / XLSX / DOCX',
+        query: activeFullName
+          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (intext:"Curriculum Vitae" OR intext:"CV" OR intext:"Teléfono" OR intext:"Contacto") (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
+        desc: 'Búsqueda de currículums filtrados, números de teléfono, actas y listas de participantes en eventos.',
+      };
+    } else if (dorkLanguage === 'de') {
+      docRoster = {
+        category: 'Dokumente, Teilnehmerlisten & Durchgesickerte Lebensläufe',
+        title: 'Lebensläufe (CV), Telefonnummern & Teilnehmerlisten in PDF / XLSX / DOCX',
+        query: activeFullName
+          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (intext:"Lebenslauf" OR intext:"CV" OR intext:"Telefon" OR intext:"Kontakt") (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
+        desc: 'Sucht nach durchgesickerten Lebensläufen, Kontaktdaten, Teilnehmerlisten und internen Tabellen.',
+      };
+    } else if (dorkLanguage === 'fr') {
+      docRoster = {
+        category: 'Documents Indexés, Listes & CV en Ligne',
+        title: 'Curriculum Vitae (CV), Téléphones & Annuaires en PDF / XLSX / DOCX',
+        query: activeFullName
+          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (intext:"Curriculum Vitae" OR intext:"CV" OR intext:"Téléphone" OR intext:"Contact") (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
+        desc: 'Recherche de CV en ligne, numéros de téléphone, listes d\'émargement et tableurs de participants.',
+      };
+    } else {
+      docRoster = {
+        category: 'Indexed Documents, Rosters & Leaked CVs',
+        title: 'Indexed PDF / XLSX / DOCX CVs, Resumes & Participant Rosters',
+        query: activeFullName
+          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (intext:"Curriculum Vitae" OR intext:"Resume" OR intext:"Phone" OR intext:"Contact") (filetype:pdf OR filetype:xlsx OR filetype:docx)`
+          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
+        desc: 'Hunts for leaked resumes/CVs, attendee rosters, contact sheets, employee rosters, or spreadsheets.',
+      };
+    }
+
+    return [
+      { id: 'family-clan-relatives', ...familyClan },
+      { id: 'family-lineage-graduation', ...familyGraduation },
+      { id: 'career-jabatan-org', ...careerJabatan },
       {
         id: 'linkedin-pivot',
-        category: 'Career, Jabatan & Executive Roles',
+        category: 'Career & Identity Pivots',
         title: 'LinkedIn Career & Education Identity Match',
         query: activeFullName
           ? `site:linkedin.com/in/ (${nameOrShort})${org ? ` "${org}"` : ''}`
@@ -207,43 +631,17 @@ export function LeadInspectorDrawer({
       },
       {
         id: 'linkedin-activity',
-        category: 'Career, Jabatan & Executive Roles',
+        category: 'Career & Identity Pivots',
         title: 'LinkedIn Public Post Comments & Colleague Tags',
         query: activeFullName
           ? `site:linkedin.com/posts/ (${nameOrShort} OR "${h}")`
           : `site:linkedin.com/posts/ "${h}"`,
         desc: 'Finds public LinkedIn posts where the target commented, congratulated colleagues, or was tagged by coworkers.',
       },
-      {
-        id: 'academic-pddikti-kampus',
-        category: 'Academic, University & PDDIKTI Records',
-        title: 'PDDIKTI, University Repository (.ac.id), NIM & Thesis/Skripsi',
-        query: `(${nameOrShort} OR "${h}") (site:ac.id OR site:pddikti.kemdikbud.go.id OR intext:"NIM" OR intext:"NPM" OR intext:"Skripsi" OR intext:"Tesis" OR intext:"Program Studi")`,
-        desc: 'Searches Indonesian & global university domains (.ac.id), PDDIKTI student/lecturer records, student IDs (NIM/NPM), and thesis repositories.',
-      },
-      {
-        id: 'academic-scholar-garuda',
-        category: 'Academic, University & PDDIKTI Records',
-        title: 'Google Scholar, SINTA, Garuda & Thesis Advisors (Dosen Pembimbing)',
-        query: `(${nameOrShort} OR "${fam}") (site:scholar.google.com OR site:garuda.kemdikbud.go.id OR site:sinta.kemdikbud.go.id OR intext:"Dosen Pembimbing" OR intext:"Jurusan" OR intext:"Fakultas")`,
-        desc: 'Finds academic journals, co-authors, thesis supervisors (dosen pembimbing), and faculty affiliations.',
-      },
-      {
-        id: 'gov-decrees-sk',
-        category: 'Official Decrees (.go.id), Rosters & Leaked CVs',
-        title: 'Government Decrees (.go.id), SK, Civil Service & Court Records',
-        query: `(${nameOrShort} OR "${fam}") (site:go.id OR intext:"Surat Keputusan" OR intext:"Lampiran" OR intext:"Pengumuman" OR intext:"Daftar Peserta")`,
-        desc: 'Hunts official government websites (.go.id), ministerial decrees (SK), CPNS/BUMN selection rosters, and public registries.',
-      },
-      {
-        id: 'doc-roster-leak',
-        category: 'Official Decrees (.go.id), Rosters & Leaked CVs',
-        title: 'Indexed PDF / XLSX / DOCX CVs, Phone Numbers (+62/08) & Rosters',
-        query: activeFullName
-          ? `(${nameOrShort} OR "${h}"${em ? ` OR "${em}"` : ''}) (filetype:pdf OR filetype:xlsx OR filetype:docx)`
-          : `"${h}" (filetype:pdf OR filetype:xlsx OR filetype:docx OR filetype:txt)`,
-        desc: 'Hunts for leaked resumes/CVs, phone numbers, university student lists, event participant rosters, or employee spreadsheets.',
-      },
+      { id: 'academic-pddikti-kampus', ...academicCampus },
+      { id: 'academic-scholar-garuda', ...academicScholar },
+      { id: 'gov-decrees-sk', ...govDecrees },
+      { id: 'doc-roster-leak', ...docRoster },
       {
         id: 'ig-bypass',
         category: 'Private Account Comment & Tag Bypass',
@@ -280,7 +678,7 @@ export function LeadInspectorDrawer({
         desc: 'Searches Linktree/Carrd bio hubs, Telegram channels, Reddit discussions, and paste sites for the target name or handle.',
       },
     ];
-  }, [activeHandle, activeFullName, activeNameTokens, activeOrg, dossier.emails]);
+  }, [activeHandle, activeFullName, activeNameTokens, activeOrg, dossier.emails, dorkLanguage]);
 
   // Extractable sub-leads from the currently selected node for 1-click "+ Spawn on Board"
   const spawnableNodeLeads = useMemo(() => {
@@ -834,6 +1232,47 @@ export function LeadInspectorDrawer({
                   placeholder={`Default: ${activeHandle}`}
                   className="w-full px-2.5 py-1.5 rounded-md bg-[#090B10] border border-white/[0.1] text-xs font-mono text-slate-100 outline-none focus:border-sky-400/60"
                 />
+              </div>
+            </div>
+
+            {/* Target Language & Region Selector */}
+            <div className="p-3 rounded-xl bg-[#131720] border border-white/[0.08] space-y-2.5" data-testid="dork-language-selector">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-semibold text-slate-100 flex items-center gap-1.5">
+                  <Languages className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Dork Language & Region</span>
+                </div>
+                <span className="text-[10px] font-mono text-sky-300 bg-sky-500/15 border border-sky-500/30 px-2 py-0.5 rounded-md">
+                  {DORK_LANGUAGES.find((l) => l.id === dorkLanguage)?.region}
+                </span>
+              </div>
+              <p className="text-[10.5px] text-slate-400 leading-relaxed">
+                Adapts keywords for family lineage, civil decrees, academic archives, and executive roles to match the target&apos;s country or language.
+              </p>
+              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                {DORK_LANGUAGES.map((lang) => {
+                  const isActive = dorkLanguage === lang.id;
+                  return (
+                    <button
+                      key={lang.id}
+                      type="button"
+                      onClick={() => {
+                        hasUserSelectedLang.current = true;
+                        setDorkLanguage(lang.id);
+                      }}
+                      data-testid={`dork-lang-${lang.id}`}
+                      className={cn(
+                        "px-2 py-1.5 rounded-lg border text-[11px] font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer",
+                        isActive
+                          ? "bg-sky-500/20 border-sky-400/60 text-sky-200 font-semibold shadow-sm shadow-sky-500/10"
+                          : "bg-[#090B10] border-white/[0.06] text-slate-400 hover:text-slate-200 hover:border-white/[0.12]"
+                      )}
+                    >
+                      <span className="text-xs">{lang.flag}</span>
+                      <span>{lang.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
