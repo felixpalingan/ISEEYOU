@@ -6,6 +6,8 @@ from engine.providers.social_scanner import SocialPresenceScanner
 from engine.providers.deep_profile_extractor import DeepProfileExtractor
 from engine.providers.connection_mapper import ConnectionMapperProvider
 from engine.providers.email_correlator import EmailCorrelatorProvider
+from engine.providers.wayback_extractor import WaybackMachineExtractor
+from engine.providers.phone_intel import PhoneIntelProvider
 
 __all__ = [
     "SubdomainDNSResolver",
@@ -15,4 +17,6 @@ __all__ = [
     "DeepProfileExtractor",
     "ConnectionMapperProvider",
     "EmailCorrelatorProvider",
+    "WaybackMachineExtractor",
+    "PhoneIntelProvider",
 ]

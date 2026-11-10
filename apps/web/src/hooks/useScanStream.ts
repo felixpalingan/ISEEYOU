@@ -105,6 +105,7 @@ export function buildTargetDossier(
   const fullNames = new Set<string>();
   const handles = new Set<string>();
   const emails = new Set<string>();
+  const phones = new Set<string>();
   const avatars = new Set<string>();
   const locations = new Set<string>();
   const organizations = new Set<string>();
@@ -127,6 +128,9 @@ export function buildTargetDossier(
   if (targetType === 'email' && target.includes('@')) {
     emails.add(target.toLowerCase());
     handles.add(target.split('@')[0]);
+  }
+  if (targetType === 'phone') {
+    phones.add(target.trim());
   }
   if (targetType === 'domain') domains.add(target.toLowerCase());
 
@@ -245,6 +249,19 @@ export function buildTargetDossier(
       }
     }
 
+    // Phones
+    if (node.type === 'phone' && node.value.trim()) {
+      phones.add(node.value.trim());
+    }
+    if (typeof meta.e164 === 'string' && meta.e164.trim()) {
+      phones.add(meta.e164.trim());
+    }
+    if (Array.isArray(meta.phones)) {
+      for (const p of meta.phones) {
+        if (typeof p === 'string' && p.trim()) phones.add(p.trim());
+      }
+    }
+
     // Bios
     if (typeof meta.bio === 'string' && meta.bio.trim()) {
       const plat = String(meta.platform || 'Profile');
@@ -341,6 +358,7 @@ export function buildTargetDossier(
     fullNames: Array.from(fullNames),
     handles: Array.from(handles),
     emails: Array.from(emails),
+    phones: Array.from(phones),
     avatars: Array.from(avatars),
     locations: Array.from(locations),
     organizations: Array.from(organizations),
@@ -383,6 +401,9 @@ export function useScanStream() {
 
   const [savedCases, setSavedCases] = useState<CaseFile[]>([]);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [autoChainEnabled, setAutoChainEnabled] = useState<boolean>(true);
+  const chainedTargetsRef = useRef<Set<string>>(new Set());
+  const currentDepthRef = useRef<number>(1);
 
   // Load saved cases from localStorage on mount
   useEffect(() => {
@@ -511,6 +532,12 @@ export function useScanStream() {
               },
             ],
           };
+        }
+
+        if (!isPivot) {
+          chainedTargetsRef.current.clear();
+          chainedTargetsRef.current.add(target.toLowerCase().trim());
+          currentDepthRef.current = 1;
         }
 
         return {
@@ -738,13 +765,68 @@ export function useScanStream() {
         es.addEventListener('scan_completed', (e: MessageEvent) => {
           try {
             const sessionResult = JSON.parse(e.data);
-            setState((prev) => ({
-              ...prev,
-              status: 'completed',
-              isScanning: false,
-              riskScore: Math.max(prev.riskScore, sessionResult.risk_score ?? 0),
-            }));
             closeEventSource();
+
+            setState((prev) => {
+              const nextState: ScanStreamState = {
+                ...prev,
+                status: 'completed',
+                isScanning: false,
+                riskScore: Math.max(prev.riskScore, sessionResult.risk_score ?? 0),
+              };
+
+              // Smart Auto-Chaining (Depth-2) strictly for verified high-entropy leads
+              if (autoChainEnabled && currentDepthRef.current === 1) {
+                const highEntropyLead = prev.nodes.find((n) => {
+                  const val = n.value.toLowerCase().trim();
+                  if (chainedTargetsRef.current.has(val)) return false;
+                  if (n.confidence === 'false_positive') return false;
+
+                  // 1. Valid commit or profile email
+                  if (n.type === 'email' && val.includes('@')) {
+                    const isBot = val.includes('noreply') || val.includes('dependabot') || val.includes('bot@');
+                    if (!isBot) return true;
+                  }
+
+                  // 2. Verified phone number
+                  if (n.type === 'phone' && val.length >= 8) {
+                    return true;
+                  }
+
+                  // 3. Custom domain
+                  if (n.type === 'domain' && val.includes('.')) {
+                    const isCommon = ['github.com', 'google.com', 'example.com', 'twitter.com', 'facebook.com', 'instagram.com'].includes(val);
+                    if (!isCommon) return true;
+                  }
+
+                  return false;
+                });
+
+                if (highEntropyLead) {
+                  const leadTarget = highEntropyLead.value;
+                  const leadType = highEntropyLead.type;
+                  const leadParentId = highEntropyLead.id;
+                  chainedTargetsRef.current.add(leadTarget.toLowerCase().trim());
+                  currentDepthRef.current = 2;
+
+                  setTimeout(() => {
+                    startScan(
+                      leadTarget,
+                      leadType,
+                      true,
+                      leadType === 'email'
+                        ? ['email_correlator', 'breach_credential_hunter', 'wayback_extractor']
+                        : leadType === 'phone'
+                        ? ['phone_intel']
+                        : ['subdomain_dns_resolver', 'wayback_extractor'],
+                      leadParentId
+                    );
+                  }, 800);
+                }
+              }
+
+              return nextState;
+            });
           } catch (err) {
             console.error('Failed to parse scan_completed:', err);
           }
@@ -1170,6 +1252,9 @@ export function useScanStream() {
     allRawNodes: state.nodes,
     dossier,
     savedCases,
+    autoChainEnabled,
+    toggleAutoChain: () => setAutoChainEnabled((prev) => !prev),
+    setAutoChainEnabled,
     startScan,
     cancelScan,
     clearLogs,

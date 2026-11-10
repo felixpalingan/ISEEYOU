@@ -267,6 +267,77 @@ class TestSocialPresenceScanner(unittest.IsolatedAsyncioTestCase):
             "bariqhkp",
         )
 
+    def test_redirect_trap_detection(self):
+        wp_platform = {
+            "id": "wordpress",
+            "name": "WordPress",
+            "error_url": "wordpress.com/typo",
+        }
+        self.assertTrue(
+            self.scanner._is_redirect_trap(
+                wp_platform,
+                "https://wordpress.com/typo/?subdomain=nonexistent123",
+                "https://nonexistent123.wordpress.com/",
+                "nonexistent123",
+            )
+        )
+        self.assertTrue(
+            self.scanner._is_redirect_trap(
+                {"id": "service", "name": "Service"},
+                "https://service.com/login",
+                "https://service.com/user123",
+                "user123",
+            )
+        )
+        self.assertFalse(
+            self.scanner._is_redirect_trap(
+                {"id": "service", "name": "Service"},
+                "https://service.com/user123",
+                "https://service.com/user123",
+                "user123",
+            )
+        )
+
+    def test_soft_404_shell_detection(self):
+        twitch_platform = {"id": "twitch", "name": "Twitch"}
+        self.assertTrue(
+            self.scanner._is_soft_404_shell(
+                twitch_platform,
+                "<!DOCTYPE html><html><head><title>Twitch</title></head></html>",
+                "fake_channel",
+            )
+        )
+        self.assertFalse(
+            self.scanner._is_soft_404_shell(
+                twitch_platform,
+                "<!DOCTYPE html><html><head><title>Ninja - Twitch</title></head></html>",
+                "ninja",
+            )
+        )
+
+        spotify_platform = {"id": "spotify", "name": "Spotify"}
+        self.assertTrue(
+            self.scanner._is_soft_404_shell(
+                spotify_platform,
+                "<html><head><title>Page not found</title></head></html>",
+                "nonexistent",
+            )
+        )
+        self.assertTrue(
+            self.scanner._is_soft_404_shell(
+                spotify_platform,
+                "<html><head><title>Spotify – Web Player</title></head></html>",
+                "nonexistent",
+            )
+        )
+        self.assertFalse(
+            self.scanner._is_soft_404_shell(
+                spotify_platform,
+                '<html><head><meta property="og:type" content="profile"/></head></html>',
+                "spotify",
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

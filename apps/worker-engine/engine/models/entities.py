@@ -10,6 +10,8 @@ class EntityType(str, Enum):
     IP = "ip"
     EMAIL = "email"
     USERNAME = "username"
+    PHONE = "phone"
+    ARCHIVE = "archive"
     BREACH = "breach"
     PORT = "port"
     SECRET = "secret"

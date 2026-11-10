@@ -79,6 +79,20 @@ export const AVAILABLE_OSINT_MODULES: ModuleConfigItem[] = [
     description: 'GeoIP ASN lookup + Shodan InternetDB open ports & CVEs',
     modes: ['web'],
   },
+  {
+    id: 'wayback_extractor',
+    label: 'Wayback Machine Archive',
+    shortLabel: 'Wayback Archive',
+    description: 'Crawls Archive.org historical snapshots & deleted profiles',
+    modes: ['web', 'identity'],
+  },
+  {
+    id: 'phone_intel',
+    label: 'Phone Carrier & Messaging Intel',
+    shortLabel: 'Phone Intel',
+    description: 'Attributes Indonesian/Intl cellular operators, WhatsApp & Telegram endpoints',
+    modes: ['identity'],
+  },
 ];
 
 interface OmniSearchBarProps {
@@ -125,6 +139,8 @@ export function OmniSearchBar({
     'breach_credential_hunter',
     'subdomain_dns_resolver',
     'ip_threat_intel',
+    'wayback_extractor',
+    'phone_intel',
   ]);
   const containerRef = useRef<HTMLDivElement>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);

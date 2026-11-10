@@ -132,8 +132,19 @@ def classify_input(seed: str, explicit_type: Optional[EntityType] = None) -> Ent
     if not seed:
         return EntityType.USERNAME
 
-    # Explicit @ prefix or full name with spaces -> Username
-    if seed.startswith("@") or " " in seed:
+    # Explicit handle prefix
+    if seed.startswith("@"):
+        return EntityType.USERNAME
+
+    # Phone number check (+62..., 08..., or international with + and digits)
+    cleaned_digits = re.sub(r"[\s\-\(\)\.]", "", seed)
+    if (seed.startswith("+") and cleaned_digits[1:].isdigit() and 7 <= len(cleaned_digits[1:]) <= 15) or (
+        cleaned_digits.isdigit() and cleaned_digits.startswith("08") and 10 <= len(cleaned_digits) <= 14
+    ):
+        return EntityType.PHONE
+
+    # Full name with spaces -> Username
+    if " " in seed:
         return EntityType.USERNAME
 
     # Email regex

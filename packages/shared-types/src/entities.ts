@@ -7,6 +7,8 @@ export type EntityType =
   | 'ip'
   | 'email'
   | 'username'
+  | 'phone'
+  | 'archive'
   | 'breach'
   | 'port'
   | 'secret'
@@ -50,6 +52,7 @@ export interface TargetDossier {
   fullNames: string[];
   handles: string[];
   emails: string[];
+  phones: string[];
   avatars: string[];
   locations: string[];
   organizations: string[];

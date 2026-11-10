@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Sparkles,
   Scale,
@@ -13,6 +13,7 @@ import {
   Network,
   Terminal,
   X,
+  Workflow,
 } from 'lucide-react';
 import {
   OmniSearchBar,
@@ -69,6 +70,8 @@ export default function WorkspacePage() {
     savedCases,
     activeCaseName,
     caseNotes,
+    autoChainEnabled,
+    toggleAutoChain,
     isScanning,
     selectedFinding,
     selectedNode,
@@ -146,20 +149,20 @@ export default function WorkspacePage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isActivityLogOpen, isRightDrawerOpen]);
 
-  const handleInspectNode = (node: EntityNode) => {
+  const handleInspectNode = useCallback((node: EntityNode) => {
     selectNode(node);
     openInspectorTab('node');
-  };
+  }, [selectNode]);
 
-  const handleInspectFinding = (finding: any) => {
+  const handleInspectFinding = useCallback((finding: any) => {
     selectFinding(finding);
     setIsRightDrawerOpen(true);
     if (typeof window !== 'undefined' && window.innerWidth < 1440) {
       setIsDossierCollapsed(true);
     }
-  };
+  }, [selectFinding]);
 
-  const handleRunModuleOnNode = (node: EntityNode | null, moduleIds: string[]) => {
+  const handleRunModuleOnNode = useCallback((node: EntityNode | null, moduleIds: string[]) => {
     const rawVal = node
       ? typeof node.metadata?.handle === 'string' && node.metadata.handle
         ? node.metadata.handle
@@ -168,9 +171,9 @@ export default function WorkspacePage() {
     const nodeType: EntityType = node ? node.type : targetType;
     const cleanVal = normalizeTargetForType(rawVal, nodeType);
     startScan(cleanVal, nodeType, true, moduleIds, node?.id);
-  };
+  }, [target, targetType, startScan]);
 
-  const handlePivotLead = (
+  const handlePivotLead = useCallback((
     rawVal: string,
     type: EntityType,
     customModules?: string[],
@@ -195,7 +198,7 @@ export default function WorkspacePage() {
       chosenMods.length > 0 ? chosenMods : validModsForMode,
       parentNodeId || selectedNode?.id || `root-${target}`
     );
-  };
+  }, [enabledModules, selectedNode, target, startScan]);
 
   const latestLog = logs[logs.length - 1];
 
@@ -248,6 +251,25 @@ export default function WorkspacePage() {
 
         {/* Right Tactical Actions Bar (Unified Quiet Surface + Crisp Icon Accents) */}
         <div className="flex items-center gap-1.5 font-mono text-[11px]">
+          <button
+            type="button"
+            data-testid="btn-toggle-autochain"
+            onClick={toggleAutoChain}
+            className={`px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 transition-all focus-visible:ring-1 focus-visible:ring-sky-400 focus-visible:outline-none ${
+              autoChainEnabled
+                ? 'bg-sky-500/15 border-sky-500/40 text-sky-300'
+                : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-400'
+            }`}
+            title={
+              autoChainEnabled
+                ? 'Auto-Chain Depth-2 is ON: Verified high-entropy leads (commit emails, phone numbers, custom domains) are automatically pivoted.'
+                : 'Auto-Chain is OFF: Lead pivoting is purely manual.'
+            }
+          >
+            <Workflow className={`w-3.5 h-3.5 ${autoChainEnabled ? 'text-sky-400' : 'text-slate-500'}`} />
+            <span className="hidden xl:inline">Auto-Chain {autoChainEnabled ? 'ON' : 'OFF'}</span>
+          </button>
+
           <button
             type="button"
             data-testid="btn-open-pin-clue"
@@ -365,133 +387,135 @@ export default function WorkspacePage() {
 
       {/* 2. FULL-SCREEN INVESTIGATION WORKSPACE */}
       <main className="flex-1 relative overflow-hidden flex">
-        {activeView === 'caseboard' && (
-          <div className="flex-1 w-full h-full relative">
-            {/* Full-Viewport Infinite React Flow Caseboard */}
-            <GraphCanvas
-              nodes={nodes}
-              edges={edges}
-              findings={findings}
+        <div
+          className={
+            activeView === 'caseboard' ? 'flex-1 w-full h-full relative' : 'hidden'
+          }
+        >
+          {/* Full-Viewport Infinite React Flow Caseboard */}
+          <GraphCanvas
+            nodes={nodes}
+            edges={edges}
+            findings={findings}
+            target={target}
+            targetType={targetType}
+            isScanning={isScanning}
+            selectedFindingId={selectedFinding?.id}
+            selectedNodeId={selectedNode?.id}
+            clusterThreshold={clusterThreshold}
+            defaultLayoutMode={defaultLayoutMode}
+            onSelectNode={handleInspectNode}
+            onSelectFinding={handleInspectFinding}
+            onPivot={(pivotTarget, pivotType, customMods, parentId) =>
+              handlePivotLead(pivotTarget, pivotType, customMods, parentId)
+            }
+          />
+
+          {/* Floating Left Panel: Live Target Dossier, Reverse Image Search & Chronological Timeline */}
+          <div className="absolute top-3 left-3 z-20">
+            <TargetDossierCard
+              dossier={dossier}
+              targetType={targetType}
+              riskScore={riskScore}
+              isScanning={isScanning}
+              onPivotLead={(val, type, mods) => handlePivotLead(val, type, mods)}
+              onOpenDorkMatrix={() => openInspectorTab('dorks')}
+              isCollapsedControlled={isDossierCollapsed}
+              onToggleCollapse={() => setIsDossierCollapsed((prev) => !prev)}
+            />
+          </div>
+
+          {/* Floating Right Panel: Slide-Over Lead Inspector, Tactical Dork Matrix & AI Detective */}
+          <div className="absolute top-3 right-3 z-20">
+            <LeadInspectorDrawer
+              isOpen={isRightDrawerOpen}
+              activeTab={inspectorTab}
+              onTabChange={(t) => setInspectorTab(t)}
+              onClose={() => setIsRightDrawerOpen(false)}
+              selectedNode={selectedNode}
               target={target}
               targetType={targetType}
+              dossier={dossier}
               isScanning={isScanning}
-              selectedFindingId={selectedFinding?.id}
-              selectedNodeId={selectedNode?.id}
-              clusterThreshold={clusterThreshold}
-              defaultLayoutMode={defaultLayoutMode}
-              onSelectNode={handleInspectNode}
-              onSelectFinding={handleInspectFinding}
-              onPivot={(pivotTarget, pivotType, customMods, parentId) =>
-                handlePivotLead(pivotTarget, pivotType, customMods, parentId)
-              }
+              onRunModuleOnNode={handleRunModuleOnNode}
+              onPivotLead={handlePivotLead}
+              onUpdateNodeAnnotation={updateNodeAnnotation}
+              onAddManualLead={addManualLead}
+              aiReport={aiReport}
+              isAIAnalyzing={isAIAnalyzing}
+              aiConfig={aiConfig}
+              onUpdateAiConfig={updateAiConfig}
+              onRunAIAnalysis={runAIAnalysis}
             />
+          </div>
 
-            {/* Floating Left Panel: Live Target Dossier, Reverse Image Search & Chronological Timeline */}
-            <div className="absolute top-3 left-3 z-20">
-              <TargetDossierCard
-                dossier={dossier}
-                targetType={targetType}
-                riskScore={riskScore}
-                isScanning={isScanning}
-                onPivotLead={(val, type, mods) => handlePivotLead(val, type, mods)}
-                onOpenDorkMatrix={() => openInspectorTab('dorks')}
-                isCollapsedControlled={isDossierCollapsed}
-                onToggleCollapse={() => setIsDossierCollapsed((prev) => !prev)}
-              />
-            </div>
-
-            {/* Floating Right Panel: Slide-Over Lead Inspector, Tactical Dork Matrix & AI Detective */}
-            <div className="absolute top-3 right-3 z-20">
-              <LeadInspectorDrawer
-                isOpen={isRightDrawerOpen}
-                activeTab={inspectorTab}
-                onTabChange={(t) => setInspectorTab(t)}
-                onClose={() => setIsRightDrawerOpen(false)}
-                selectedNode={selectedNode}
-                target={target}
-                targetType={targetType}
-                dossier={dossier}
-                isScanning={isScanning}
-                onRunModuleOnNode={handleRunModuleOnNode}
-                onPivotLead={handlePivotLead}
-                onUpdateNodeAnnotation={updateNodeAnnotation}
-                onAddManualLead={addManualLead}
-                aiReport={aiReport}
-                isAIAnalyzing={isAIAnalyzing}
-                aiConfig={aiConfig}
-                onUpdateAiConfig={updateAiConfig}
-                onRunAIAnalysis={runAIAnalysis}
-              />
-            </div>
-
-            {/* Subtle Floating Activity Log Pill (Bottom-Left above Zoom Controls) */}
-            <div className="absolute bottom-3 left-14 z-20 max-w-md">
-              {isActivityLogOpen ? (
-                <div className="w-[420px] max-h-56 bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden flex flex-col font-mono text-[11px]">
-                  <div className="px-3 py-1.5 bg-[#131720] border-b border-white/[0.07] flex items-center justify-between">
-                    <span className="font-semibold text-slate-200 flex items-center gap-1.5 tabular-nums">
-                      <Terminal className="w-3.5 h-3.5 text-sky-400" />
-                      Live OSINT Stream ({logs.length})
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={clearLogs}
-                        className="text-[10px] text-slate-400 hover:text-white"
-                      >
-                        Clear
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsActivityLogOpen(false)}
-                        className="text-slate-400 hover:text-white"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-2.5 space-y-1 select-text">
-                    {logs.slice(-25).map((l) => (
-                      <div key={l.id} className="leading-snug">
-                        <span className="text-slate-500 tabular-nums">[{l.timestamp}]</span>{' '}
-                        <span className="text-sky-400 font-medium">[{l.module}]</span>{' '}
-                        <span
-                          className={
-                            l.level === 'error'
-                              ? 'text-rose-400'
-                              : l.level === 'warn'
-                              ? 'text-amber-300'
-                              : l.level === 'success'
-                              ? 'text-emerald-300'
-                              : 'text-slate-300'
-                          }
-                        >
-                          {l.message}
-                        </span>
-                      </div>
-                    ))}
+          {/* Subtle Floating Activity Log Pill (Bottom-Left above Zoom Controls) */}
+          <div className="absolute bottom-3 left-14 z-20 max-w-md">
+            {isActivityLogOpen ? (
+              <div className="w-[420px] max-h-56 bg-[#0F1219]/95 backdrop-blur-xl border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden flex flex-col font-mono text-[11px]">
+                <div className="px-3 py-1.5 bg-[#131720] border-b border-white/[0.07] flex items-center justify-between">
+                  <span className="font-semibold text-slate-200 flex items-center gap-1.5 tabular-nums">
+                    <Terminal className="w-3.5 h-3.5 text-sky-400" />
+                    Live OSINT Stream ({logs.length})
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={clearLogs}
+                      className="text-[10px] text-slate-400 hover:text-white"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsActivityLogOpen(false)}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsActivityLogOpen(true)}
-                  className="px-3 py-1.5 rounded-full bg-[#0F1219]/92 backdrop-blur-md border border-white/[0.08] hover:border-white/[0.18] text-[11px] font-mono text-slate-300 flex items-center gap-2 shadow-lg max-w-sm truncate transition-colors"
-                  title="Click to expand live OSINT telemetry log"
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      isScanning ? 'bg-sky-400 animate-ping' : 'bg-emerald-400'
-                    }`}
-                  />
-                  <span className="truncate">
-                    {latestLog ? latestLog.message : 'Ready for investigation'}
-                  </span>
-                </button>
-              )}
-            </div>
+                <div className="flex-1 overflow-y-auto p-2.5 space-y-1 select-text">
+                  {logs.slice(-25).map((l) => (
+                    <div key={l.id} className="leading-snug">
+                      <span className="text-slate-500 tabular-nums">[{l.timestamp}]</span>{' '}
+                      <span className="text-sky-400 font-medium">[{l.module}]</span>{' '}
+                      <span
+                        className={
+                          l.level === 'error'
+                            ? 'text-rose-400'
+                            : l.level === 'warn'
+                            ? 'text-amber-300'
+                            : l.level === 'success'
+                            ? 'text-emerald-300'
+                            : 'text-slate-300'
+                        }
+                      >
+                        {l.message}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsActivityLogOpen(true)}
+                className="px-3 py-1.5 rounded-full bg-[#0F1219]/92 backdrop-blur-md border border-white/[0.08] hover:border-white/[0.18] text-[11px] font-mono text-slate-300 flex items-center gap-2 shadow-lg max-w-sm truncate transition-colors"
+                title="Click to expand live OSINT telemetry log"
+              >
+                <span
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    isScanning ? 'bg-sky-400 animate-ping' : 'bg-emerald-400'
+                  }`}
+                />
+                <span className="truncate">
+                  {latestLog ? latestLog.message : 'Ready for investigation'}
+                </span>
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
         {activeView === 'table' && (
           <div className="flex-1 overflow-auto p-6 bg-[#090B10]">

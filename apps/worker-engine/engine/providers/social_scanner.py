@@ -16,6 +16,7 @@ from typing import AsyncGenerator, Dict, Any, List, Optional
 import asyncio
 import re
 import html
+from urllib.parse import urlparse
 import httpx
 import logging
 
@@ -97,6 +98,88 @@ class SocialPresenceScanner(BaseOSINTProvider):
                 return True
         return False
 
+    def _is_redirect_trap(
+        self,
+        platform: Dict[str, Any],
+        final_url: str,
+        original_url: str,
+        username: str,
+    ) -> bool:
+        """
+        Detects false-positive redirect traps:
+        1. Explicit error_url matching (e.g. wordpress.com/typo)
+        2. Bouncing to auth/login walls (/login, /signin, /session/new, /auth)
+        3. Bouncing to generic error pages (/404, /notfound, /error)
+        4. Bouncing to root homepage where username is stripped from URL
+        """
+        if not final_url or not isinstance(final_url, str) or final_url.startswith("<MagicMock"):
+            return False
+
+        error_url = platform.get("error_url")
+        if error_url and error_url.lower() in final_url.lower():
+            return True
+
+        try:
+            parsed_final = urlparse(final_url)
+            parsed_orig = urlparse(original_url)
+
+            # If redirected to a generic path where target username disappeared
+            final_path = parsed_final.path.rstrip("/").lower()
+            trap_paths = {
+                "",
+                "/login",
+                "/signin",
+                "/auth",
+                "/session/new",
+                "/typo",
+                "/error",
+                "/notfound",
+                "/404",
+                "/home",
+            }
+            if final_path in trap_paths and username.lower() not in final_url.lower():
+                return True
+
+            # Check if root domain redirect (e.g., http://sub.domain.com -> https://domain.com/)
+            if parsed_orig.netloc.lower() != parsed_final.netloc.lower():
+                if username.lower() not in final_url.lower() and (not final_path or final_path in trap_paths):
+                    return True
+        except Exception:
+            pass
+
+        return False
+
+    def _is_soft_404_shell(
+        self,
+        platform: Dict[str, Any],
+        body_text: str,
+        username: str,
+    ) -> bool:
+        """
+        Detects Single Page Application (SPA) soft 404 shells that return HTTP 200:
+        1. Twitch generic title / noindex shell
+        2. Spotify web player shell / page not found
+        """
+        if not body_text or not isinstance(body_text, str):
+            return False
+
+        lower_text = body_text.lower()
+        platform_id = str(platform.get("id", "")).lower()
+
+        if platform_id == "twitch":
+            if "<title>twitch</title>" in lower_text or '<meta property="og:title" content="twitch"/>' in lower_text:
+                return True
+
+        if platform_id == "spotify":
+            if (
+                "<title>spotify – web player</title>" in lower_text
+                or "<title>page not found</title>" in lower_text
+                or "error-page" in lower_text
+            ):
+                return True
+
+        return False
+
     def _extract_profile_metadata(
         self, platform: Dict[str, Any], response_text: str
     ) -> Dict[str, Any]:
@@ -147,7 +230,8 @@ class SocialPresenceScanner(BaseOSINTProvider):
         ).format(username=username)
 
         check_type = platform.get("check_type", "status_code")
-        follow_redirects = check_type != "response_url"
+        # Follow redirects for all platforms unless strictly disabled, so we can detect redirect traps
+        follow_redirects = platform.get("follow_redirects", True)
 
         async with self.semaphore:
             try:
@@ -191,14 +275,17 @@ class SocialPresenceScanner(BaseOSINTProvider):
                     )
                     return None
 
-                # 3. Check response_url redirect trap (redirect-to-login / error_url mode)
-                if check_type == "response_url":
-                    error_url = platform.get("error_url")
-                    final_url = str(getattr(response, "url", ""))
-                    if error_url and error_url in final_url:
-                        return None
+                # 3. Detect redirect traps (e.g. error_url, bounce to login, or generic homepage)
+                raw_final_url = getattr(response, "url", None)
+                final_url = str(raw_final_url) if raw_final_url is not None else ""
+                if self._is_redirect_trap(platform, final_url, url, username):
+                    return None
 
-                # 4. Check absence strings / negative_match / errorMsg
+                # 4. Detect Single Page Application soft-404 shells (Twitch, Spotify, etc.)
+                if self._is_soft_404_shell(platform, body_text, username):
+                    return None
+
+                # 5. Check absence strings / negative_match / errorMsg
                 absence_list: List[str] = []
                 if platform.get("negative_match"):
                     absence_list.append(platform["negative_match"])
@@ -212,15 +299,24 @@ class SocialPresenceScanner(BaseOSINTProvider):
                     absence_list.append(platform["errorMsg"])
 
                 for neg_str in absence_list:
-                    if neg_str and neg_str in body_text:
+                    if not neg_str:
+                        continue
+                    formatted_neg = neg_str.format(username=username) if "{username}" in neg_str else neg_str
+                    if formatted_neg in body_text or formatted_neg.lower() in body_text.lower():
                         return None
 
-                # 5. Check presence strings verification
+                # 6. Check presence strings verification
                 presence_list = platform.get("presence_strings", [])
                 if isinstance(presence_list, str):
                     presence_list = [presence_list]
                 if presence_list:
-                    if not any(pos_str in body_text for pos_str in presence_list):
+                    found_any = False
+                    for pos_str in presence_list:
+                        formatted_pos = pos_str.format(username=username) if "{username}" in pos_str else pos_str
+                        if formatted_pos in body_text:
+                            found_any = True
+                            break
+                    if not found_any:
                         return None
 
                 # 6. Extract profile metadata

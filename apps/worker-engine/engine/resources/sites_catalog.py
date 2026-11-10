@@ -539,7 +539,14 @@ OSINT_SITES_CATALOG: List[Dict[str, Any]] = [
         "tags": ["blog", "cms"],
         "url_template": "https://{username}.wordpress.com/",
         "regex_check": r"^[a-zA-Z][a-zA-Z0-9_-]*$",
-        "check_type": "status_code",
+        "check_type": "response_url",
+        "error_url": "wordpress.com/typo",
+        "absence_strings": [
+            "wordpress.com/typo",
+            "doesn't exist",
+            "Do you want to register",
+            "is no longer available",
+        ],
     },
     {
         "id": "behance",
@@ -638,9 +645,17 @@ OSINT_SITES_CATALOG: List[Dict[str, Any]] = [
         "name": "Twitch",
         "category": "Streaming",
         "tags": ["streaming", "gaming"],
-        "url_template": "https://m.twitch.tv/{username}",
+        "url_template": "https://www.twitch.tv/{username}",
         "profile_url_template": "https://www.twitch.tv/{username}",
-        "check_type": "status_code",
+        "check_type": "presence",
+        "absence_strings": [
+            "<title>Twitch</title>",
+            '<meta property="og:title" content="Twitch"/>',
+        ],
+        "presence_strings": [
+            'content="profile"',
+            'content="{username}"',
+        ],
     },
     {
         "id": "youtube",
@@ -664,7 +679,15 @@ OSINT_SITES_CATALOG: List[Dict[str, Any]] = [
         "category": "Music",
         "tags": ["music", "audio"],
         "url_template": "https://open.spotify.com/user/{username}",
-        "check_type": "status_code",
+        "check_type": "presence",
+        "absence_strings": [
+            "<title>Page not found</title>",
+            "error-page",
+            "<title>Spotify – Web Player</title>",
+        ],
+        "presence_strings": [
+            'content="profile"',
+        ],
     },
     {
         "id": "soundcloud",

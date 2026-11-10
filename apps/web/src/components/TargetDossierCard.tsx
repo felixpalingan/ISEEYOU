@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
   User,
   Mail,
+  Phone,
   MapPin,
   Building2,
   Globe,
@@ -434,6 +435,44 @@ export function TargetDossierCard({
                             title="Investigate this Organization / Family Clan"
                           >
                             <span>Chain</span>
+                            <ArrowRight className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Extracted Phone Numbers (With 1-Click WhatsApp / Telegram / Carrier Chain) */}
+                {dossier.phones && dossier.phones.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold mb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 text-green-400" />
+                        Phone Numbers ({dossier.phones.length})
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {dossier.phones.map((ph) => (
+                        <div
+                          key={`ph-${ph}`}
+                          className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#131720] border border-white/[0.08]"
+                        >
+                          <div className="min-w-0">
+                            <span className="block font-mono text-[11px] text-green-200 font-medium truncate">
+                              {ph}
+                            </span>
+                            <span className="block text-[9px] font-mono text-slate-400">
+                              Cellular / Messaging Lead
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onPivotLead(ph, 'phone', ['phone_intel'])}
+                            className="px-2 py-0.5 rounded bg-green-500/15 hover:bg-green-500/25 border border-green-500/30 text-green-200 text-[10px] font-mono font-medium flex items-center gap-1 flex-shrink-0 transition-colors"
+                            title="Trace carrier, WhatsApp & Telegram"
+                          >
+                            <span>Trace</span>
                             <ArrowRight className="w-2.5 h-2.5" />
                           </button>
                         </div>

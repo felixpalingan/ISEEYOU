@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -18,6 +18,7 @@ import {
   Position,
   Handle,
   NodeProps,
+  NodeChange,
 } from '@xyflow/react';
 import {
   EntityNode as SharedEntityNode,
@@ -1282,6 +1283,15 @@ function FlowCanvasInner({
     setExpandedClusters(new Set());
   }, []);
 
+  // Track user-dragged node coordinates to persist across scans & view changes
+  const userNodePositionsRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  const hasAutoFitTargetRef = useRef<string>('');
+
+  useEffect(() => {
+    userNodePositionsRef.current.clear();
+    hasAutoFitTargetRef.current = '';
+  }, [target]);
+
   const { initialFlowNodes, initialFlowEdges } = useMemo(() => {
     const { flowNodes, flowEdges } = layoutGraphElements(
       sharedNodes,
@@ -1295,7 +1305,7 @@ function FlowCanvasInner({
       layoutMode,
       clusterThreshold,
       categoryFilter,
-      selectedNodeId,
+      undefined, // Decoupled from selection to avoid layout recalculation
       onPivot,
       onSelectNode
     );
@@ -1312,7 +1322,6 @@ function FlowCanvasInner({
     layoutMode,
     clusterThreshold,
     categoryFilter,
-    selectedNodeId,
     onPivot,
     onSelectNode,
   ]);
@@ -1320,26 +1329,92 @@ function FlowCanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialFlowNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlowEdges);
 
+  // Capture user dragging movements
+  const handleCustomNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      for (const change of changes) {
+        if (change.type === 'position' && change.position) {
+          userNodePositionsRef.current.set(change.id, change.position);
+        }
+      }
+      onNodesChange(changes);
+    },
+    [onNodesChange]
+  );
+
+  // Sync graph elements while preserving dragged coordinates
   useEffect(() => {
-    setNodes(initialFlowNodes);
+    setNodes((prevNodes) => {
+      const existingPos = new Map<string, { x: number; y: number }>();
+      for (const n of prevNodes) {
+        existingPos.set(n.id, n.position);
+      }
+
+      return initialFlowNodes.map((n) => {
+        const userPos = userNodePositionsRef.current.get(n.id);
+        if (userPos) {
+          return {
+            ...n,
+            position: userPos,
+            data: { ...n.data, isSelected: n.id === selectedNodeId },
+          };
+        }
+        const prevPos = existingPos.get(n.id);
+        if (prevPos) {
+          return {
+            ...n,
+            position: prevPos,
+            data: { ...n.data, isSelected: n.id === selectedNodeId },
+          };
+        }
+        return {
+          ...n,
+          data: { ...n.data, isSelected: n.id === selectedNodeId },
+        };
+      });
+    });
     setEdges(initialFlowEdges);
-  }, [initialFlowNodes, initialFlowEdges, setNodes, setEdges]);
+  }, [initialFlowNodes, initialFlowEdges, selectedNodeId, setNodes, setEdges]);
+
+  // Fast decoupled isSelected sync without shifting (x, y) coordinates
+  useEffect(() => {
+    setNodes((prev) =>
+      prev.map((n) => {
+        const isSelected = n.id === selectedNodeId;
+        if (n.data?.isSelected !== isSelected) {
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              isSelected,
+            },
+          };
+        }
+        return n;
+      })
+    );
+  }, [selectedNodeId, setNodes]);
+
+  // Restrict automatic fitView: only on initial target load or layout mode change
+  useEffect(() => {
+    if (sharedNodes.length > 0 && hasAutoFitTargetRef.current !== target) {
+      hasAutoFitTargetRef.current = target;
+      const timer = setTimeout(() => {
+        fitView({ padding: 0.22, duration: 450 });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [sharedNodes.length, target, fitView]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fitView({ padding: 0.22, duration: 450 });
-    }, 120);
+      fitView({ padding: 0.22, duration: 400 });
+    }, 150);
     return () => clearTimeout(timer);
-  }, [
-    sharedNodes.length,
-    findings.length,
-    expandedClusters.size,
-    layoutMode,
-    categoryFilter,
-    fitView,
-  ]);
+  }, [layoutMode, fitView]);
 
   const handleAutoTidy = useCallback(() => {
+    userNodePositionsRef.current.clear();
     const tidied = resolveNodeCollisions(initialFlowNodes, `root-${target}`);
     setNodes(tidied);
     setEdges(initialFlowEdges);
@@ -1474,7 +1549,7 @@ function FlowCanvasInner({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleCustomNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
         onNodeContextMenu={handleNodeContextMenu}

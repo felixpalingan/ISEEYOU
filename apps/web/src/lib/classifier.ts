@@ -33,6 +33,15 @@ export function classifyTarget(input: string, mode?: 'web' | 'identity'): Entity
     return 'username';
   }
 
+  // Phone number check (+62..., 08..., or international with + and digits)
+  const cleanedDigits = target.replace(/[\s\-\(\)\.]/g, '');
+  if (
+    (target.startsWith('+') && /^\d{7,15}$/.test(cleanedDigits.slice(1))) ||
+    (/^\d{10,14}$/.test(cleanedDigits) && cleanedDigits.startsWith('08'))
+  ) {
+    return 'phone';
+  }
+
   // Full name / phrase with spaces: ALMAKIUS FELIX BARIQ -> always username
   if (target.includes(' ')) {
     return 'username';
@@ -146,6 +155,18 @@ export const ENTITY_BADGE_CONFIGS: Record<EntityType, EntityBadgeConfig> = {
     type: 'location',
     label: 'LOCATION',
     colorClass: 'text-rose-300 border-rose-700/50 bg-rose-950/60',
+    iconName: 'Globe',
+  },
+  phone: {
+    type: 'phone',
+    label: 'PHONE',
+    colorClass: 'text-green-400 border-green-600/50 bg-green-950/60',
+    iconName: 'Network',
+  },
+  archive: {
+    type: 'archive',
+    label: 'ARCHIVE',
+    colorClass: 'text-amber-400 border-amber-600/50 bg-amber-950/60',
     iconName: 'Globe',
   },
 };
