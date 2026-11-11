@@ -267,3 +267,4 @@ class PhoneIntelProvider(BaseOSINTProvider):
 
 # Register into global provider registry
 provider_registry.register(PhoneIntelProvider())
+

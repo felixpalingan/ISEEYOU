@@ -26,11 +26,14 @@
 **ISEEYOU 2.0** is an interactive Open Source Intelligence (OSINT) Lead-Chaining Caseboard, Target Dossier Workbench, and External Attack Surface Management (EASM) platform engineered for security researchers, red-team analysts, and digital investigators.
 
 Instead of running isolated CLI tools and losing track of scattered clues, **ISEEYOU 2.0** turns every discovered attribute into an actionable graph lead on a full-screen infinite canvas:
-- Start from a single **Username**, **Email Address**, **Domain**, or **Public IP**.
+- Start from a single **Username**, **Email Address**, **Phone Number**, **Domain**, or **Public IP**.
 - Automatically extract **Real Names, Avatars, Bios, Locations, Organizations, and Hidden Commit Emails** from public developer and social APIs.
 - Map a target's **Inner Circle (2-Way Mutual Connections & Repository Co-Authors)** to uncover real-world associates.
 - Pivot from **Emails to Gravatar MD5 Profiles, OpenPGP Keyserver UIDs, and k-Anonymity Breach Records**.
-- Bypass private social media walls using the **8-Formula Tactical Google Dork Matrix** (`site:`, `intext:`, `-inurl:`, `filetype:`) to surface public third-party comments, friend tags, and leaked PDF/XLSX rosters.
+- Uncover deleted websites, past usernames, and legacy bio records using the **Wayback Machine Historical Archival Crawler**.
+- Attribute cellular carriers and direct communication endpoints via the **Phone Number Intelligence Engine** (E.164 normalization, Indonesian carrier mapping, WhatsApp & Telegram direct links).
+- Accelerate investigations hands-free using **Smart Auto-Chaining (Depth-2)** with a zero-spam entropy filter that automatically pivots verified emails and phone numbers while keeping candidate handles off the board.
+- Bypass private social media walls using the **14-Formula Tactical Google Dork Matrix** (`site:`, `intext:`, `-inurl:`, `filetype:`) to surface public third-party comments, friend tags, and leaked PDF/XLSX rosters with 6 regional language presets.
 - Run **1-Click Reverse Image Search** across **Google Lens, Yandex Images, Bing Visual, and TinEye** on any discovered or custom photo URL.
 - Correlate clues and predict alternate handles using the **Multi-Provider BYOK AI Detective** (`Gemini`, `Groq`, `OpenAI / OpenRouter`, or local `Ollama`) or connect external AI agents via the built-in **Model Context Protocol (MCP) Server**.
 
@@ -41,10 +44,10 @@ Instead of running isolated CLI tools and losing track of scattered clues, **ISE
 ```mermaid
 flowchart LR
   subgraph Client ["Client Layer (Next.js 15 Carbon Obsidian Caseboard)"]
-    Omni["OmniSearchBar & 7 Modular Extractor Toggles"]
+    Omni["OmniSearchBar & 9 Modular Extractor Toggles"]
     Dossier["Floating Target Dossier, Reverse Image & Timeline"]
     Board["React Flow Infinite Evidence Caseboard"]
-    Inspector["Lead Inspector, 8-Formula Dork Matrix & BYOK AI"]
+    Inspector["Lead Inspector, 14-Formula Dork Matrix & BYOK AI"]
     CaseMgr["Multi-Case Session Manager (.case.json) & PDF/MD Export"]
   end
 
@@ -61,6 +64,8 @@ flowchart LR
     Socials["4. 66+ Platform Deep Social Footprint Engine"]
     Breach["5. HIBP k-Anonymity Breach & SPF/DMARC Hunter"]
     WebInfra["6. CT Log Subdomains, DoH DNS & Shodan InternetDB"]
+    Wayback["7. Wayback Machine Historical Crawler"]
+    PhoneIntel["8. Phone Carrier & Messaging Intel"]
     AIDetect["Multi-Provider BYOK AI Detective & MCP Server"]
   end
 
@@ -73,10 +78,14 @@ flowchart LR
   SSRF2 --> Socials
   SSRF2 --> Breach
   SSRF2 --> WebInfra
+  SSRF2 --> Wayback
+  SSRF2 --> PhoneIntel
   Deep -->|"Real-Time Entities"| Board
   Mutual -->|"Associate & Org Nodes"| Board
   EmailCorr -->|"Identity & PGP Nodes"| Board
   Socials -->|"Verified Profiles"| Board
+  Wayback -->|"Archived Snapshots"| Board
+  PhoneIntel -->|"Phone, Telco & Messaging"| Board
   Board -->|"Live Aggregation"| Dossier
   Board -->|"Inspect & Chain"| Inspector
   Inspector -->|"BYOK API Key / Prompt"| AIDetect
@@ -87,12 +96,12 @@ flowchart LR
 
 | Layer | Technologies | Engineering Rationale |
 | :--- | :--- | :--- |
-| **Frontend Caseboard** | **Next.js 15 (App Router)**, React 19, TypeScript 5.7+ | Streaming UI, strict type safety via `@iseeyou/shared-types`, and zero-latency state management. |
-| **Graph Visualization** | **@xyflow/react (React Flow v12)** | Infinite canvas with deterministic Axis-Aligned Bounding Box (AABB) anti-overlap layout engine (`Tree` & `Radial`). |
+| **Frontend Caseboard** | **Next.js 15 (App Router)**, React 19, TypeScript 5.7+ | Streaming UI, strict type safety via `@iseeyou/shared-types`, persistent canvas mounting, and zero-latency state management. |
+| **Graph Visualization** | **@xyflow/react (React Flow v12)** | Infinite canvas with frozen coordinate persistence (`userNodePositionsRef`), decoupled selection calculation, and AABB anti-overlap layout engine. |
 | **Design System** | **Tailwind CSS**, Carbon Obsidian Tokens, Lucide Icons | High-contrast, low-noise tactical interface with `tabular-nums` alignment and keyboard-first navigation (`/`). |
 | **OSINT Worker Engine** | **Python 3.11+**, **FastAPI**, **Asyncio**, **HTTPX** | High-concurrency asynchronous I/O for non-blocking multi-source OSINT extraction and SSE streaming. |
 | **AI Detective & MCP** | **Gemini**, **Groq**, **OpenAI/OpenRouter**, **Ollama**, **MCP** | Bring-Your-Own-Key (BYOK) multi-provider LLM routing plus a standard JSON-RPC 2.0 stdio MCP server. |
-| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 90 Python unit tests and 12 Playwright E2E browser tests. |
+| **Security & Testing** | **Zod**, **Pydantic v2**, **Pytest**, **Playwright** | Dual-layer Anti-SSRF network protection backed by 105 Python unit tests and 12 Playwright E2E browser tests. |
 
 ---
 
@@ -102,6 +111,10 @@ flowchart LR
 - **Deep Profile, Full-Name & Academic/Career Extractor (`deep_profile_extractor.py` & `name_intelligence.py`):** Queries GitHub (`/users/{u}`, `/search/users`, and `/users/{u}/events/public`), Keybase, Reddit, HackerNews, **OpenAlex (250M+ Academic & University Records)**, **CrossRef**, and **Wikidata**. Supports both single-token handles and **Full Real Names** — extracting commit emails, university/company affiliations, published theses/papers, family clan surnames, and smart consonant-abbreviated candidate handles.
 - **Inner Circle, Family Surname Relatives & Co-Author Mapper (`connection_mapper.py`):** Maps a target's social and family graph across 2-way mutual follows (`followers ∩ following`), repository co-authors, stargazers, direct followers, **Same-Surname Family Clan Relatives** (OpenAlex/CrossRef/GitHub surname matching), and academic thesis co-authors/supervisors.
 - **Email-to-Identity Correlator (`email_correlator.py`):** Computes MD5 hashes for Gravatar profile/avatar extraction, queries the Ubuntu OpenPGP HKP keyserver for registered full names and UIDs, searches GitHub commits by author email, and isolates custom organization domains.
+- **Wayback Machine Historical Archival Crawler (`wayback_extractor.py`):** Queries Archive.org Wayback Availability API (`archive.org/wayback/available?url=...`) across domains, developer profiles, and social accounts (GitHub, Twitter, Instagram, WordPress, Medium) to uncover deleted websites, former handles, and archived bio metadata.
+- **Phone Number Carrier, Messaging & Breach Intel (`phone_intel.py`):** Normalizes local and international telephone numbers to standard E.164 (`+62...`), detects Indonesian telecommunications operators (Telkomsel, Indosat Ooredoo, XL Axiata, Tri, Smartfren), and generates 1-click verified WhatsApp (`https://wa.me/...`) and Telegram direct messaging endpoints.
+- **Smart Auto-Chaining (Depth-2) & Zero-Spam Filtering:** Automatically chains verified high-entropy entities (Git commit emails $\rightarrow$ email correlator & breach hunter; phone numbers $\rightarrow$ phone intel; custom domains $\rightarrow$ DNS & Wayback) without board pollution, while keeping candidate handle permutations strictly manual. Features a 1-click command bar toggle (`Auto-Chain ON/OFF`).
+- **False-Positive Hardening (Zero-Trap Verification):** Advanced redirect trap detection (`_is_redirect_trap`) rejecting HTTP 302 redirects to error/typo pages (e.g. WordPress `/typo`), login portals, or root homepages, coupled with SPA soft-404 shell suppression (`_is_soft_404_shell`) for Twitch generic shells and Spotify web player 404s.
 - **500+ Platform Deep Social Footprint Engine (Sherlock + Maigret Architecture — `social_scanner.py` & `sites_catalog.py`):** High-speed concurrent username reconnaissance across 500+ platforms spanning 10 specialized categories (Developer, Security/CTF, Social, Community, Identity, Creative, Gaming, Streaming, Finance/Crypto, and Indonesian Regional portals). Utilizes lightweight `url_probe` separation, pre-flight `regex_check` validation, `response_url` redirect trap detection, dual `presence_strings` / `absence_strings` verification, Anti-WAF false-positive filtering (Cloudflare, PerimeterX, Vercel, DDoS-Guard), and in-flight regex profile metadata extraction (`avatar_url`, `full_name`, `bio`, `location`, `secondary_link`).
 - **Infrastructure & Breach Intelligence:** Combines Certificate Transparency (`crt.sh` / CertSpotter), Cloudflare DNS-over-HTTPS (DoH), Shodan InternetDB open port/CVE lookups, and HaveIBeenPwned k-Anonymity breach checks.
 
@@ -186,7 +199,7 @@ python -m engine.mcp_server
 ## 🧪 Automated Testing & Verification
 
 ```bash
-# 1. Run Python Worker Engine Unit & Anti-SSRF Security Tests (90 passed)
+# 1. Run Python Worker Engine Unit & Anti-SSRF Security Tests (105 passed)
 python -m pytest apps/worker-engine/tests -v
 
 # 2. Build Next.js Production Bundle
